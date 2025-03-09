@@ -1,0 +1,14 @@
+pandas
+geopandas
+matplotlib
+requests
+shapely
+pyarrow
+xarray
+zarr
+xvec
+dask
+dask[distributed]
+bokeh
+exactextract
+rioxarray
