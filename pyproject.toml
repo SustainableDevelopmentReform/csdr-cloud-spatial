@@ -1,0 +1,48 @@
+[project]
+name = "csdr-pipeline"
+dynamic = ["version"]
+description = "CSDR data processing pipeline tooling"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Alex Leith", email = "alex@auspatious.com" },
+    { name = "Nick Forbe-Smith", email = "nick@forbes-smith.com" },
+]
+keywords = ["data"]
+
+dependencies = [
+    "bokeh",
+    "boto3",
+    "dask",
+    "distributed",
+    "folium",
+    "geopandas",
+    "hatchling",
+    "hatch-vcs",
+    "matplotlib",
+    "odc-stac",
+    "odc-geo",
+    "pystac",
+    "pystac-client",
+    "rio-stac",
+    "s3fs",
+    "scipy",
+    "typer",
+]
+
+[project.optional-dependencies]
+dev = ["poetry", "bokeh", "folium", "jinja2", "matplotlib"]
+
+[project.scripts]
+csdr = "csdr.cli:app"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "csdr/_version.py"
