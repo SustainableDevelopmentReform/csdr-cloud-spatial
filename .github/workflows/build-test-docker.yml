@@ -2,7 +2,7 @@ name : Build Docker Image
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/sustainable-development-reform/csdr-cloud-spatial  # ${{ github.repository }}
+  IMAGE_NAME: sustainabledevelopmentreform/csdr-cloud-spatial  # ${{ github.repository }}
 
 on:
   pull_request:
