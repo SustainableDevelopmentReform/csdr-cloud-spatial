@@ -16,6 +16,7 @@ dependencies = [
     "boto3",
     "dask",
     "distributed",
+    "exactextract",
     "folium",
     "geopandas",
     "hatchling",
@@ -23,12 +24,19 @@ dependencies = [
     "matplotlib",
     "odc-stac",
     "odc-geo",
+    "pandas",
     "pystac",
     "pystac-client",
+    "requests",
     "rio-stac",
+    "rioxarray",
     "s3fs",
     "scipy",
+    "shapely",
     "typer",
+    "xarray",
+    "xvec",
+    "zarr"
 ]
 
 [project.optional-dependencies]
