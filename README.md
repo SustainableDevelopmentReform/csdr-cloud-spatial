@@ -41,13 +41,17 @@ We are using [DVC](https://dvc.org/doc/start) to manage the pipeline, this allow
 
 See installation instructions on the [DVC website](https://dvc.org/doc/install).
 
-### Reproducing the pipeline
+### Reproducing the pipelines
 
 You can compute all datasets and geometries by running:
 
 ```bash
 dvc repro -P
 ```
+
+**Note** you can use the `--allow-missing` [flag](https://dvc.org/doc/command-reference/repro#--allow-missing) skip stages with no other changes than missing data
+
+- This is useful if you are using existing intermediary datasets/geometries and only want to compute the products. Otherwise you will need to ingest and recompute the intermediary datasets/geometries, if the input data doesn't exist.
 
 ### Datasets
 
