@@ -37,6 +37,12 @@ poetry install --with dev
 
 ## Pipeline
 
+We are using [DVC](https://dvc.org/doc/start) to manage the pipeline, this allows, us to track the dependencies between the datasets and geometries, and chain multiple pipelines together.
+
+See installation instructions on the [DVC website](https://dvc.org/doc/install).
+
+### Reproducing the pipeline
+
 You can compute all datasets and geometries by running:
 
 ```bash
@@ -48,13 +54,16 @@ dvc repro
 You can compute all datasets by running:
 
 ```bash
-dvc repro datasets/
+dvc repro datasets/dvc.yaml
 ```
 
 You can also compute a specific dataset by running:
 
 ```bash
 dvc repro datasets/<dataset-name>/dvc.yaml
+
+# For example
+dvc repro datasets/global-mangrove-watch-annual-extent/dvc.yaml
 ```
 
 ### Geometries
@@ -62,18 +71,23 @@ dvc repro datasets/<dataset-name>/dvc.yaml
 You can compute all geometries by running:
 
 ```bash
-dvc repro geometries/
+dvc repro geometries/dvc.yaml
 ```
 
 You can also compute a specific geometry by running:
 
 ```bash
 dvc repro geometries/<geometry-name>/dvc.yaml
+
+# For example
+dvc repro geometries/abs-asgs-edition-3/dvc.yaml
 ```
 
 ### Using outputs
 
 There is an example of how to use the outputs in the `examples` folder. You must have run the pipeline at least once before using the examples.
+
+- [Global Mangrove Watch + ABS ASGS States](examples/global-mangrove-watch/abs-asgs-ste.ipynb)
 
 ## Build and Push Workflow
 
