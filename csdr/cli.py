@@ -7,6 +7,7 @@ import typer
 # Import the subcommand applications
 from .cli_datasets import dataset_app
 from .cli_geometries import geometry_app
+from .cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
 
@@ -15,6 +16,8 @@ app.add_typer(dataset_app, name="datasets",
               help="Commands for processing datasets.")
 app.add_typer(geometry_app, name="geometries",
               help="Commands for processing geometries.")
+app.add_typer(vector_cube_app, name="vector-cube",
+              help="Commands for vector-cube operations like zonal statistics.")
 
 
 @app.command()

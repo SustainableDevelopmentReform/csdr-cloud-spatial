@@ -1,0 +1,48 @@
+schema: '2.0'
+stages:
+  calculate_zonal_stats:
+    cmd: csdr vector-cube zonal-stats --input-zarr 
+      ../../datasets/global-mangrove-watch-annual-extent/out/gmw-v4019-1km-mollweide.zarr
+      --input-geoparquet ../../geometries/abs-asgs-edition-3/out/asgs-ste-2021.parquet
+      --output-path out/gmw_zonal_stats_ste.parquet --data-variable data_variable
+      --stat mean --name-dim asgs_ste --fill-value 0
+    deps:
+    - path: ../../csdr/cli.py
+      hash: md5
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
+    - path: ../../csdr/cli_vector_cube.py
+      hash: md5
+      md5: 3dfa753bed0ed6c7c19b946169fbd5e1
+      size: 6079
+    - path: 
+        ../../datasets/global-mangrove-watch-annual-extent/out/gmw-v4019-1km-mollweide.zarr
+      hash: md5
+      md5: 97b900b6008e0e211b1fb06046233278.dir
+      size: 326561
+      nfiles: 116
+    - path: ../../geometries/abs-asgs-edition-3/out/asgs-ste-2021.parquet
+      hash: md5
+      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
+      size: 28619337
+    outs:
+    - path: out/gmw_zonal_stats_ste.parquet
+      hash: md5
+      md5: dfa5e956039197076b5b7592537c8218
+      size: 57221060
+  validate_zonal_stats:
+    cmd: 'csdr geometries validate --input-file out/gmw_zonal_stats_ste.parquet #
+      Add --schema if a specific schema exists for validation'
+    deps:
+    - path: ../../csdr/cli.py
+      hash: md5
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
+    - path: ../../csdr/cli_geometries.py
+      hash: md5
+      md5: 81df0b0b51118ec2a451e7e60e13fa13
+      size: 5038
+    - path: out/gmw_zonal_stats_ste.parquet
+      hash: md5
+      md5: dfa5e956039197076b5b7592537c8218
+      size: 57221060

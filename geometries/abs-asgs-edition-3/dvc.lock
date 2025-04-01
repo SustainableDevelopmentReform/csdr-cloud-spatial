@@ -17,12 +17,12 @@ stages:
     deps:
     - path: ../../csdr/cli.py
       hash: md5
-      md5: f0e175301773317ce27eb1a8ccad7449
-      size: 1321
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 3ebb4a5ac9130349f89dbdeee08019bc
-      size: 4844
+      md5: 81df0b0b51118ec2a451e7e60e13fa13
+      size: 5038
     - path: in/asgs-ste-2021
       hash: md5
       md5: 08c751eeee0f605a11bf6827f70d7674.dir

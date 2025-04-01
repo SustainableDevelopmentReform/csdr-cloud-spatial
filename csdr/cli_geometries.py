@@ -141,6 +141,11 @@ def validate(
         # Read the GeoParquet file
         gdf = gpd.read_parquet(input_file)
 
+        # Fail if no geometry column
+        if "geometry" not in gdf.columns:
+            logger.error("No geometry column found in the GeoParquet file.")
+            raise typer.Exit(code=1)
+
         # Validate the GeoParquet file
         # validate_geoparquet(gdf, schema_path)
         logger.info("Validation complete.")

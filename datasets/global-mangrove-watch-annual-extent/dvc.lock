@@ -51,8 +51,8 @@ stages:
     deps:
     - path: ../../csdr/cli.py
       hash: md5
-      md5: f0e175301773317ce27eb1a8ccad7449
-      size: 1321
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
       md5: 9d97d98e7689b98061bda6b5adcc4086
