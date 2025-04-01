@@ -1,6 +1,0 @@
-# Aggregator pipeline for all geometry processing stages
-stages:
-  abs-asgs-edition-3:
-    cmd: cd abs-asgs-edition-3 && dvc repro && cd ../../
-    deps:
-      - abs-asgs-edition-3/dvc.lock

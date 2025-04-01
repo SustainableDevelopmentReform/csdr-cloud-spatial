@@ -46,7 +46,7 @@ See installation instructions on the [DVC website](https://dvc.org/doc/install).
 You can compute all datasets and geometries by running:
 
 ```bash
-dvc repro
+dvc repro -P
 ```
 
 ### Datasets
@@ -54,7 +54,7 @@ dvc repro
 You can compute all datasets by running:
 
 ```bash
-dvc repro datasets/dvc.yaml
+dvc repro -R datasets/
 ```
 
 You can also compute a specific dataset by running:
@@ -71,7 +71,7 @@ dvc repro datasets/global-mangrove-watch-annual-extent/dvc.yaml
 You can compute all geometries by running:
 
 ```bash
-dvc repro geometries/dvc.yaml
+dvc repro -R geometries/
 ```
 
 You can also compute a specific geometry by running:

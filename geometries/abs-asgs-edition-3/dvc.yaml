@@ -35,7 +35,8 @@ stages:
       - ../../csdr/cli_geometries.py
     # Define the output relative to the main project root
     outs:
-      - ${parquet_output}
+      - ${parquet_output}:
+          cache: false
 
   validate_asgs:
     desc: Validate the generated GeoParquet file (schema, CRS, etc.)
