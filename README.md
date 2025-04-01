@@ -74,3 +74,13 @@ dvc repro geometries/<geometry-name>/dvc.yaml
 ### Using outputs
 
 There is an example of how to use the outputs in the `examples` folder. You must have run the pipeline at least once before using the examples.
+
+## Build and Push Workflow
+
+This workflow builds a Docker container image and pushes it to Amazon ECR in two scenarios:
+
+- **Main Branch:** A merge to `main` automatically triggers the workflow. The image is tagged with a version (based on git tags) and additionally gets a `latest` tag.
+
+- **Manual Trigger:** Developers can manually trigger the workflow (using `workflow_dispatch`) to create and push a test build from their feature branch without the `latest` tag.
+
+**Note:** If you build from a feature branch, you will need to visit AWS Batch and create a new revision of the job definition `csdr-dev-env-csdr-cloud-spatial` that uses your custom container image tag.
