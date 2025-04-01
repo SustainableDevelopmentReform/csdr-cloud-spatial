@@ -25,6 +25,7 @@ dependencies = [
     "odc-stac",
     "odc-geo",
     "pandas",
+    "pyarrow",
     "pystac",
     "pystac-client",
     "requests",
