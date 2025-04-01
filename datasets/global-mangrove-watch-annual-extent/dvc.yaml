@@ -1,0 +1,76 @@
+# Pipeline specific to Global Mangrove Watch (GMW)
+
+vars:
+  - url: "https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1"
+  - archive_name: gmw_mng_2020_v4019_gtiff.zip
+  - extract_dir: in/geotiffs
+  - projected_dir: in/projected-geotiffs
+  - vrt_path: in/projected-geotiffs.vrt
+  - zarr_output: out/gmw-v4019-1km-mollweide.zarr
+  # Resample/Reproject from 0.0001 degree resolution (WGS84) to 1km resolution (Mollweide)
+  - target_crs: "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+  - target_resolution: 1000
+  - resampling_method: nearest
+
+stages:
+  download_extract_gmw:
+    desc: Download and extract GMW GeoTIFF archive
+    cmd: |
+      mkdir -p ${extract_dir}
+      echo "Downloading from ${url}..." 
+      curl -L -o ${extract_dir}/${archive_name} "${url}" 
+      echo "Unzipping..."
+      unzip -o ${extract_dir}/${archive_name} -d ${extract_dir}
+    outs:
+      - ${extract_dir}:
+          cache: false
+
+  warp_gmw:
+    cmd:
+      - |
+        mkdir -p "${projected_dir}"
+        for INPUT_FILE in "${extract_dir}"/*.tif; do
+          OUTPUT_FILE="${projected_dir}/$(basename "$INPUT_FILE")"
+          echo "Warping $INPUT_FILE -> $OUTPUT_FILE"
+          gdalwarp \
+            -t_srs "${target_crs}" \
+            -tr "${target_resolution}" "${target_resolution}" \
+            -r "${resampling_method}" \
+            "$INPUT_FILE" \
+            "$OUTPUT_FILE"
+        done
+    deps:
+      - ${extract_dir}
+    outs:
+      - ${projected_dir}:
+          cache: false
+
+  build_vrt_gmw:
+    cmd: |
+      echo "Building VRT: ${vrt_path}"
+      gdalbuildvrt ${vrt_path} ${projected_dir}/*.tif
+    deps:
+      - ${projected_dir} # Depends on the output directory of the warp stage
+    outs:
+      - ${vrt_path}
+
+  vrt_to_zarr_gmw:
+    cmd: >-
+      csdr datasets raster-to-zarr
+      --input-raster ${vrt_path}
+      --output-zarr ${zarr_output}
+    deps:
+      - ${vrt_path}
+      - ../../csdr/cli.py # Dependency on the main CLI script
+      - ../../csdr/cli_datasets.py # Dependency on the datasets script
+    outs:
+      - ${zarr_output}:
+          cache: false
+
+  validate_gmw:
+    cmd: >-
+      csdr datasets validate-zarr --input-zarr ${zarr_output}
+    deps:
+      - ${zarr_output} # Depends on the converted file
+      - ../../csdr/cli.py
+      - ../../csdr/cli_datasets.py

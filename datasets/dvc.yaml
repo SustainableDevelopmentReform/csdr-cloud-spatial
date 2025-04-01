@@ -1,0 +1,6 @@
+# Aggregator pipeline for all dataset processing stages
+stages:
+  global-mangrove-watch-annual-extent:
+    cmd: cd global-mangrove-watch-annual-extent && dvc repro && cd ../../
+    deps:
+      - global-mangrove-watch-annual-extent/dvc.lock

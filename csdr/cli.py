@@ -4,7 +4,17 @@ from json import dumps
 import boto3
 import typer
 
+# Import the subcommand applications
+from .cli_datasets import dataset_app
+from .cli_geometries import geometry_app
+
 app = typer.Typer()
+
+# Add the subcommands
+app.add_typer(dataset_app, name="datasets",
+              help="Commands for processing datasets.")
+app.add_typer(geometry_app, name="geometries",
+              help="Commands for processing geometries.")
 
 
 @app.command()

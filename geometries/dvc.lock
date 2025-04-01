@@ -1,0 +1,16 @@
+schema: '2.0'
+stages:
+  asgs-ste:
+    cmd: cd abs-asgs-edition-3 && dvc repro && cd ../../
+    deps:
+    - path: abs-asgs-edition-3/dvc.lock
+      hash: md5
+      md5: 0fb695bedc1bc51fc1710136cc666b61
+      size: 2039
+  abs-asgs-edition-3:
+    cmd: cd abs-asgs-edition-3 && dvc repro && cd ../../
+    deps:
+    - path: abs-asgs-edition-3/dvc.lock
+      hash: md5
+      md5: 0fb695bedc1bc51fc1710136cc666b61
+      size: 2039

@@ -1,0 +1,9 @@
+schema: '2.0'
+stages:
+  global-mangrove-watch-annual-extent:
+    cmd: cd global-mangrove-watch-annual-extent && dvc repro && cd ../../
+    deps:
+    - path: global-mangrove-watch-annual-extent/dvc.lock
+      hash: md5
+      md5: 1eabdd5425376930936207d8142ab00e
+      size: 2902

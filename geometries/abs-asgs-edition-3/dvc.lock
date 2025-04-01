@@ -1,0 +1,51 @@
+schema: '2.0'
+stages:
+  download_extract_asgs:
+    cmd: "mkdir -p in/asgs-ste-2021\necho \"Downloading from https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip...\"\
+      \ \ncurl -L -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip
+      \necho \"Unzipping...\" \nunzip -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip
+      -d in/asgs-ste-2021\n"
+    outs:
+    - path: in/asgs-ste-2021
+      hash: md5
+      md5: 08c751eeee0f605a11bf6827f70d7674.dir
+      size: 51045181
+      nfiles: 6
+  convert_asgs:
+    cmd: csdr geometries convert-vector  --input-dir in/asgs-ste-2021  --input-glob
+      STE_2021_AUST_GDA2020.shp  --target-crs EPSG:4326  --output-path out/asgs-ste-2021.parquet
+    deps:
+    - path: ../../csdr/cli.py
+      hash: md5
+      md5: f0e175301773317ce27eb1a8ccad7449
+      size: 1321
+    - path: ../../csdr/cli_geometries.py
+      hash: md5
+      md5: 3ebb4a5ac9130349f89dbdeee08019bc
+      size: 4844
+    - path: in/asgs-ste-2021
+      hash: md5
+      md5: 08c751eeee0f605a11bf6827f70d7674.dir
+      size: 51045181
+      nfiles: 6
+    outs:
+    - path: out/asgs-ste-2021.parquet
+      hash: md5
+      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
+      size: 28619337
+  validate_asgs:
+    cmd: 'csdr geometries validate --input-file out/asgs-ste-2021.parquet # --schema
+      ../../../schemas/geoparquet_standard.json # Example schema path'
+    deps:
+    - path: ../../csdr/cli.py
+      hash: md5
+      md5: f0e175301773317ce27eb1a8ccad7449
+      size: 1321
+    - path: ../../csdr/cli_geometries.py
+      hash: md5
+      md5: 3ebb4a5ac9130349f89dbdeee08019bc
+      size: 4844
+    - path: out/asgs-ste-2021.parquet
+      hash: md5
+      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
+      size: 28619337

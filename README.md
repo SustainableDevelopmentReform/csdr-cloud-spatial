@@ -34,3 +34,43 @@ pip install -e ".[dev]"
 # Using Poetry
 poetry install --with dev
 ```
+
+## Pipeline
+
+You can compute all datasets and geometries by running:
+
+```bash
+dvc repro
+```
+
+### Datasets
+
+You can compute all datasets by running:
+
+```bash
+dvc repro datasets/
+```
+
+You can also compute a specific dataset by running:
+
+```bash
+dvc repro datasets/<dataset-name>/dvc.yaml
+```
+
+### Geometries
+
+You can compute all geometries by running:
+
+```bash
+dvc repro geometries/
+```
+
+You can also compute a specific geometry by running:
+
+```bash
+dvc repro geometries/<geometry-name>/dvc.yaml
+```
+
+### Using outputs
+
+There is an example of how to use the outputs in the `examples` folder. You must have run the pipeline at least once before using the examples.
