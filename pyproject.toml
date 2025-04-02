@@ -55,3 +55,9 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "csdr/_version.py"
+
+[tool.hatch.build]
+include = ["csdr/**.py"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["csdr"]
