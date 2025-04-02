@@ -1,6 +1,6 @@
 vars:
-  - asgs_abs_geoparquet_path: ../../geometries/abs-asgs-edition-3/out/asgs-ste-2021.parquet
-  - gmw_zarr_path: ../../datasets/global-mangrove-watch-annual-extent/out/gmw-v4019-1km-mollweide.zarr
+  - asgs_abs_geoparquet_path: s3://csdr-dvc-out/asgs-ste-2021.parquet
+  - gmw_zarr_path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
   - gmw_data_variable: data_variable # Variable name within the Zarr
   - zonal_stat: mean # Statistic to calculate
   - geometry_name_dim: asgs_ste # Dimension name for geometries in output

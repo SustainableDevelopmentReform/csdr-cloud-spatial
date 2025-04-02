@@ -12,14 +12,18 @@ stages:
       size: 992445640
       nfiles: 1648
   warp_gmw:
-    cmd:
-    - "mkdir -p \"in/projected-geotiffs\"\nfor INPUT_FILE in \"in/geotiffs\"/*.tif;
-      do\n  OUTPUT_FILE=\"in/projected-geotiffs/$(basename \"$INPUT_FILE\")\"\n  echo
-      \"Warping $INPUT_FILE -> $OUTPUT_FILE\"\n  gdalwarp \\\n    -t_srs \"+proj=moll
-      +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs\" \\\n    -tr \"1000\"\
-      \ \"1000\" \\\n    -r \"nearest\" \\\n    \"$INPUT_FILE\" \\\n    \"$OUTPUT_FILE\"\
-      \ndone\n"
+    cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir "in/projected-geotiffs"
+      --target-crs "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+      --target-resolution "1000" --resampling-method "nearest"
     deps:
+    - path: ../../csdr/cli.py
+      hash: md5
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
+    - path: ../../csdr/cli_datasets.py
+      hash: md5
+      md5: 018267efa45dec8ba44861fd2cc01528
+      size: 6934
     - path: in/geotiffs
       hash: md5
       md5: 57c331a471461096ee1bd5a5c20b6c69.dir
@@ -55,8 +59,8 @@ stages:
       size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: 9d97d98e7689b98061bda6b5adcc4086
-      size: 1987
+      md5: 018267efa45dec8ba44861fd2cc01528
+      size: 6934
     - path: in/projected-geotiffs.vrt
       hash: md5
       md5: 6cad439408dfe8227e4be6752f55050f
@@ -64,7 +68,7 @@ stages:
     outs:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 97b900b6008e0e211b1fb06046233278.dir
+      md5: 3e4aa91ef2de7c303d39947382a64f3a.dir
       size: 326561
       nfiles: 116
   validate_gmw:
@@ -72,14 +76,29 @@ stages:
     deps:
     - path: ../../csdr/cli.py
       hash: md5
-      md5: f0e175301773317ce27eb1a8ccad7449
-      size: 1321
+      md5: 49f6f06a492ad096172953a27667fa4a
+      size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: 9d97d98e7689b98061bda6b5adcc4086
-      size: 1987
+      md5: 018267efa45dec8ba44861fd2cc01528
+      size: 6934
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 97b900b6008e0e211b1fb06046233278.dir
+      md5: 3e4aa91ef2de7c303d39947382a64f3a.dir
+      size: 326561
+      nfiles: 116
+  upload_gmw:
+    cmd: aws s3 cp out/gmw-v4019-1km-mollweide.zarr s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
+      --recursive
+    deps:
+    - path: out/gmw-v4019-1km-mollweide.zarr
+      hash: md5
+      md5: 3e4aa91ef2de7c303d39947382a64f3a.dir
+      size: 326561
+      nfiles: 116
+    outs:
+    - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
+      hash: md5
+      md5: 370ff47de9571922711e1f6757a97eec.dir
       size: 326561
       nfiles: 116

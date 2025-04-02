@@ -56,3 +56,12 @@ stages:
   #     --input-file ${parquet_output}
   #     --bucket csdr-data-dev
   #     --bucket-path geometries/abs-asgs-edition-3/asgs-ste-2021.parquet
+
+  upload_asgs:
+    cmd: >-
+      aws s3 cp ${parquet_output} s3://csdr-dvc-out/asgs-ste-2021.parquet
+    deps:
+      - ${parquet_output}
+    outs:
+      - s3://csdr-dvc-out/asgs-ste-2021.parquet:
+          cache: false

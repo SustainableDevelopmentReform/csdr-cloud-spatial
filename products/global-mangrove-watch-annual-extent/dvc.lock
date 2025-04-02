@@ -1,11 +1,9 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr 
-      ../../datasets/global-mangrove-watch-annual-extent/out/gmw-v4019-1km-mollweide.zarr
-      --input-geoparquet ../../geometries/abs-asgs-edition-3/out/asgs-ste-2021.parquet
-      --output-path out/gmw_zonal_stats_ste.parquet --data-variable data_variable
-      --stat mean --name-dim asgs_ste --fill-value 0
+    cmd: csdr vector-cube zonal-stats --input-zarr s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
+      --input-geoparquet s3://csdr-dvc-out/asgs-ste-2021.parquet --output-path out/gmw_zonal_stats_ste.parquet
+      --data-variable data_variable --stat mean --name-dim asgs_ste --fill-value 0
     deps:
     - path: ../../csdr/cli.py
       hash: md5
@@ -13,18 +11,17 @@ stages:
       size: 1498
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: 3dfa753bed0ed6c7c19b946169fbd5e1
-      size: 6079
-    - path: 
-        ../../datasets/global-mangrove-watch-annual-extent/out/gmw-v4019-1km-mollweide.zarr
+      md5: 239f2a9ec2a30d7dac7341766f72cf7d
+      size: 6767
+    - path: s3://csdr-dvc-out/asgs-ste-2021.parquet
       hash: md5
-      md5: 97b900b6008e0e211b1fb06046233278.dir
+      etag: 5678a37d9568e4df77cf408b92e97022-4
+      size: 28619337
+    - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
+      hash: md5
+      md5: 8800d167381a5149224eff76722f7ba0.dir
       size: 326561
       nfiles: 116
-    - path: ../../geometries/abs-asgs-edition-3/out/asgs-ste-2021.parquet
-      hash: md5
-      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
-      size: 28619337
     outs:
     - path: out/gmw_zonal_stats_ste.parquet
       hash: md5

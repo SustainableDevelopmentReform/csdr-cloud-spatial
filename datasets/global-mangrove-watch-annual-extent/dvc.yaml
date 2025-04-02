@@ -1,14 +1,14 @@
 # Pipeline specific to Global Mangrove Watch (GMW)
 
 vars:
-  - url: "https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1"
+  - url: https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1
   - archive_name: gmw_mng_2020_v4019_gtiff.zip
   - extract_dir: in/geotiffs
   - projected_dir: in/projected-geotiffs
   - vrt_path: in/projected-geotiffs.vrt
   - zarr_output: out/gmw-v4019-1km-mollweide.zarr
-  # Resample/Reproject from 0.0001 degree resolution (WGS84) to 1km resolution (Mollweide)
-  - target_crs: "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+    # Resample/Reproject from 0.0001 degree resolution (WGS84) to 1km resolution (Mollweide)
+  - target_crs: +proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs
   - target_resolution: 1000
   - resampling_method: nearest
 
@@ -26,21 +26,17 @@ stages:
           cache: false
 
   warp_gmw:
-    cmd:
-      - |
-        mkdir -p "${projected_dir}"
-        for INPUT_FILE in "${extract_dir}"/*.tif; do
-          OUTPUT_FILE="${projected_dir}/$(basename "$INPUT_FILE")"
-          echo "Warping $INPUT_FILE -> $OUTPUT_FILE"
-          gdalwarp \
-            -t_srs "${target_crs}" \
-            -tr "${target_resolution}" "${target_resolution}" \
-            -r "${resampling_method}" \
-            "$INPUT_FILE" \
-            "$OUTPUT_FILE"
-        done
+    cmd: >-
+      csdr datasets warp-raster
+      --input-dir "${extract_dir}"
+      --output-dir "${projected_dir}"
+      --target-crs "${target_crs}"
+      --target-resolution "${target_resolution}"
+      --resampling-method "${resampling_method}"
     deps:
       - ${extract_dir}
+      - ../../csdr/cli.py # Dependency on the main CLI script
+      - ../../csdr/cli_datasets.py # Dependency on the datasets script
     outs:
       - ${projected_dir}:
           cache: false
@@ -61,8 +57,8 @@ stages:
       --output-zarr ${zarr_output}
     deps:
       - ${vrt_path}
-      - ../../csdr/cli.py # Dependency on the main CLI script
-      - ../../csdr/cli_datasets.py # Dependency on the datasets script
+      - ../../csdr/cli.py
+      - ../../csdr/cli_datasets.py
     outs:
       - ${zarr_output}:
           cache: false
@@ -74,3 +70,12 @@ stages:
       - ${zarr_output} # Depends on the converted file
       - ../../csdr/cli.py
       - ../../csdr/cli_datasets.py
+
+  upload_gmw:
+    cmd: >-
+      aws s3 cp ${zarr_output} s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr --recursive
+    deps:
+      - ${zarr_output}
+    outs:
+      - s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr:
+          cache: false
