@@ -4,7 +4,6 @@ import xarray as xr
 import geopandas as gpd
 import logging
 from typing import List, Optional
-import xvec
 
 
 # Configure logging
@@ -19,43 +18,56 @@ vector_cube_app = typer.Typer()
 @vector_cube_app.command("zonal-stats")
 def zonal_stats(
     zarr_path: str = typer.Option(
-        ..., "--input-zarr",
-        help="Path to the input Zarr dataset."
+        ..., "--input-zarr", help="Path to the input Zarr dataset."
     ),
     geoparquet_path: str = typer.Option(
-        ..., "--input-geoparquet",
-        help="Path to the input GeoParquet file containing geometries."
+        ...,
+        "--input-geoparquet",
+        help="Path to the input GeoParquet file containing geometries.",
     ),
     output_path: str = typer.Option(
-        ..., "--output-path", "-o",
-        help="Output path for the GeoParquet file with calculated statistics."
+        ...,
+        "--output-path",
+        "-o",
+        help="Output path for the GeoParquet file with calculated statistics.",
     ),
     data_variable: str = typer.Option(
-        ..., "--data-variable",
-        help="Name of the data variable within the Zarr dataset to analyze."
+        ...,
+        "--data-variable",
+        help="Name of the data variable within the Zarr dataset to analyze.",
     ),
     stats: List[str] = typer.Option(
-        ..., "--stat",
-        help="Statistic to calculate (e.g., 'mean', 'sum'). Can be specified multiple times."
+        ...,
+        "--stat",
+        help="Statistic to calculate (e.g., 'mean', 'sum'). Can be specified multiple times.",
     ),
     output_crs: str = typer.Option(
-        "EPSG:4326", "--output-crs",
-        help="Target CRS for the final output GeoParquet file."
+        "EPSG:4326",
+        "--output-crs",
+        help="Target CRS for the final output GeoParquet file.",
     ),
     name_dim: str = typer.Option(
-        "geometry_dim", "--name-dim",
-        help="Name for the dimension created during zonal stats, representing the geometries."
+        "geometry_dim",
+        "--name-dim",
+        help="Name for the dimension created during zonal stats, representing the geometries.",
     ),
     fill_value: Optional[float] = typer.Option(
-        0, "--fill-value",
-        help="Value to fill NaN/nodata in the Zarr array before stats. Set to None to disable filling."
-    )
+        0,
+        "--fill-value",
+        help="Value to fill NaN/nodata in the Zarr array before stats. Set to None to disable filling.",
+    ),
 ):
     """
     Calculates zonal statistics from a Zarr dataset based on geometries
     from a GeoParquet file and outputs the results to a new GeoParquet file.
     """
-    if not zarr_path or not geoparquet_path or not output_path or not data_variable or not stats:
+    if (
+        not zarr_path
+        or not geoparquet_path
+        or not output_path
+        or not data_variable
+        or not stats
+    ):
         logger.error(
             "--input-zarr, --input-geoparquet, --output-path, --data-variable, and at least one --stat are required."
         )
@@ -66,8 +78,7 @@ def zonal_stats(
         ds = xr.open_zarr(zarr_path, decode_coords="all")
 
         if data_variable not in ds:
-            logger.error(
-                f"Data variable '{data_variable}' not found in Zarr dataset.")
+            logger.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
             logger.error(f"Available variables: {list(ds.data_vars)}")
             raise typer.Exit(code=1)
 
@@ -80,7 +91,8 @@ def zonal_stats(
         gdf_filtered = gdf_orig[gdf_orig.geometry.notnull()].copy()
         if len(gdf_filtered) != len(gdf_orig):
             logger.warning(
-                f"Removed {len(gdf_orig) - len(gdf_filtered)} rows with null geometries.")
+                f"Removed {len(gdf_orig) - len(gdf_filtered)} rows with null geometries."
+            )
         if len(gdf_filtered) == 0:
             logger.error("No valid geometries found in the input GeoParquet.")
             raise typer.Exit(code=1)
@@ -90,8 +102,7 @@ def zonal_stats(
             raise typer.Exit(code=1)
         logger.info(f"Using target CRS from Zarr: {target_crs}")
 
-        logger.info(
-            f"Reprojecting geometries from {gdf_filtered.crs} to {target_crs}")
+        logger.info(f"Reprojecting geometries from {gdf_filtered.crs} to {target_crs}")
         gdf_reprojected = gdf_filtered.to_crs(target_crs)
 
         # Crop the DataArray to the bounds of the reprojected geometries
@@ -117,10 +128,9 @@ def zonal_stats(
             y_coords="y",
             stats=stats,
             name=name_dim,  # Use the specified name for the new dimension
-            index=True  # Keep the original geometry index
+            index=True,  # Keep the original geometry index
         )
-        logger.info(
-            "Zonal statistics calculation complete. Computing results...")
+        logger.info("Zonal statistics calculation complete. Computing results...")
         stats_computed = stats_da.compute()  # Compute the dask array
         logger.info("Computation complete.")
 
@@ -131,10 +141,7 @@ def zonal_stats(
 
         # Merge the statistics back into the *original* filtered GeoDataFrame
         # Use left_index and right_index because zonal_stats preserves the index
-        stats_gdf = stats_gdf.merge(
-            gdf_filtered,
-            left_on="index", right_index=True
-        )
+        stats_gdf = stats_gdf.merge(gdf_filtered, left_on="index", right_index=True)
 
         # Reproject final output if needed
         if stats_gdf.crs != output_crs:

@@ -61,3 +61,6 @@ include = ["csdr/**.py"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["csdr"]
+
+[tool.ruff]
+ignore = ["E501"]
