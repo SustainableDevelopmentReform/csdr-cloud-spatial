@@ -6,8 +6,8 @@
         "asgs_abs_geoparquet_path": "s3://csdr-dvc-out/asgs-ste-2021.parquet",
         "gmw_zarr_path": "s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr"
     },
-    "git_commit": "6f5ef3c4823dc7234355999c17a1f33d3e2d76a7",
-    "git_commit_date": "2025-04-21 22:20:35 +1000",
+    "git_commit": "f1e84c4f3b9634b08a67aafe9d13ab85d7d53b0b",
+    "git_commit_date": "2025-04-21 22:33:43 +1000",
     "dependencies": [
         "datasets/global-mangrove-watch-annual-extent/dvc.yaml",
         "geometries/abs-asgs-edition-3/dvc.yaml"
