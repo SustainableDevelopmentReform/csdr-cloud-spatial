@@ -52,9 +52,9 @@ There are a few components to each pipeline
 
 This is used for storing intermediary datasets, geometries, and products - it does not cache input data, and it not a DVC remote (see DVC limitations). It is currently specified in each `params.yaml` file.
 
-To get this working locally, you will need to change the `out_s3_path` in all `params.yaml` files to your own S3 bucket (until we have another S3 bucket setup).
+To get this working locally, you will need to change all S3 paths (`s3://csdr-dvc-out`) in all `params.yaml` and `dvc.yaml` files to your own S3 bucket (until we have another S3 bucket setup).
 
-- Alternatively, change it to a local directory (ideally outside the git repo) - for example `out_s3_path: /tmp/csdr/`
+- Alternatively, change it to a local directory (ideally outside the git repo) - for example `/tmp/csdr/`
 
 ### Check status of the pipeline
 
@@ -129,7 +129,7 @@ The `csdr dvc publish` command will generate a provenance file for each pipeline
 csdr dvc publish
 ```
 
-**Note** this will also commit the changes to the git repository (it makes two commits, one before and one after the provenance generation).
+**Note** this will also commit the changes to the git repository (it makes two commits, one before and one after the provenance generation). You can skip this by using the `--no-commit` flag.
 
 ### DVC Limitations
 

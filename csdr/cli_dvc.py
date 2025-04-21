@@ -180,7 +180,12 @@ def publish(
         "--post-commit-message",
         "-c",
         help="Git commit message if changes are detected.",
-    )
+    ),
+    no_commit: bool = typer.Option(
+        False,
+        "--no-commit",
+        help="Do not commit changes to Git.",
+    ),
 ):
     """
     Generates provenance JSON files for DVC pipelines after ensuring the
@@ -188,7 +193,10 @@ def publish(
     """
     logger.info("Starting provenance generation...")
 
-    commit_if_changes(pre_commit_message)
+    if not no_commit:
+        commit_if_changes(pre_commit_message)
+    else:
+        logger.info("Skipping Git commit - --no-commit flag used.")
 
     try:
         logger.info("Initializing DVC repo object...")
@@ -290,7 +298,10 @@ def publish(
 
         logger.info("Provenance generation finished.")
 
-        commit_if_changes(post_commit_message)
+        if not no_commit:
+            commit_if_changes(post_commit_message)
+        else:
+            logger.info("Skipping Git commit - --no-commit flag used.")
 
     except NotDvcRepoError:
         logger.error("Current directory is not a DVC repository.")
