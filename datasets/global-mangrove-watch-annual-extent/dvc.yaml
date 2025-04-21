@@ -1,6 +1,7 @@
 # Pipeline specific to Global Mangrove Watch (GMW)
 
 vars:
+  - s3_bucket: csdr-dvc-out
   - url: https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1
   - archive_name: gmw_mng_2020_v4019_gtiff.zip
   - extract_dir: in/geotiffs
@@ -35,7 +36,7 @@ stages:
       --resampling-method "${resampling_method}"
     deps:
       - ${extract_dir}
-      - ../../csdr/cli.py # Dependency on the main CLI script
+      # Dependency on the main CLI script
       - ../../csdr/cli_datasets.py # Dependency on the datasets script
     outs:
       - ${projected_dir}:
@@ -57,7 +58,7 @@ stages:
       --output-zarr ${zarr_output}
     deps:
       - ${vrt_path}
-      - ../../csdr/cli.py
+
       - ../../csdr/cli_datasets.py
     outs:
       - ${zarr_output}:
@@ -68,12 +69,12 @@ stages:
       csdr datasets validate-zarr --input-zarr ${zarr_output}
     deps:
       - ${zarr_output} # Depends on the converted file
-      - ../../csdr/cli.py
+
       - ../../csdr/cli_datasets.py
 
   upload_gmw:
     cmd: >-
-      aws s3 cp ${zarr_output} s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr --recursive
+      aws s3 cp ${zarr_output} s3://${s3_bucket}/gmw-v4019-1km-mollweide.zarr --recursive
     deps:
       - ${zarr_output}
     outs:

@@ -16,6 +16,8 @@ dependencies = [
     "boto3",
     "dask",
     "distributed",
+    "dvc",
+    "dvc-s3",
     "exactextract",
     "folium",
     "geopandas",

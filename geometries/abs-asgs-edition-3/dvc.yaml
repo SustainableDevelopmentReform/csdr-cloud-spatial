@@ -6,6 +6,7 @@ vars:
   - shapefile_name: STE_2021_AUST_GDA2020.shp
   - extract_dir: in/asgs-ste-2021
   - parquet_output: out/asgs-ste-2021.parquet # Relative to project root
+  - s3_bucket: csdr-dvc-out
 
 stages:
   download_extract_asgs:
@@ -31,7 +32,7 @@ stages:
     # Depend on the directory from previous stage and the script
     deps:
       - ${extract_dir}
-      - ../../csdr/cli.py
+
       - ../../csdr/cli_geometries.py
     # Define the output relative to the main project root
     outs:
@@ -46,7 +47,7 @@ stages:
       # --schema ../../../schemas/geoparquet_standard.json # Example schema path
     deps:
       - ${parquet_output} # Depends on the converted file
-      - ../../csdr/cli.py
+
       - ../../csdr/cli_geometries.py
 
   # publish_asgs:
@@ -59,9 +60,9 @@ stages:
 
   upload_asgs:
     cmd: >-
-      aws s3 cp ${parquet_output} s3://csdr-dvc-out/asgs-ste-2021.parquet
+      aws s3 cp ${parquet_output} s3://${s3_bucket}/asgs-ste-2021.parquet
     deps:
       - ${parquet_output}
     outs:
-      - s3://csdr-dvc-out/asgs-ste-2021.parquet:
+      - s3://${s3_bucket}/asgs-ste-2021.parquet:
           cache: false

@@ -41,7 +41,21 @@ We are using [DVC](https://dvc.org/doc/start) to manage the pipeline, this allow
 
 See installation instructions on the [DVC website](https://dvc.org/doc/install).
 
-### Reproducing the pipelines
+### Check status of the pipeline
+
+This will print a list of pipelines that have changed, and need to be recomputed. Note, it will not track input datasets (that need to be ingested), it will track all other dependencies - including code, intermediary datasets and geometries, etc.
+
+```bash
+csdr dvc status
+```
+
+You can also filter by pipeline type:
+
+- `csdr dvc status datasets`
+- `csdr dvc status geometries`
+- `csdr dvc status products`
+
+### Reproducing the pipelines (locally)
 
 You can compute all datasets and geometries by running:
 
@@ -49,7 +63,7 @@ You can compute all datasets and geometries by running:
 dvc repro -P
 ```
 
-**Note** you can use the `--allow-missing` [flag](https://dvc.org/doc/command-reference/repro#--allow-missing) skip stages with no other changes than missing data
+**Note** if you do not have input/ingested datasets, these will all be downloaded locally - you can use the `--allow-missing` [flag](https://dvc.org/doc/command-reference/repro#--allow-missing) skip stages with no other changes than missing data
 
 - This is useful if you are using existing intermediary datasets/geometries and only want to compute the products. Otherwise you will need to ingest and recompute the intermediary datasets/geometries, if the input data doesn't exist.
 
@@ -61,10 +75,10 @@ You can compute all datasets by running:
 dvc repro -R datasets/
 ```
 
-You can also compute a specific dataset by running:
+Note, you can also reproduce a specific pipeline by running:
 
 ```bash
-dvc repro datasets/<dataset-name>/dvc.yaml
+dvc repro <pipeline-type>/<dataset-name>/dvc.yaml
 
 # For example
 dvc repro datasets/global-mangrove-watch-annual-extent/dvc.yaml
@@ -78,18 +92,17 @@ You can compute all geometries by running:
 dvc repro -R geometries/
 ```
 
-You can also compute a specific geometry by running:
+### Products
+
+You can compute all products by running:
 
 ```bash
-dvc repro geometries/<geometry-name>/dvc.yaml
-
-# For example
-dvc repro geometries/abs-asgs-edition-3/dvc.yaml
+dvc repro -R products/
 ```
 
 ### Using outputs
 
-There is an example of how to use the outputs in the `examples` folder. You must have run the pipeline at least once before using the examples.
+There is an example of how to use the outputs in the `examples` folder.
 
 - [Global Mangrove Watch + ABS ASGS States](examples/global-mangrove-watch/abs-asgs-ste.ipynb)
 

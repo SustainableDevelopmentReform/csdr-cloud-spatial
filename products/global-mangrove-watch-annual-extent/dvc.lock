@@ -1,14 +1,10 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
+    cmd: csdr vector-cube zonal-stats  --input-zarr s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       --input-geoparquet s3://csdr-dvc-out/asgs-ste-2021.parquet --output-path out/gmw_zonal_stats_ste.parquet
       --data-variable data_variable --stat mean --name-dim asgs_ste --fill-value 0
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
       md5: 239f2a9ec2a30d7dac7341766f72cf7d
@@ -19,7 +15,7 @@ stages:
       size: 28619337
     - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 8800d167381a5149224eff76722f7ba0.dir
+      md5: 1f7914e6a40c869208bf72f7802f3905.dir
       size: 326561
       nfiles: 116
     outs:
