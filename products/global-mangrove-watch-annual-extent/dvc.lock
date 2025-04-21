@@ -7,15 +7,15 @@ stages:
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: 239f2a9ec2a30d7dac7341766f72cf7d
-      size: 6767
+      md5: d8cc9191a55342b660f96ee0538effad
+      size: 6711
     - path: s3://csdr-dvc-out/asgs-ste-2021.parquet
       hash: md5
       etag: 5678a37d9568e4df77cf408b92e97022-4
       size: 28619337
     - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 1f7914e6a40c869208bf72f7802f3905.dir
+      md5: 5c8821c97ae3072eb5b2cd5df8f1a4c2.dir
       size: 326561
       nfiles: 116
     outs:

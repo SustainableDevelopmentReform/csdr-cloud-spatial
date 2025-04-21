@@ -1,0 +1,14 @@
+{
+    "pipeline_file": "/datasets/global-mangrove-watch-annual-extent/dvc.yaml",
+    "lock_file": "/datasets/global-mangrove-watch-annual-extent/dvc.lock",
+    "params": {
+        "out_s3_path": "s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr",
+        "url": "https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
+        "target_crs": "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs",
+        "target_resolution": 1000,
+        "resampling_method": "nearest"
+    },
+    "git_commit": "6f5ef3c4823dc7234355999c17a1f33d3e2d76a7",
+    "git_commit_date": "2025-04-21 22:20:35 +1000",
+    "dependencies": []
+}

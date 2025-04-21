@@ -1,11 +1,12 @@
+import logging
+import subprocess
+import zipfile
 from typing import Any, Dict
 
 import boto3
+import requests
 from affine import Affine
 from odc.geo.geobox import GeoBox, GeoboxTiles
-import requests
-import zipfile
-import logging
 
 WGS84GRID10 = GeoboxTiles(
     GeoBox(
@@ -126,17 +127,7 @@ def execute(year: int, tile: tuple[int, int] | None = None):
     return job_id
 
 
-# === File Handling Utilities ===
-
-# Configure logging specifically for utils if needed, or rely on root logger
-# Use __name__ to get 'csdr.utils' logger
 util_logger = logging.getLogger(__name__)
-# Example handler if you want separate logging configuration:
-# handler = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# handler.setFormatter(formatter)
-# util_logger.addHandler(handler)
-# util_logger.setLevel(logging.INFO)
 
 
 def download_file(url: str, local_path: str):
@@ -169,3 +160,43 @@ def unzip_file(zip_path: str, extract_dir: str):
     except Exception as e:
         util_logger.error(f"Error unzipping {zip_path}: {e}")
         raise
+
+
+def run_command(command: list[str]) -> tuple[bool, str, str]:
+    """Runs a shell command and returns success status, stdout, and stderr."""
+    try:
+        process = subprocess.run(
+            command,
+            check=False,  # Don't raise exception on non-zero exit
+            capture_output=True,
+            text=True,
+            encoding='utf-8'  # Ensure consistent encoding
+        )
+        # Log stderr even on success, as it might contain warnings
+        if process.stderr:
+            cmd_str = ' '.join(command)
+            util_logger.debug(f"Command '{cmd_str}' stderr:")
+            util_logger.debug(process.stderr.strip())
+
+        if process.returncode == 0:
+            return True, process.stdout.strip(), ""
+        else:
+            # Construct error message carefully to avoid f-string issues
+            cmd_str = ' '.join(command)
+            stderr_str = process.stderr.strip()
+            stdout_str = process.stdout.strip()
+            error_message = (
+                f"Command '{cmd_str}' failed with exit code {process.returncode}.\n"
+                f"Stderr:\n{stderr_str}\n"
+                f"Stdout:\n{stdout_str}"
+            )
+            util_logger.error(error_message)
+            return False, stdout_str, stderr_str
+    except FileNotFoundError:
+        cmd_zero = command[0] if command else "<empty command>"
+        util_logger.error(f"Command not found: {cmd_zero}")
+        return False, "", f"Command not found: {cmd_zero}"
+    except Exception as e:
+        cmd_str = ' '.join(command)
+        util_logger.error(f"Failed to run command '{cmd_str}': {e}")
+        return False, "", str(e)

@@ -16,14 +16,10 @@ stages:
       --target-crs "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
       --target-resolution "1000" --resampling-method "nearest"
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: 018267efa45dec8ba44861fd2cc01528
-      size: 6934
+      md5: d1f51fc72635cebe4331429981ed8762
+      size: 6465
     - path: in/geotiffs
       hash: md5
       md5: 57c331a471461096ee1bd5a5c20b6c69.dir
@@ -53,14 +49,10 @@ stages:
     cmd: csdr datasets raster-to-zarr --input-raster in/projected-geotiffs.vrt --output-zarr
       out/gmw-v4019-1km-mollweide.zarr
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: 018267efa45dec8ba44861fd2cc01528
-      size: 6934
+      md5: d1f51fc72635cebe4331429981ed8762
+      size: 6465
     - path: in/projected-geotiffs.vrt
       hash: md5
       md5: 6cad439408dfe8227e4be6752f55050f
@@ -68,23 +60,19 @@ stages:
     outs:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: cb2a85d00d666652789fd8cfb817746d.dir
+      md5: 1089f5020a3292d59ee3bc928d3f9131.dir
       size: 326561
       nfiles: 116
   validate_gmw:
     cmd: csdr datasets validate-zarr --input-zarr out/gmw-v4019-1km-mollweide.zarr
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: 018267efa45dec8ba44861fd2cc01528
-      size: 6934
+      md5: d1f51fc72635cebe4331429981ed8762
+      size: 6465
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: cb2a85d00d666652789fd8cfb817746d.dir
+      md5: 1089f5020a3292d59ee3bc928d3f9131.dir
       size: 326561
       nfiles: 116
   upload_gmw:
@@ -93,12 +81,12 @@ stages:
     deps:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: cb2a85d00d666652789fd8cfb817746d.dir
+      md5: 1089f5020a3292d59ee3bc928d3f9131.dir
       size: 326561
       nfiles: 116
     outs:
     - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 1f7914e6a40c869208bf72f7802f3905.dir
+      md5: 5c8821c97ae3072eb5b2cd5df8f1a4c2.dir
       size: 326561
       nfiles: 116

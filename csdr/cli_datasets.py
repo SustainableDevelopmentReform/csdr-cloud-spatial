@@ -2,12 +2,13 @@ import typer
 import xarray as xr
 import logging
 import rioxarray
-import subprocess
 import os
 import glob
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 import multiprocessing
+
+from csdr.utils import run_command
 
 # Configure logging
 logging.basicConfig(
@@ -46,24 +47,13 @@ def _run_gdalwarp(input_file: str, output_dir: str, target_crs: str,
         input_file,
         output_file,
     ]
-    try:
-        # result is implicitly used by check=True
-        result = subprocess.run(  # noqa: F841
-            cmd, check=True, capture_output=True, text=True, encoding='utf-8'
-        )
-        return None  # Success
-    except subprocess.CalledProcessError as e:
-        # Properly format the multiline error message
-        command_str = ' '.join(cmd)
-        error_message = (
-            f"gdalwarp failed for {input_file} -> {output_file}.\n"
-            f"Command: {command_str}\n"
-            f"Stderr:\n{e.stderr}\n"
-            f"Stdout:\n{e.stdout}"
-        )
-        return error_message
-    except Exception as e:
-        return f"Unexpected error during gdalwarp for {input_file}: {e}"
+
+    warp_success, _, warp_stderr = run_command(cmd)
+    if not warp_success:
+        logger.error(
+            f"Failed to warp {input_file} -> {output_file} - {warp_stderr}")
+        return warp_stderr
+    return None
 
 
 @dataset_app.command("warp-raster")

@@ -43,7 +43,7 @@ See installation instructions on the [DVC website](https://dvc.org/doc/install).
 
 ### Check status of the pipeline
 
-This will print a list of pipelines that have changed, and need to be recomputed. Note, it will not track input datasets (that need to be ingested), it will track all other dependencies - including code, intermediary datasets and geometries, etc.
+This will print a list of pipelines that have changed, and need to be recomputed. Note, it will not track input datasets (that need to be ingested), but it will track all other dependencies - including code, intermediary datasets and geometries, etc.
 
 ```bash
 csdr dvc status
@@ -105,6 +105,21 @@ dvc repro -R products/
 There is an example of how to use the outputs in the `examples` folder.
 
 - [Global Mangrove Watch + ABS ASGS States](examples/global-mangrove-watch/abs-asgs-ste.ipynb)
+
+### Provenance
+
+The `csdr dvc publish` command will generate a provenance file for each pipeline. This will include the pipeline file, the git commit hash, the git commit date, and the dependencies.
+
+```bash
+csdr dvc publish
+```
+
+**Note** this will also commit the changes to the git repository (it makes two commits, one before and one after the provenance generation).
+
+### DVC Limitations
+
+- You can't template params/variables in an entire repo - so there is no easy way to have a high-level variable and apply to all pipelines.
+- Datasets stored on DVC Remotes can't be used in the same was as direct S3 access (eg zarr or geoparquet files).
 
 ## Build and Push Workflow
 

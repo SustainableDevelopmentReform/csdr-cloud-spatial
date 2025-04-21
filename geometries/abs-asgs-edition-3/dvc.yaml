@@ -1,12 +1,11 @@
 # Pipeline specific to ASGS STE Geometries (Edition 3)
 
+# Internal variables
 vars:
-  - url: "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip"
   - archive_name: STE_2021_AUST_SHP_GDA2020.zip
   - shapefile_name: STE_2021_AUST_GDA2020.shp
   - extract_dir: in/asgs-ste-2021
   - parquet_output: out/asgs-ste-2021.parquet # Relative to project root
-  - s3_bucket: csdr-dvc-out
 
 stages:
   download_extract_asgs:
@@ -60,9 +59,9 @@ stages:
 
   upload_asgs:
     cmd: >-
-      aws s3 cp ${parquet_output} s3://${s3_bucket}/asgs-ste-2021.parquet
+      aws s3 cp ${parquet_output} ${out_s3_path}
     deps:
       - ${parquet_output}
     outs:
-      - s3://${s3_bucket}/asgs-ste-2021.parquet:
+      - ${out_s3_path}:
           cache: false

@@ -1,7 +1,5 @@
+# Internal variables
 vars:
-  - s3_bucket: csdr-dvc-out
-  - asgs_abs_geoparquet_path: asgs-ste-2021.parquet
-  - gmw_zarr_path: gmw-v4019-1km-mollweide.zarr
   - gmw_data_variable: data_variable # Variable name within the Zarr
   - zonal_stat: mean # Statistic to calculate
   - geometry_name_dim: asgs_ste # Dimension name for geometries in output
@@ -13,16 +11,16 @@ stages:
     desc: Calculate zonal statistics (mean mangrove proportion) per ASGS State/Territory
     cmd: >-
       csdr vector-cube zonal-stats 
-      --input-zarr s3://${s3_bucket}/${gmw_zarr_path}
-      --input-geoparquet s3://${s3_bucket}/${asgs_abs_geoparquet_path}
+      --input-zarr ${gmw_zarr_path}
+      --input-geoparquet ${asgs_abs_geoparquet_path}
       --output-path ${zonal_stats_output}
       --data-variable ${gmw_data_variable}
       --stat ${zonal_stat}
       --name-dim ${geometry_name_dim}
       --fill-value ${fill_value}
     deps:
-      - s3://${s3_bucket}/${gmw_zarr_path}
-      - s3://${s3_bucket}/${asgs_abs_geoparquet_path}
+      - ${gmw_zarr_path}
+      - ${asgs_abs_geoparquet_path}
       - ../../csdr/cli_vector_cube.py
     outs:
       - ${zonal_stats_output}:

@@ -1,17 +1,12 @@
 # Pipeline specific to Global Mangrove Watch (GMW)
 
+# Internal variables
 vars:
-  - s3_bucket: csdr-dvc-out
-  - url: https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1
   - archive_name: gmw_mng_2020_v4019_gtiff.zip
   - extract_dir: in/geotiffs
   - projected_dir: in/projected-geotiffs
   - vrt_path: in/projected-geotiffs.vrt
   - zarr_output: out/gmw-v4019-1km-mollweide.zarr
-    # Resample/Reproject from 0.0001 degree resolution (WGS84) to 1km resolution (Mollweide)
-  - target_crs: +proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs
-  - target_resolution: 1000
-  - resampling_method: nearest
 
 stages:
   download_extract_gmw:
@@ -74,9 +69,9 @@ stages:
 
   upload_gmw:
     cmd: >-
-      aws s3 cp ${zarr_output} s3://${s3_bucket}/gmw-v4019-1km-mollweide.zarr --recursive
+      aws s3 cp ${zarr_output} ${out_s3_path} --recursive
     deps:
       - ${zarr_output}
     outs:
-      - s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr:
+      - ${out_s3_path}:
           cache: false

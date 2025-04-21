@@ -4,7 +4,7 @@ import xarray as xr
 import geopandas as gpd
 import logging
 from typing import List, Optional
-import xvec
+import xvec  # noqa: F401
 
 
 # Configure logging
@@ -163,7 +163,6 @@ def zonal_stats(
         stats_gdf = stats_computed.xvec.to_geodataframe()
 
         # Merge the statistics back into the *original* filtered GeoDataFrame
-        # Use left_index/right_index; zonal_stats preserves the index
         stats_gdf = stats_gdf.merge(
             gdf_filtered, left_on="index", right_index=True)
 
