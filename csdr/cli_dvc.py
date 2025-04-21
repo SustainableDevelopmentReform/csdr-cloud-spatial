@@ -32,6 +32,14 @@ def status(
             )
         ),
     ] = None,
+    allow_missing: bool = typer.Option(
+        False,
+        "--allow-missing",
+        help=(
+            "Allow missing data. Useful if using existing intermediary "
+            "datasets/geometries and only want to compute products."
+        ),
+    ),
 ):
     """Prints the status of the DVC repo."""
     logger.info("Checking status of DVC repo...")
@@ -39,7 +47,7 @@ def status(
         repo: Repo = Repo(uninitialized=False)
 
         reproduce_kwargs = {"dry": True, "on_error": "ignore",
-                            "allow_missing": True, "recursive": True}
+                            "allow_missing": allow_missing, "recursive": True}
 
         if pipeline_type:
             if pipeline_type in ["datasets", "geometries", "products"]:
@@ -63,7 +71,10 @@ def status(
             logger.info(f"Changed: {stage.relpath}:{stage.name}")
             changed_pipelines.add(stage.relpath)
 
-        logger.info(f"Changed pipelines: {changed_pipelines}")
+        if changed_pipelines:
+            logger.info(f"Changed pipelines: {changed_pipelines}")
+        else:
+            logger.info("No changes detected.")
 
     except NotDvcRepoError:
         logger.error("Current directory is not a DVC repository.")
