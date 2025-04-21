@@ -69,7 +69,7 @@ stages:
 
   upload_gmw:
     cmd: >-
-      aws s3 cp ${zarr_output} ${out_s3_path} --recursive
+      if [[ ${out_s3_path} == s3://* ]]; then aws s3 cp ${zarr_output} ${out_s3_path} --recursive; else echo "out_s3_path does not start with s3://, skipping upload" && cp -r ${zarr_output} ${out_s3_path}; fi
     deps:
       - ${zarr_output}
     outs:

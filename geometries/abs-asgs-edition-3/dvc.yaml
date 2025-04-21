@@ -59,7 +59,7 @@ stages:
 
   upload_asgs:
     cmd: >-
-      aws s3 cp ${parquet_output} ${out_s3_path}
+      if [[ ${out_s3_path} == s3://* ]]; then aws s3 cp ${parquet_output} ${out_s3_path}; else echo "out_s3_path does not start with s3://, skipping upload" && cp ${parquet_output} ${out_s3_path}; fi
     deps:
       - ${parquet_output}
     outs:
