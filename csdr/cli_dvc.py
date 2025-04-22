@@ -80,7 +80,7 @@ def status(
         logger.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.error(f"Failed to get DVC status: {e}")
+        logger.exception(f"Failed to get DVC status: {e}")
         raise typer.Exit(code=1)
 
 # This isn't really needed at the moment, just use `dvc repro`
@@ -267,6 +267,8 @@ def publish(
                 "git_commit": dvc_lock_commit_hash,
                 "git_commit_date": dvc_lock_commit_date,
                 "dependencies": [],
+                # TODO add docker info (if running in container)
+                #
             }
 
             # Aggregate info from each stage within the pipeline
@@ -288,10 +290,10 @@ def publish(
                 logger.info(
                     f"Successfully generated provenance file: {provenance_file_path}")
             except IOError as e:
-                logger.error(
+                logger.exception(
                     f"Failed to write provenance file {provenance_file_path}: {e}")
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"An unexpected error occurred while writing "
                     f"{provenance_file_path}: {e}"
                 )
@@ -307,9 +309,8 @@ def publish(
         logger.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.error(
-            f"Failed during DVC processing or provenance generation: {e} ",
-            exc_info=True)  # Log traceback
+        logger.exception(
+            f"Failed during DVC processing or provenance generation: {e} ")
         raise typer.Exit(code=1)
 
 

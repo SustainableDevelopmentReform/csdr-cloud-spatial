@@ -138,7 +138,7 @@ def warp_raster(
                         failed_warps += 1
                 except Exception as exc:
                     # Log the exception details, breaking the line
-                    logger.error(
+                    logger.exception(
                         f"{input_file} generated an exception "
                         f"during processing: {exc}"
                     )
@@ -154,7 +154,7 @@ def warp_raster(
             # raise typer.Exit(code=1)
 
     except Exception as e:
-        logger.error(f"Raster warping process failed: {e}")
+        logger.exception(f"Raster warping process failed: {e}")
         raise typer.Exit(code=1)
 
 
@@ -193,7 +193,7 @@ def raster_to_zarr(
         logger.info("Successfully wrote Zarr store.")
 
     except Exception as e:
-        logger.error(f"Raster to Zarr conversion failed: {e}")
+        logger.exception(f"Raster to Zarr conversion failed: {e}")
         raise typer.Exit(code=1)
 
 

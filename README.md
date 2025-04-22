@@ -134,7 +134,8 @@ csdr dvc publish
 ### DVC Limitations
 
 - You can't template params/variables in an entire repo - so there is no easy way to have a high-level variable and apply to all pipelines.
-- Datasets stored on DVC Remotes can't be used in the same way as direct S3 access (eg zarr or geoparquet files).
+- Datasets stored on DVC Remotes can't be used in the same way as direct S3 access (eg zarr or geoparquet files), so we are using datasets in S3 as ["external dependencies"](https://dvc.org/doc/user-guide/pipelines/external-dependencies-and-outputs).
+- DVC is known to have performance issues hashing larger datasets, when we come across this we will need to wrap up large datasets with some placeholder file for DVC to track - this isn't too difficult, but still work that needs to be done when we hit this issue
 
 ## Build and Push Workflow
 

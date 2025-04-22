@@ -141,7 +141,7 @@ def download_file(url: str, local_path: str):
                 f.write(chunk)
         util_logger.info(f"Successfully downloaded to {local_path}")
     except requests.exceptions.RequestException as e:
-        util_logger.error(f"Error downloading {url}: {e}")
+        util_logger.exception(f"Error downloading {url}: {e}")
         raise
 
 
@@ -158,7 +158,7 @@ def unzip_file(zip_path: str, extract_dir: str):
         )
         raise
     except Exception as e:
-        util_logger.error(f"Error unzipping {zip_path}: {e}")
+        util_logger.exception(f"Error unzipping {zip_path}: {e}")
         raise
 
 
@@ -198,5 +198,5 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
         cmd_str = ' '.join(command)
-        util_logger.error(f"Failed to run command '{cmd_str}': {e}")
+        util_logger.exception(f"Failed to run command '{cmd_str}': {e}")
         return False, "", str(e)
