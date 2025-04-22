@@ -15,7 +15,7 @@ stages:
       size: 28619337
     - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 5c8821c97ae3072eb5b2cd5df8f1a4c2.dir
+      md5: be6b4446fb861ed0eff99c7927bf0b98.dir
       size: 326561
       nfiles: 116
     outs:

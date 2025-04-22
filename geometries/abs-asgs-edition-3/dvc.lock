@@ -50,7 +50,10 @@ stages:
       md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
       size: 28619337
   upload_asgs:
-    cmd: aws s3 cp out/asgs-ste-2021.parquet s3://csdr-dvc-out/asgs-ste-2021.parquet
+    cmd: if [[ s3://csdr-dvc-out/asgs-ste-2021.parquet == s3://* ]]; then aws s3 cp
+      out/asgs-ste-2021.parquet s3://csdr-dvc-out/asgs-ste-2021.parquet; else echo
+      "out_s3_path does not start with s3://, skipping upload" && cp out/asgs-ste-2021.parquet
+      s3://csdr-dvc-out/asgs-ste-2021.parquet; fi
     deps:
     - path: out/asgs-ste-2021.parquet
       hash: md5
