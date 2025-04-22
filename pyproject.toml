@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
     { name = "Alex Leith", email = "alex@auspatious.com" },
-    { name = "Nick Forbe-Smith", email = "nick@forbes-smith.com" },
+    { name = "Nick Forbes-Smith", email = "nick@forbes-smith.com" },
 ]
 keywords = ["data"]
 
@@ -16,6 +16,8 @@ dependencies = [
     "boto3",
     "dask",
     "distributed",
+    "dvc",
+    "dvc-s3",
     "exactextract",
     "folium",
     "geopandas",
@@ -31,7 +33,7 @@ dependencies = [
     "requests",
     "rio-stac",
     "rioxarray",
-    "s3fs",
+    "s3fs>=2025.3.2",
     "scipy",
     "shapely",
     "typer",
@@ -55,3 +57,12 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "csdr/_version.py"
+
+[tool.hatch.build]
+include = ["csdr/**.py"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["csdr"]
+
+[tool.ruff]
+ignore = ["E501"]
