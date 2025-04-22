@@ -4,12 +4,13 @@
 
 - Create Python environment and install the dependencies
 - Read [DVC](https://dvc.org/doc/start) docs
+  - [Install DVC](https://dvc.org/doc/install)
 - In all `params.yaml` and `dvc.yaml` files, replace `s3://csdr-dvc-out` with your own S3 bucket (until we have another S3 bucket setup)
   - Alternatively, change it to a local directory (ideally outside the git repo) - for example `out_s3_path: /tmp/csdr/`
 - Run `csdr dvc status` - it should list all pipelines need to be run
 - Run `dvc dag` - have a look at the graph of compute
 - Then run `dvc repro -P` at root dir to run all compute
-- Finally, run `csdr dvc publish --no-commit` to generate the provenance JSOn files
+- Finally, run `csdr dvc publish --no-commit` to generate the provenance JSON files
 
 Make some changes to some `params.yaml` - or create a new datasets/geometries/products pipeline! - and then repeat
 
