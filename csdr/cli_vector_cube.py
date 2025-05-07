@@ -41,7 +41,7 @@ def zonal_stats(
         ...,
         "--stat",
         help="Statistic to calculate (e.g., 'mean', 'sum'). "
-             "Can be specified multiple times.",
+        "Can be specified multiple times.",
     ),
     output_crs: str = typer.Option(
         "EPSG:4326",
@@ -52,13 +52,13 @@ def zonal_stats(
         "geometry_dim",
         "--name-dim",
         help="Name for the dimension created during zonal stats, "
-             "representing the geometries.",
+        "representing the geometries.",
     ),
     fill_value: Optional[float] = typer.Option(
         0,
         "--fill-value",
         help="Value to fill NaN/nodata in the Zarr array before stats. "
-             "Set to None to disable filling.",
+        "Set to None to disable filling.",
     ),
 ):
     """
@@ -80,19 +80,16 @@ def zonal_stats(
 
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
-        # Use csdr-dvc-test profile for S3
+
         if zarr_path.startswith("s3://"):
             ds = xr.open_zarr(
-                zarr_path,
-                storage_options={"profile": "csdr-dvc-test"},
-                decode_coords="all"  # Ensure coords are decoded
+                zarr_path, decode_coords="all"  # Ensure coords are decoded
             )
         else:
             ds = xr.open_zarr(zarr_path, decode_coords="all")
 
         if data_variable not in ds:
-            logger.error(
-                f"Data variable '{data_variable}' not found in Zarr dataset.")
+            logger.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
             logger.error(f"Available variables: {list(ds.data_vars)}")
             raise typer.Exit(code=1)
 
@@ -101,7 +98,7 @@ def zonal_stats(
         logger.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
             gdf_orig = gpd.read_parquet(
-                geoparquet_path, storage_options={"profile": "csdr-dvc-test"}
+                geoparquet_path,
             )
         else:
             gdf_orig = gpd.read_parquet(geoparquet_path)
@@ -122,8 +119,7 @@ def zonal_stats(
             raise typer.Exit(code=1)
         logger.info(f"Using target CRS from Zarr: {target_crs}")
 
-        logger.info(
-            f"Reprojecting geometries from {gdf_filtered.crs} to {target_crs}")
+        logger.info(f"Reprojecting geometries from {gdf_filtered.crs} to {target_crs}")
         gdf_reprojected = gdf_filtered.to_crs(target_crs)
 
         # Crop the DataArray to the bounds of the reprojected geometries
@@ -152,8 +148,7 @@ def zonal_stats(
             name=name_dim,  # Use the specified name for the new dimension
             index=True,  # Keep the original geometry index
         )
-        logger.info(
-            "Zonal statistics calculation complete. Computing results...")
+        logger.info("Zonal statistics calculation complete. Computing results...")
         stats_computed = stats_da.compute()  # Compute the dask array
         logger.info("Computation complete.")
 
@@ -163,8 +158,7 @@ def zonal_stats(
         stats_gdf = stats_computed.xvec.to_geodataframe()
 
         # Merge the statistics back into the *original* filtered GeoDataFrame
-        stats_gdf = stats_gdf.merge(
-            gdf_filtered, left_on="index", right_index=True)
+        stats_gdf = stats_gdf.merge(gdf_filtered, left_on="index", right_index=True)
 
         # Reproject final output if needed
         if stats_gdf.crs != output_crs:
