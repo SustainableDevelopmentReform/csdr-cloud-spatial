@@ -3,7 +3,7 @@ name = "csdr-pipeline"
 dynamic = ["version"]
 description = "CSDR data processing pipeline tooling"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [
     { name = "Alex Leith", email = "alex@auspatious.com" },
@@ -12,34 +12,34 @@ authors = [
 keywords = ["data"]
 
 dependencies = [
-    "bokeh",
-    "boto3",
-    "dask",
-    "distributed",
-    "dvc",
-    "dvc-s3",
-    "exactextract",
-    "folium",
-    "geopandas",
-    "hatchling",
-    "hatch-vcs",
-    "matplotlib",
-    "odc-stac",
-    "odc-geo",
-    "pandas",
-    "pyarrow",
-    "pystac",
-    "pystac-client",
-    "requests",
-    "rio-stac",
-    "rioxarray",
-    "s3fs>=2025.3.2",
-    "scipy",
-    "shapely",
-    "typer",
-    "xarray",
-    "xvec",
-    "zarr"
+    "bokeh==3.7.2",
+    "boto3==1.37.1",
+    "dask==2025.3.0",
+    "distributed==2025.3.0",
+    "dvc==3.59.1",
+    "dvc-s3==3.2.0",
+    "exactextract==0.2.1",
+    "folium==0.19.5",
+    "geopandas==1.0.1",
+    "hatchling==1.27.0",
+    "hatch-vcs==0.4.0",
+    "matplotlib==3.10.1",
+    "odc-stac==0.3.11",
+    "odc-geo==0.4.10",
+    "pandas==2.2.3",
+    "pyarrow==19.0.1",
+    "pystac==1.12.2",
+    "pystac-client==0.8.6",
+    "requests==2.32.3",
+    "rio-stac==0.10.1",
+    "rioxarray==0.18.2",
+    "s3fs==2025.3.2",
+    "scipy==1.15.2",
+    "shapely==2.0.7",
+    "typer==0.15.2",
+    "xarray==2025.3.1",
+    "xvec==0.3.1",
+    "zarr==3.0.6"
 ]
 
 [project.optional-dependencies]
