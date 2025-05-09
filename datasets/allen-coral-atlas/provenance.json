@@ -1,6 +1,6 @@
 {
-    "pipeline_file": "/datasets/allen-coral-atlass/dvc.yaml",
-    "lock_file": "/datasets/allen-coral-atlass/dvc.lock",
+    "pipeline_file": "/datasets/allen-coral-atlas/dvc.yaml",
+    "lock_file": "/datasets/allen-coral-atlas/dvc.lock",
     "params": {
         "out_s3_path": "s3://csdr-dvc-out/testing/aca.zarr"
     },

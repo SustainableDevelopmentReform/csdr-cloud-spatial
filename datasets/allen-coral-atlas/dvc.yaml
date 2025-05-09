@@ -7,12 +7,8 @@ vars:
 stages:
   sync_zarr:
     cmd: >
-      if [[ ${out_s3_path} == s3://* ]]; then
+      # This works both local and remote
       aws s3 sync ${source_zarr} ${out_s3_path} --quiet;
-      else
-      echo "out_s3_path does not start with s3://, skipping upload" &&
-      aws s3 sync ${source_zarr} ${out_s3_path} --quiet;
-      fi
 
     outs:
       - ${out_s3_path}:
