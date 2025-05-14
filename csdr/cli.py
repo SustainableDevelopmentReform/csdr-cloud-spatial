@@ -6,27 +6,30 @@ import typer
 
 # Import the subcommand applications
 from .cli_datasets import dataset_app
+from .cli_dvc import dvc_app
 from .cli_geometries import geometry_app
 from .cli_vector_cube import vector_cube_app
-from .cli_dvc import dvc_app
+
 app = typer.Typer()
 
 # Add the subcommands
-app.add_typer(dataset_app, name="datasets",
-              help="Commands for processing datasets.")
-app.add_typer(geometry_app, name="geometries",
-              help="Commands for processing geometries.")
-app.add_typer(vector_cube_app, name="vector-cube",
-              help="Commands for vector-cube operations like zonal statistics.")
-app.add_typer(dvc_app, name="dvc",
-              help="Commands for DVC operations.")
+app.add_typer(dataset_app, name="datasets", help="Commands for processing datasets.")
+app.add_typer(
+    geometry_app, name="geometries", help="Commands for processing geometries."
+)
+app.add_typer(
+    vector_cube_app,
+    name="vector-cube",
+    help="Commands for vector-cube operations like zonal statistics.",
+)
+app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
 
 @app.command()
 def hello(
     bucket: str = "csdr-data-dev",
     bucket_path: str | None = None,
-):
+) -> None:
     """Write a little json doc to the bucket
 
     Args:

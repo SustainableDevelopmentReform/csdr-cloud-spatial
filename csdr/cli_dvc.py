@@ -1,14 +1,13 @@
 import json
 import logging
 import os
-from typing import Optional
+from typing import Annotated
 
 import typer
 import yaml
 from dvc.exceptions import NotDvcRepoError
 from dvc.repo import Repo
 from dvc.stage import PipelineStage
-from typing_extensions import Annotated
 
 from csdr.utils import run_command
 
@@ -24,7 +23,7 @@ dvc_app = typer.Typer()
 @dvc_app.command("status")
 def status(
     pipeline_type: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(
             help=(
                 "Filter by pipeline type (datasets, geometries, products). "
@@ -40,14 +39,18 @@ def status(
             "datasets/geometries and only want to compute products."
         ),
     ),
-):
+) -> None:
     """Prints the status of the DVC repo."""
     logger.info("Checking status of DVC repo...")
     try:
         repo: Repo = Repo(uninitialized=False)
 
-        reproduce_kwargs = {"dry": True, "on_error": "ignore",
-                            "allow_missing": allow_missing, "recursive": True}
+        reproduce_kwargs = {
+            "dry": True,
+            "on_error": "ignore",
+            "allow_missing": allow_missing,
+            "recursive": True,
+        }
 
         if pipeline_type:
             if pipeline_type in ["datasets", "geometries", "products"]:
@@ -82,6 +85,7 @@ def status(
     except Exception as e:
         logger.exception(f"Failed to get DVC status: {e}")
         raise typer.Exit(code=1)
+
 
 # This isn't really needed at the moment, just use `dvc repro`
 
@@ -138,21 +142,20 @@ def status(
 #         raise typer.Exit(code=1)
 
 
-def commit_if_changes(message: str):
+def commit_if_changes(message: str) -> None:
     logger.info("Checking Git status...")
     git_status_success, git_status_output, _ = run_command(
-        ["git", "status", "--porcelain"])
+        ["git", "status", "--porcelain"]
+    )
     if not git_status_success:
         logger.error("Failed to check Git status. Is this a Git repository?")
         raise typer.Exit(code=1)
 
     if bool(git_status_output):
-        logger.info(
-            "Changes detected or commit forced. Staging and committing...")
+        logger.info("Changes detected or commit forced. Staging and committing...")
         add_success, _, add_stderr = run_command(["git", "add", "."])
         if not add_success:
-            logger.error(
-                f"Failed to stage changes with 'git add .': {add_stderr}")
+            logger.error(f"Failed to stage changes with 'git add .': {add_stderr}")
             raise typer.Exit(code=1)
 
         commit_cmd = ["git", "commit", "-m", message]
@@ -161,8 +164,7 @@ def commit_if_changes(message: str):
             logger.error(f"Failed to commit changes: {commit_stderr}")
             raise typer.Exit(code=1)
         else:
-            logger.info(
-                f"Committed changes with message: '{message}'")
+            logger.info(f"Committed changes with message: '{message}'")
     else:
         logger.info("No changes detected. Skipping commit.")
 
@@ -186,7 +188,7 @@ def publish(
         "--no-commit",
         help="Do not commit changes to Git.",
     ),
-):
+) -> None:
     """
     Generates provenance JSON files for DVC pipelines after ensuring the
     repository state is captured in Git.
@@ -219,50 +221,59 @@ def publish(
         logger.info(f"Found {len(pipelines)} DVC pipeline files.")
 
         for pipeline_path, stages_in_pipeline in pipelines.items():
-            provenance_file_path = pipeline_path.replace(
-                "dvc.yaml", "provenance.json")
+            provenance_file_path = pipeline_path.replace("dvc.yaml", "provenance.json")
 
             logger.info(
-                f"Processing pipeline: {pipeline_path} -> {provenance_file_path}")
+                f"Processing pipeline: {pipeline_path} -> {provenance_file_path}"
+            )
 
             # Get git commit has for dvc.lock file
             dvc_lock_path = pipeline_path.replace("dvc.yaml", "dvc.lock")
 
             if not os.path.exists(dvc_lock_path):
-                logger.warning(
-                    f"DVC lock file not found for pipeline: {pipeline_path}")
+                logger.warning(f"DVC lock file not found for pipeline: {pipeline_path}")
                 continue
 
             # Call git command to get commit hash for dvc.lock file
             commit_hash_success, dvc_lock_commit_hash, commit_hash_stderr = run_command(
-                ["git", "rev-list", "-1", "HEAD", "--", dvc_lock_path])
+                ["git", "rev-list", "-1", "HEAD", "--", dvc_lock_path]
+            )
             if not commit_hash_success:
                 logger.error(
-                    f"Failed to get git commit hash for pipeline: {pipeline_path} - {commit_hash_stderr}")
+                    f"Failed to get git commit hash for pipeline: {pipeline_path} - {commit_hash_stderr}"
+                )
                 continue
 
             # Call git command to get commit date for dvc.lock file
             commit_date_success, dvc_lock_commit_date, commit_date_stderr = run_command(
-                ["git", "show", "-s", "--format=%cd", "--date=iso", dvc_lock_commit_hash])
+                [
+                    "git",
+                    "show",
+                    "-s",
+                    "--format=%cd",
+                    "--date=iso",
+                    dvc_lock_commit_hash,
+                ]
+            )
             if not commit_date_success:
                 logger.error(
-                    f"Failed to get git commit date for pipeline: {pipeline_path} - {commit_date_stderr}")
+                    f"Failed to get git commit date for pipeline: {pipeline_path} - {commit_date_stderr}"
+                )
                 continue
 
             # Get params.yaml file for the pipeline
             params_file_path = pipeline_path.replace("dvc.yaml", "params.yaml")
             if os.path.exists(params_file_path):
-                with open(params_file_path, "r") as f:
+                with open(params_file_path) as f:
                     params = yaml.safe_load(f)
             else:
-                logger.warning(
-                    f"Params file not found for pipeline: {pipeline_path}")
+                logger.warning(f"Params file not found for pipeline: {pipeline_path}")
                 params = {}
 
             # Initialize aggregated provenance data for the pipeline
             pipeline_provenance_data = {
-                "pipeline_file": "/"+pipeline_path,
-                "lock_file": "/"+dvc_lock_path,
+                "pipeline_file": "/" + pipeline_path,
+                "lock_file": "/" + dvc_lock_path,
                 "params": params,
                 "git_commit": dvc_lock_commit_hash,
                 "git_commit_date": dvc_lock_commit_date,
@@ -279,19 +290,26 @@ def publish(
                 # Get all stages that depend on the current stage
                 for dep_stage in dvc_repo.index.graph.successors(stage):
                     # Add to dependencies, if it is not already in
-                    if dep_stage.relpath != pipeline_path and dep_stage.relpath not in pipeline_provenance_data["dependencies"]:
+                    if (
+                        dep_stage.relpath != pipeline_path
+                        and dep_stage.relpath
+                        not in pipeline_provenance_data["dependencies"]
+                    ):
                         pipeline_provenance_data["dependencies"].append(
-                            dep_stage.relpath)
+                            dep_stage.relpath
+                        )
 
             # Write the aggregated JSON file for the pipeline
             try:
                 with open(provenance_file_path, "w") as f:
                     json.dump(pipeline_provenance_data, f, indent=4)
                 logger.info(
-                    f"Successfully generated provenance file: {provenance_file_path}")
-            except IOError as e:
+                    f"Successfully generated provenance file: {provenance_file_path}"
+                )
+            except OSError as e:
                 logger.exception(
-                    f"Failed to write provenance file {provenance_file_path}: {e}")
+                    f"Failed to write provenance file {provenance_file_path}: {e}"
+                )
             except Exception as e:
                 logger.exception(
                     f"An unexpected error occurred while writing "
@@ -309,8 +327,7 @@ def publish(
         logger.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.exception(
-            f"Failed during DVC processing or provenance generation: {e} ")
+        logger.exception(f"Failed during DVC processing or provenance generation: {e} ")
         raise typer.Exit(code=1)
 
 
