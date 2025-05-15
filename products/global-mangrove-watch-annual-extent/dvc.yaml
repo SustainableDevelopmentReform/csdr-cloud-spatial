@@ -10,7 +10,7 @@ stages:
   calculate_zonal_stats:
     desc: Calculate zonal statistics (mean mangrove proportion) per ASGS State/Territory
     cmd: >-
-      csdr vector-cube zonal-stats 
+      csdr vector-cube zonal-stats
       --input-zarr ${gmw_zarr_path}
       --input-geoparquet ${asgs_abs_geoparquet_path}
       --output-path ${zonal_stats_output}

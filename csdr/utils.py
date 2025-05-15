@@ -1,25 +1,32 @@
 import logging
 import subprocess
 import zipfile
-from typing import Any, Dict
+from typing import Any, TypedDict, cast
 
 import boto3
 import requests
 from affine import Affine
 from odc.geo.geobox import GeoBox, GeoboxTiles
 
+
+class Event(TypedDict):
+    timestamp: int
+    message: str
+    ingestionTime: int
+
+
 WGS84GRID10 = GeoboxTiles(
     GeoBox(
-        (1800000, 3600000),
-        Affine(0.0001, 0.0, -180.0, 0.0, 0.0001, -90.0),
-        "epsg:4326"),
-    (5000, 5000),)
+        (1800000, 3600000), Affine(0.0001, 0.0, -180.0, 0.0, 0.0001, -90.0), "epsg:4326"
+    ),
+    (5000, 5000),
+)
 WGS84GRID30 = GeoboxTiles(
     GeoBox(
-        (600000, 1200000),
-        Affine(0.0003, 0.0, -180.0, 0.0, 0.0003, -90.0),
-        "epsg:4326"),
-    (5000, 5000),)
+        (600000, 1200000), Affine(0.0003, 0.0, -180.0, 0.0, 0.0003, -90.0), "epsg:4326"
+    ),
+    (5000, 5000),
+)
 
 
 # Submit a batch job
@@ -27,8 +34,8 @@ def submit_job(
     job_name: str,
     job_queue: str,
     job_definition: str,
-    container_overrides: Dict[str, Any],
-    parameters: Dict[str, str],
+    container_overrides: dict[str, Any],
+    parameters: dict[str, str],
     multi: bool = False,
     multi_size: int = 30,  # This is how many tiles there are in each year
 ) -> str:
@@ -38,7 +45,7 @@ def submit_job(
     if multi:
         extras["arrayProperties"] = {"size": multi_size}
 
-    response = client.submit_job(
+    response: dict[str, str] = client.submit_job(
         jobName=job_name,
         jobQueue=job_queue,
         jobDefinition=job_definition,
@@ -57,12 +64,12 @@ def get_job_status(job_id: str) -> str:
     """Get the status of a job"""
     client = boto3.client("batch")
     response = client.describe_jobs(jobs=[job_id])
-    return response["jobs"][0]["status"]
+    return cast(str, response["jobs"][0]["status"])
 
 
 def get_cloudwatch_logs(
     job_id: str, log_group_name: str = "/aws/batch/auspatious-csdr"
-) -> Dict[str, Any]:
+) -> Event:
     """Get the logs for a job"""
     client = boto3.client("batch")
     response = client.describe_jobs(jobs=[job_id])
@@ -71,13 +78,13 @@ def get_cloudwatch_logs(
     logs_client = boto3.client("logs")
 
     response = logs_client.get_log_events(
-        logGroupName=log_group_name, logStreamName=log_stream_name,
-        startFromHead=True)
+        logGroupName=log_group_name, logStreamName=log_stream_name, startFromHead=True
+    )
 
-    return response["events"]
+    return cast(Event, response["events"])
 
 
-def execute(year: int, tile: tuple[int, int] | None = None):
+def execute(year: int, tile: tuple[int, int] | None = None) -> str:
     """Submit one or a set of jobs to AWS Batch"""
     extra_params = []
     if tile is not None:
@@ -130,7 +137,7 @@ def execute(year: int, tile: tuple[int, int] | None = None):
 util_logger = logging.getLogger(__name__)
 
 
-def download_file(url: str, local_path: str):
+def download_file(url: str, local_path: str) -> None:
     """Downloads a file from a URL to a local path."""
     util_logger.info(f"Downloading data from {url}...")
     try:
@@ -145,7 +152,7 @@ def download_file(url: str, local_path: str):
         raise
 
 
-def unzip_file(zip_path: str, extract_dir: str):
+def unzip_file(zip_path: str, extract_dir: str) -> None:
     """Unzips a file to a specified directory."""
     util_logger.info(f"Unzipping {zip_path} to {extract_dir}")
     try:
@@ -153,9 +160,7 @@ def unzip_file(zip_path: str, extract_dir: str):
             zip_ref.extractall(extract_dir)
         util_logger.info(f"Successfully unzipped to {extract_dir}")
     except zipfile.BadZipFile:
-        util_logger.error(
-            f"Error: {zip_path} is not a valid zip file or is corrupted."
-        )
+        util_logger.error(f"Error: {zip_path} is not a valid zip file or is corrupted.")
         raise
     except Exception as e:
         util_logger.exception(f"Error unzipping {zip_path}: {e}")
@@ -170,11 +175,11 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
             check=False,  # Don't raise exception on non-zero exit
             capture_output=True,
             text=True,
-            encoding='utf-8'  # Ensure consistent encoding
+            encoding="utf-8",  # Ensure consistent encoding
         )
         # Log stderr even on success, as it might contain warnings
         if process.stderr:
-            cmd_str = ' '.join(command)
+            cmd_str = " ".join(command)
             util_logger.debug(f"Command '{cmd_str}' stderr:")
             util_logger.debug(process.stderr.strip())
 
@@ -182,7 +187,7 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
             return True, process.stdout.strip(), ""
         else:
             # Construct error message carefully to avoid f-string issues
-            cmd_str = ' '.join(command)
+            cmd_str = " ".join(command)
             stderr_str = process.stderr.strip()
             stdout_str = process.stdout.strip()
             error_message = (
@@ -197,6 +202,6 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         util_logger.error(f"Command not found: {cmd_zero}")
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
-        cmd_str = ' '.join(command)
+        cmd_str = " ".join(command)
         util_logger.exception(f"Failed to run command '{cmd_str}': {e}")
         return False, "", str(e)

@@ -52,7 +52,7 @@ jobs:
           git fetch --all --tags
           VERSION=$(git describe --tags)
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-      
+
           # Check if we are on the main branch and set LATEST_TAG accordingly
           if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             echo "LATEST_TAG=${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_ECR_REPO }}:latest" >> $GITHUB_OUTPUT

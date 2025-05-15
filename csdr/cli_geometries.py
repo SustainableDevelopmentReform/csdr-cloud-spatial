@@ -1,8 +1,9 @@
-import os
-import typer
-import geopandas as gpd
-import logging
 import glob
+import logging
+import os
+
+import geopandas as gpd
+import typer
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -15,20 +16,20 @@ geometry_app = typer.Typer()
 @geometry_app.command("convert-vector")
 def convert_vector(
     input_dir: str = typer.Option(
-        ..., "--input-dir",
-        help="Directory containing the input vector file(s)."
+        ..., "--input-dir", help="Directory containing the input vector file(s)."
     ),
     output_path: str = typer.Option(
-        ..., "--output-path", "-o",
-        help="Output path for the GeoParquet file."
+        ..., "--output-path", "-o", help="Output path for the GeoParquet file."
     ),
     target_crs: str = typer.Option(
-        ..., "--target-crs",
-        help="Target CRS for the output GeoParquet file (e.g., EPSG:4326)."
+        ...,
+        "--target-crs",
+        help="Target CRS for the output GeoParquet file (e.g., EPSG:4326).",
     ),
     input_glob: str = typer.Option(
-        "*.shp", "--input-glob",
-        help="Glob pattern to find the input vector file(s) within the input directory."
+        "*.shp",
+        "--input-glob",
+        help="Glob pattern to find the input vector file(s) within the input directory.",
     ),
     source_crs_option: str = typer.Option(
         None,
@@ -38,29 +39,26 @@ def convert_vector(
             "Overrides CRS detection from file."
         ),
     ),
-):
+) -> None:
     """
     Converts first found vector file matching glob to GeoParquet, applying CRS.
 
-    Reads from --input-dir, finds file matching --input-glob, converts to 
+    Reads from --input-dir, finds file matching --input-glob, converts to
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        logger.error(
-            "--input-dir, --output-path, and --target-crs are required.")
+        logger.error("--input-dir, --output-path, and --target-crs are required.")
         raise typer.Exit(code=1)
 
     try:
         # Find input vector file using glob relative to input_dir
         # Search recursively within the input directory
         search_path = os.path.join(input_dir, "**", input_glob)
-        logger.info(
-            f"Searching for input vector file(s) matching: {search_path}")
+        logger.info(f"Searching for input vector file(s) matching: {search_path}")
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            logger.error(
-                f"No files matching '{input_glob}' found within {input_dir}")
+            logger.error(f"No files matching '{input_glob}' found within {input_dir}")
             raise typer.Exit(code=1)
 
         vector_file_path = found_files[0]  # Use the first found file
@@ -121,15 +119,12 @@ def convert_vector(
 @geometry_app.command("validate")
 def validate(
     input_file: str = typer.Option(
-        ..., "--input-file",
-        help="Path to the GeoParquet file to validate."
+        ..., "--input-file", help="Path to the GeoParquet file to validate."
     ),
     schema_path: str = typer.Option(
-        None,
-        "--schema",
-        help="Path to the GeoParquet schema file to validate against."
+        None, "--schema", help="Path to the GeoParquet schema file to validate against."
     ),
-):
+) -> None:
     """
     Validate the GeoParquet file against the provided schema.
     """

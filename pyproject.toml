@@ -43,7 +43,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["poetry", "bokeh", "folium", "jinja2", "matplotlib"]
+dev = [
+    "poetry",
+    "bokeh",
+    "folium",
+    "jinja2",
+    "matplotlib",
+    "ruff",
+    "mypy",
+    "types-requests",
+    "types-PyYAML",
+    "pre-commit",
+]
 
 [project.scripts]
 csdr = "csdr.cli:app"
@@ -66,3 +77,11 @@ packages = ["csdr"]
 
 [tool.ruff]
 ignore = ["E501"]
+fix = true
+
+[tool.ruff.lint]
+extend-select = ["ANN", "I", "RUF", "UP"]
+
+[tool.mypy]
+ignore_missing_imports = true
+strict = true

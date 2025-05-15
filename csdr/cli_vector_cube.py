@@ -1,11 +1,10 @@
+import logging
 import os
+
+import geopandas as gpd
 import typer
 import xarray as xr
-import geopandas as gpd
-import logging
-from typing import List, Optional
 import xvec  # noqa: F401
-
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +36,7 @@ def zonal_stats(
         "--data-variable",
         help="Name of the data variable within the Zarr dataset to analyze.",
     ),
-    stats: List[str] = typer.Option(
+    stats: list[str] = typer.Option(
         ...,
         "--stat",
         help="Statistic to calculate (e.g., 'mean', 'sum'). "
@@ -54,13 +53,13 @@ def zonal_stats(
         help="Name for the dimension created during zonal stats, "
         "representing the geometries.",
     ),
-    fill_value: Optional[float] = typer.Option(
+    fill_value: float | None = typer.Option(
         0,
         "--fill-value",
         help="Value to fill NaN/nodata in the Zarr array before stats. "
         "Set to None to disable filling.",
     ),
-):
+) -> None:
     """
     Calculates zonal statistics from a Zarr dataset based on geometries
     from a GeoParquet file and outputs the results to a new GeoParquet file.
@@ -83,7 +82,8 @@ def zonal_stats(
 
         if zarr_path.startswith("s3://"):
             ds = xr.open_zarr(
-                zarr_path, decode_coords="all"  # Ensure coords are decoded
+                zarr_path,
+                decode_coords="all",  # Ensure coords are decoded
             )
         else:
             ds = xr.open_zarr(zarr_path, decode_coords="all")

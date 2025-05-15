@@ -13,8 +13,8 @@ stages:
     desc: Download and extract GMW GeoTIFF archive
     cmd: |
       mkdir -p ${extract_dir}
-      echo "Downloading from ${url}..." 
-      curl -L -o ${extract_dir}/${archive_name} "${url}" 
+      echo "Downloading from ${url}..."
+      curl -L -o ${extract_dir}/${archive_name} "${url}"
       echo "Unzipping..."
       unzip -o ${extract_dir}/${archive_name} -d ${extract_dir}
     outs:
