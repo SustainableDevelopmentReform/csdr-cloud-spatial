@@ -2,7 +2,7 @@
 
 ## Quickstart
 
-- Create Python environment and install the dependencies
+- Create Python environment with GDAL and install the dependencies
 - Read [DVC](https://dvc.org/doc/start) docs
   - [Install DVC](https://dvc.org/doc/install)
 - In all `params.yaml` and `dvc.yaml` files, replace `s3://csdr-dvc-out` with your own S3 bucket (until we have another S3 bucket setup)
@@ -16,7 +16,7 @@ Make some changes to some `params.yaml` - or create a new datasets/geometries/pr
 
 ## Installation
 
-To install the dependencies for this project, you can use pip with the pyproject.toml file:
+First, ensure that GDAL is installed in your environment. To install the dependencies for this project, you can use pip with the pyproject.toml file:
 
 ### Using pip
 
@@ -48,6 +48,12 @@ pip install -e ".[dev]"
 # Using Poetry
 poetry install --with dev
 ```
+
+To use pre-commit to automatically run ruff, mypy and other checks on each commit, make sure the development dependencies are installed and then run:
+
+`pre-commit install`
+
+Note that you will need to run `pre-commit run --all-files` if any of the hooks in `.pre-commit-config.yaml` change.
 
 ## Pipeline
 
