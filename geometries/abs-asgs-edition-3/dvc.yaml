@@ -12,9 +12,9 @@ stages:
     desc: Download and extract ASGS STE shapefile archive
     cmd: |
       mkdir -p ${extract_dir}
-      echo "Downloading from ${url}..." 
-      curl -L -o ${extract_dir}/${archive_name} ${url} 
-      echo "Unzipping..." 
+      echo "Downloading from ${url}..."
+      curl -L -o ${extract_dir}/${archive_name} ${url}
+      echo "Unzipping..."
       unzip -o ${extract_dir}/${archive_name} -d ${extract_dir}
     outs:
       - ${extract_dir}:
@@ -23,10 +23,10 @@ stages:
   convert_asgs:
     desc: Convert extracted shapefile to GeoParquet
     cmd: >-
-      csdr geometries convert-vector 
-      --input-dir ${extract_dir} 
-      --input-glob ${shapefile_name} 
-      --target-crs EPSG:4326 
+      csdr geometries convert-vector
+      --input-dir ${extract_dir}
+      --input-glob ${shapefile_name}
+      --target-crs EPSG:4326
       --output-path ${parquet_output}
     # Depend on the directory from previous stage and the script
     deps:
