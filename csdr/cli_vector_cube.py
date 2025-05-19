@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 vector_cube_app = typer.Typer()
 
 
+def parse_fill_value(value: str) -> float | None:
+    if value.lower() == "none":
+        return None
+    return float(value)
+
+
 @vector_cube_app.command("zonal-stats")
 def zonal_stats(
     zarr_path: str = typer.Option(
@@ -53,9 +59,10 @@ def zonal_stats(
         help="Name for the dimension created during zonal stats, "
         "representing the geometries.",
     ),
-    fill_value: float | None = typer.Option(
+    fill_value: str | None = typer.Option(
         0,
         "--fill-value",
+        callback=parse_fill_value,
         help="Value to fill NaN/nodata in the Zarr array before stats. "
         "Set to None to disable filling.",
     ),

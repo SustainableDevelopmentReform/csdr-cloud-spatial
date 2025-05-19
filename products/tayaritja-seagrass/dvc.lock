@@ -1,0 +1,37 @@
+schema: '2.0'
+stages:
+  calculate_zonal_stats:
+    cmd: csdr vector-cube zonal-stats  --input-zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+      --input-geoparquet /tmp/csdr-dvc-out/acsc-ga-2015.parquet --output-path out/tsg_zonal_stats_acsc.parquet
+      --data-variable data_variable --stat mean --name-dim acsc --fill-value None
+    deps:
+    - path: ../../csdr/cli_vector_cube.py
+      hash: md5
+      md5: 472eb376f0b74ec5b7cb8718edf6a5a7
+      size: 6623
+    - path: /tmp/csdr-dvc-out/acsc-ga-2015.parquet
+      hash: md5
+      md5: b6df59c688f8019eac018b7fb4089d79
+      size: 8959806
+    - path: /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+      hash: md5
+      md5: 8a622f53ef287c0a1563f216459f419b.dir
+      size: 188067
+      nfiles: 27
+    outs:
+    - path: out/tsg_zonal_stats_acsc.parquet
+      hash: md5
+      md5: c78b2fea81cdc0103bf4c596ff074614
+      size: 17906951
+  validate_zonal_stats:
+    cmd: 'csdr geometries validate --input-file out/tsg_zonal_stats_acsc.parquet #
+      Add --schema if a specific schema exists for validation'
+    deps:
+    - path: ../../csdr/cli_geometries.py
+      hash: md5
+      md5: 95cc1509f8c7b0986bf3ecffe744294f
+      size: 4989
+    - path: out/tsg_zonal_stats_acsc.parquet
+      hash: md5
+      md5: c78b2fea81cdc0103bf4c596ff074614
+      size: 17906951
