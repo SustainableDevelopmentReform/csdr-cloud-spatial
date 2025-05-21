@@ -1,7 +1,12 @@
 # Internal variables
 vars:
   - tsg_data_variable: data_variable # Variable name within the Zarr
-  - zonal_stat: mean # Statistic to calculate
+  - zonal_stat1: sum
+  - zonal_stat2: mean
+  - mode1: area
+  - mode2: pixel
+  - stat_name1: total_area
+  - stat_name2: percent_cover
   - geometry_name_dim: acsc # Dimension name for geometries in output
   - fill_value: None # Value to fill nodata/NaN with before stats
   - zonal_stats_output: out/tsg_zonal_stats_acsc.parquet # Output path for this product
@@ -15,9 +20,15 @@ stages:
       --input-geoparquet ${acsc_geoparquet_path}
       --output-path ${zonal_stats_output}
       --data-variable ${tsg_data_variable}
-      --stat ${zonal_stat}
+      --stat ${zonal_stat1}
+      --stat ${zonal_stat2}
+      --mode ${mode1}
+      --mode ${mode2}
+      --stat-name ${stat_name1}
+      --stat-name ${stat_name2}
       --name-dim ${geometry_name_dim}
       --fill-value ${fill_value}
+      --proj-crs EPSG:9473
     deps:
       - ${tsg_zarr_path}
       - ${acsc_geoparquet_path}
