@@ -1,4 +1,6 @@
 # These values will be included in the provenance file
+name: "gmw_zonal_stats_abs_asgs_ste"
 out_s3_path: s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet
+json_out_s3_path: s3://csdr-dvc-out/gmw_zonal_stats_ste/
 asgs_abs_geoparquet_path: s3://csdr-dvc-out/asgs-ste-2021.parquet
 gmw_zarr_path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr

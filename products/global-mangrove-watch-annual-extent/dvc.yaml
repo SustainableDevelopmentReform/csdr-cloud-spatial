@@ -35,3 +35,12 @@ stages:
     deps:
       - ${zonal_stats_output} # Depends on the output file
       - ../../csdr/cli_geometries.py # Assuming geometry validation is sufficient for now
+
+  upload:
+    cmd: >-
+      if [[ ${out_s3_path} == s3://* ]]; then aws s3 cp ${zonal_stats_output} ${out_s3_path}; else echo "out_s3_path does not start with s3://, skipping upload" && cp ${zonal_stats_output} ${out_s3_path}; fi
+    deps:
+      - ${zonal_stats_output}
+    outs:
+      - ${out_s3_path}:
+          cache: false
