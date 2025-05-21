@@ -16,8 +16,8 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: aa51d8a81fc477c726b0a9969eb0e1a0
-      size: 6477
+      md5: da41e3e30a46292404913b08080c5cd9
+      size: 6566
     - path: in/geotiffs
       hash: md5
       md5: fdaed1f09be2fe4e09276a33587365b1.dir
@@ -26,7 +26,7 @@ stages:
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 14800c30a062a4ea9b650797f2b6bebd.dir
+      md5: 9586c32078b22ded1f2addc619920b6e.dir
       size: 705037
       nfiles: 52
   validate_tsg:
@@ -34,28 +34,28 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: aa51d8a81fc477c726b0a9969eb0e1a0
-      size: 6477
+      md5: da41e3e30a46292404913b08080c5cd9
+      size: 6566
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 14800c30a062a4ea9b650797f2b6bebd.dir
+      md5: 9586c32078b22ded1f2addc619920b6e.dir
       size: 705037
       nfiles: 52
   upload_tsg:
-    cmd: if [[ /tmp/csdr/csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]];
-      then aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    cmd: if [[ s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]]; then
+      aws s3 cp out/nesp36_seagrass_baseline.zarr s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
       --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
-      && cp -r out/nesp36_seagrass_baseline.zarr /tmp/csdr/csdr-dvc-out/nesp36_seagrass_baseline.zarr;
+      && cp -r out/nesp36_seagrass_baseline.zarr s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr;
       fi
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 14800c30a062a4ea9b650797f2b6bebd.dir
+      md5: 9586c32078b22ded1f2addc619920b6e.dir
       size: 705037
       nfiles: 52
     outs:
-    - path: /tmp/csdr/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    - path: s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 14800c30a062a4ea9b650797f2b6bebd.dir
+      md5: c4654b2bfdf752bcce271e2e5288bf71.dir
       size: 705037
       nfiles: 52

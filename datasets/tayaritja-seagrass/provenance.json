@@ -1,8 +1,8 @@
 {
-    "pipeline_file": "/datasets/tayaritja-seagrass/dvc.yaml",
-    "lock_file": "/datasets/tayaritja-seagrass/dvc.lock",
+    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/63c666f01079bc333c7e5b8ed4ecc70c3ba7a2c8/datasets/tayaritja-seagrass/dvc.yaml",
+    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/63c666f01079bc333c7e5b8ed4ecc70c3ba7a2c8/datasets/tayaritja-seagrass/dvc.lock",
     "params": {
-        "out_s3_path": "s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr",
+        "out_s3_path": "/Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/nesp36_seagrass_baseline.zarr",
         "url": "https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-"
     },
     "git_commit": "63c666f01079bc333c7e5b8ed4ecc70c3ba7a2c8",
