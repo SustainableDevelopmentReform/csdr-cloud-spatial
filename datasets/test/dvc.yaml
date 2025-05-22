@@ -1,0 +1,14 @@
+# Test
+
+# Internal variables
+vars:
+  - complex_input: test:thing
+
+stages:
+  test:
+    desc: Run CLI
+    params:
+      - test
+      - test.thing
+    cmd: |
+      csdr test --complex-input ${complex_input}
