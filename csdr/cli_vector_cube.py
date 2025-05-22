@@ -1,6 +1,7 @@
 import logging
 import os
 
+import dvc.api
 import geopandas as gpd
 import odc.geo.xr  # noqa: F401
 import typer
@@ -43,17 +44,6 @@ def zonal_stats(
         "--data-variable",
         help="Name of the data variable within the Zarr dataset to analyze.",
     ),
-    stats: list[str] = typer.Option(
-        ...,
-        "--stat",
-        help="Statistic to calculate (e.g., 'mean', 'sum'). "
-        "Can be specified multiple times.",
-    ),
-    stats_names: list[str] = typer.Option(
-        ...,
-        "--stat-name",
-        help="Name for the statistic.Can be specified multiple times.",
-    ),
     output_crs: str = typer.Option(
         "EPSG:4326",
         "--output-crs",
@@ -72,12 +62,6 @@ def zonal_stats(
         help="Value to fill NaN/nodata in the Zarr array before stats. "
         "Set to None to disable filling.",
     ),
-    modes: list[str] | None = typer.Option(
-        None,
-        "--mode",
-        help="Calculate either an area based or pixel based statistic. "
-        "Can be specified multiple times.",
-    ),
     proj_crs: str | None = typer.Option(
         None, "--proj-crs", help="Projected CRS to use for area based statistics."
     ),
@@ -86,20 +70,18 @@ def zonal_stats(
     Calculates zonal statistics from a Zarr dataset based on geometries
     from a GeoParquet file and outputs the results to a new GeoParquet file.
     """
-
     if (
-        not zarr_path
-        or not geoparquet_path
-        or not output_path
-        or not data_variable
-        or not stats
+        not zarr_path or not geoparquet_path or not output_path or not data_variable
+        # or not stats
     ):
         logger.error(
             "--input-zarr, --input-geoparquet, --output-path, "
             "--data-variable, and at least one --stat are required."
         )
         raise typer.Exit(code=1)
-
+    params = dvc.api.params_show()
+    stats = params["zonal_stats"]
+    print(f"stats: {stats}")
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
 
@@ -165,42 +147,34 @@ def zonal_stats(
             da_filled = da_cropped
 
         # Calculate zonal statistics
-        logger.info(f"Calculating zonal statistics ({', '.join(stats)})...")
+        logger.info(
+            f"Calculating zonal statistics ({[stat['stat'] for stat in stats]})"
+        )
         stats_da = da_filled.xvec.zonal_stats(
             gdf_reprojected.geometry,
             x_coords="x",
             y_coords="y",
-            stats=stats,
+            stats=[stat["stat"] for stat in stats],
             name=name_dim,  # Use the specified name for the new dimension
             index=True,  # Keep the original geometry index
         )
 
         # Calculate area-based statistics if requested:
-        if modes is not None:
-            if len(stats) != len(modes):
-                logger.error(
-                    "If mode is provided, must provide a mode for each statistic."
-                )
-                raise typer.Exit(code=1)
-            else:
-                for stat, mode, name in zip(stats, modes, stats_names):
-                    if mode == "area":
-                        if not stats_da.rio.crs.is_projected:
-                            logger.error(
-                                "Data is in a geographic CRS, must specify a projected CRS for area-based statistics."
-                            )
-                            raise typer.Exit(code=1)
-                        else:
-                            pixel_area = abs(
-                                stats_da.rio.resolution()[0]
-                                * stats_da.rio.resolution()[1]
-                            )
-                            area_da = stats_da.sel(zonal_statistics=stat) * pixel_area
-                            area_da = area_da.expand_dims(zonal_statistics=[name])
-                            stats_da = xr.concat(
-                                [stats_da, area_da], dim="zonal_statistics"
-                            )
-                            # drop the pixel-based version of the stat
+        for stat in stats:
+            if stat["mode"] == "area":
+                if not stats_da.rio.crs.is_projected:
+                    logger.error(
+                        "Data is in a geographic CRS, must specify a projected CRS for area-based statistics."
+                    )
+                    raise typer.Exit(code=1)
+                else:
+                    pixel_area = abs(
+                        stats_da.rio.resolution()[0] * stats_da.rio.resolution()[1]
+                    )
+                    area_da = stats_da.sel(zonal_statistics=stat["stat"]) * pixel_area
+                    area_da = area_da.expand_dims(zonal_statistics=[stat["name"]])
+                    stats_da = xr.concat([stats_da, area_da], dim="zonal_statistics")
+                    # drop the pixel-based version of the stat
 
         logger.info("Zonal statistics calculation complete. Computing results...")
         stats_computed = stats_da.compute()  # Compute the dask array
