@@ -2,7 +2,7 @@ from datetime import datetime
 from json import dumps
 
 import boto3
-import dvc
+import dvc.api
 import typer
 
 # Import the subcommand applications
@@ -76,11 +76,6 @@ def test(
         complex_input (str): A complex input string which is yaml.
     """
     print(complex_input)
-
-    import pdb
-
-    pdb.set_trace()
-
     params = dvc.api.params_show()
     print(params)
 

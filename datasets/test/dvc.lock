@@ -2,3 +2,17 @@ schema: '2.0'
 stages:
   test:
     cmd: "csdr test --complex-input test:thing\n"
+    params:
+      params.yaml:
+        test:
+          thing: &id001
+          - 1
+          - 2
+          - 3
+          val:
+            map: 123
+            list:
+            - 1
+            - 2
+            - 3
+        test.thing: *id001
