@@ -1,0 +1,11 @@
+{
+    "pipeline_file": "/geometries/acsc-ga-2015/dvc.yaml",
+    "lock_file": "/geometries/acsc-ga-2015/dvc.lock",
+    "params": {
+        "out_s3_path": "s3://csdr-dvc-out/acsc-ga-2015.parquet",
+        "url": "https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip"
+    },
+    "git_commit": "d2090c43471876ded900c7207aae84fe5dcfe566",
+    "git_commit_date": "2025-05-16 12:12:07 -0600",
+    "dependencies": []
+}

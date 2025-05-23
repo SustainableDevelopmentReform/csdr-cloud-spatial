@@ -4,7 +4,19 @@
     "params": {
         "out_s3_path": "s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet",
         "asgs_abs_geoparquet_path": "s3://csdr-dvc-out/asgs-ste-2021.parquet",
-        "gmw_zarr_path": "s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr"
+        "gmw_zarr_path": "s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr",
+        "zonal_stats": [
+            {
+                "stat": "sum",
+                "mode": "area",
+                "name": "total_area"
+            },
+            {
+                "stat": "mean",
+                "mode": "pixel",
+                "name": "percent_cover"
+            }
+        ]
     },
     "git_commit": "0265cbd41b70abc6187a7e8d510bbdf0db04c098",
     "git_commit_date": "2025-04-22 11:51:09 +1000",
