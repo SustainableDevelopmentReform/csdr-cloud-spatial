@@ -20,15 +20,15 @@ stages:
       size: 6566
     - path: in/resampled-geotiffs
       hash: md5
-      md5: f14af53e619a59129be57676fb941ec2.dir
-      size: 36067897
+      md5: 9388fb838b2205b932504612fe124d6b.dir
+      size: 9018731
       nfiles: 1
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8a622f53ef287c0a1563f216459f419b.dir
-      size: 188067
-      nfiles: 27
+      md5: 896d8117fe5782c098593599a3f99e78.dir
+      size: 81802
+      nfiles: 20
   validate_tsg:
     cmd: csdr datasets validate-zarr --input-zarr out/nesp36_seagrass_baseline.zarr
     deps:
@@ -38,9 +38,9 @@ stages:
       size: 6566
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8a622f53ef287c0a1563f216459f419b.dir
-      size: 188067
-      nfiles: 27
+      md5: 77a37dd1792d201e3d007d85d3148a64.dir
+      size: 81802
+      nfiles: 20
   upload_tsg:
     cmd: if [[ /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]]; then
       aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
@@ -50,18 +50,18 @@ stages:
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8a622f53ef287c0a1563f216459f419b.dir
-      size: 188067
-      nfiles: 27
+      md5: 896d8117fe5782c098593599a3f99e78.dir
+      size: 81802
+      nfiles: 20
     outs:
     - path: /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8a622f53ef287c0a1563f216459f419b.dir
-      size: 188067
-      nfiles: 27
+      md5: 896d8117fe5782c098593599a3f99e78.dir
+      size: 81802
+      nfiles: 20
   warp_tsg:
     cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir "in/resampled-geotiffs"
-      --target-crs "+proj=longlat +datum=WGS84 +no_defs" --target-resolution "0.0002"
+      --target-crs "+proj=longlat +datum=WGS84 +no_defs" --target-resolution "0.0004"
       --resampling-method "nearest"
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -76,6 +76,6 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: f14af53e619a59129be57676fb941ec2.dir
-      size: 36067897
+      md5: 9388fb838b2205b932504612fe124d6b.dir
+      size: 9018731
       nfiles: 1

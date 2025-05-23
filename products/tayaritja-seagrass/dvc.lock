@@ -7,17 +7,17 @@ stages:
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: ea8378da6655a89cc70c74daf5268b02
-      size: 7793
+      md5: 5bdca188f69507fea32ae263e1721d60
+      size: 7697
     - path: /tmp/csdr-dvc-out/acsc-ga-2015.parquet
       hash: md5
       md5: b6df59c688f8019eac018b7fb4089d79
       size: 8959806
     - path: /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8a622f53ef287c0a1563f216459f419b.dir
-      size: 188067
-      nfiles: 27
+      md5: 896d8117fe5782c098593599a3f99e78.dir
+      size: 81802
+      nfiles: 20
     params:
       params.yaml:
         zonal_stats:
@@ -30,8 +30,8 @@ stages:
     outs:
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 2d520ac5f0a91d03ccf743b5deb07123
-      size: 18688957
+      md5: 17bc2662698b753f973fc6679bb1afc4
+      size: 18687964
   validate_zonal_stats:
     cmd: 'csdr geometries validate --input-file out/tsg_zonal_stats_acsc.parquet #
       Add --schema if a specific schema exists for validation'
@@ -42,5 +42,5 @@ stages:
       size: 4989
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 2d520ac5f0a91d03ccf743b5deb07123
-      size: 18688957
+      md5: 17bc2662698b753f973fc6679bb1afc4
+      size: 18687964

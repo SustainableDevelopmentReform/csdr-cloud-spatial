@@ -70,18 +70,17 @@ def zonal_stats(
     Calculates zonal statistics from a Zarr dataset based on geometries
     from a GeoParquet file and outputs the results to a new GeoParquet file.
     """
-    if (
-        not zarr_path or not geoparquet_path or not output_path or not data_variable
-        # or not stats
-    ):
+    if not zarr_path or not geoparquet_path or not output_path or not data_variable:
         logger.error(
-            "--input-zarr, --input-geoparquet, --output-path, "
-            "--data-variable, and at least one --stat are required."
+            "--input-zarr, --input-geoparquet, --output-path, and "
+            "--data-variable are required."
         )
         raise typer.Exit(code=1)
     params = dvc.api.params_show()
+    if "zonal_stats" not in params:
+        logger.error("zonal_stats must be specified in params.yaml.")
+        raise typer.Exit(code=1)
     stats = params["zonal_stats"]
-    print(f"stats: {stats}")
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
 
@@ -154,13 +153,13 @@ def zonal_stats(
             gdf_reprojected.geometry,
             x_coords="x",
             y_coords="y",
-            stats=[stat["stat"] for stat in stats],
+            stats=[(stat["name"], stat["stat"]) for stat in stats],
             name=name_dim,  # Use the specified name for the new dimension
             index=True,  # Keep the original geometry index
         )
 
-        # Calculate area-based statistics if requested:
         for stat in stats:
+            # Calculate area-based statistics if requested:
             if stat["mode"] == "area":
                 if not stats_da.rio.crs.is_projected:
                     logger.error(
@@ -171,16 +170,14 @@ def zonal_stats(
                     pixel_area = abs(
                         stats_da.rio.resolution()[0] * stats_da.rio.resolution()[1]
                     )
-                    area_da = stats_da.sel(zonal_statistics=stat["stat"]) * pixel_area
-                    area_da = area_da.expand_dims(zonal_statistics=[stat["name"]])
-                    stats_da = xr.concat([stats_da, area_da], dim="zonal_statistics")
-                    # drop the pixel-based version of the stat
+                    area_da = stats_da.sel(zonal_statistics=stat["name"]) * pixel_area
+                    stats_da.loc[dict(zonal_statistics=stat["name"])] = area_da.values
 
         logger.info("Zonal statistics calculation complete. Computing results...")
         stats_computed = stats_da.compute()  # Compute the dask array
         logger.info("Computation complete.")
 
-        # --- 4. Format and Write Output ---
+        # Format and Write Output
         logger.info("Formatting results into GeoDataFrame...")
         # Convert the DataArray results to a GeoDataFrame
         stats_gdf = stats_computed.xvec.to_geodataframe()

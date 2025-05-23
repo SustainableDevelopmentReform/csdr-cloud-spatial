@@ -303,6 +303,7 @@ def publish(
             try:
                 with open(provenance_file_path, "w") as f:
                     json.dump(pipeline_provenance_data, f, indent=4)
+                    f.write("\n")
                 logger.info(
                     f"Successfully generated provenance file: {provenance_file_path}"
                 )
