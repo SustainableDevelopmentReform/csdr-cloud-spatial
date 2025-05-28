@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 vector_cube_app = typer.Typer()
 
 
-def parse_fill_value(value: str) -> float | None:
-    if value.lower() == "none":
+def parse_fill_value(value: str | None) -> float | None:
+    if value is None:
+        return None
+    elif value.lower() == "none":
         return None
     return float(value)
 
@@ -99,7 +101,10 @@ def zonal_stats(
 
         da = ds[data_variable]  # Select the data variable
 
-        if proj_crs:
+        if proj_crs and da.odc.crs != proj_crs:
+            logger.info(
+                f"Reprojecting dataset from {da.odc.crs.to_wkt(pretty=True)} to {proj_crs}."
+            )
             da = da.odc.reproject(proj_crs, resampling="nearest")
 
         logger.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
@@ -126,7 +131,9 @@ def zonal_stats(
             raise typer.Exit(code=1)
         logger.info(f"Using target CRS from Zarr: {target_crs}")
 
-        logger.info(f"Reprojecting geometries from {gdf_filtered.crs} to {target_crs}")
+        logger.info(
+            f"Reprojecting geometries from {gdf_filtered.crs.to_wkt(pretty=True)} to {target_crs}"
+        )
         gdf_reprojected = gdf_filtered.to_crs(target_crs)
 
         # Crop the DataArray to the bounds of the reprojected geometries

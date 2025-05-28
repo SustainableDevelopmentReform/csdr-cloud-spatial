@@ -4,6 +4,7 @@ vars:
   - geometry_name_dim: acsc # Dimension name for geometries in output
   - fill_value: None # Value to fill nodata/NaN with before stats
   - zonal_stats_output: out/tsg_zonal_stats_acsc.parquet # Output path for this product
+  - proj_crs: epsg:9473
 
 stages:
   calculate_zonal_stats:
@@ -18,7 +19,7 @@ stages:
       --data-variable ${tsg_data_variable}
       --name-dim ${geometry_name_dim}
       --fill-value ${fill_value}
-      --proj-crs EPSG:9473
+      --proj-crs ${proj_crs}
     deps:
       - ${tsg_zarr_path}
       - ${acsc_geoparquet_path}
