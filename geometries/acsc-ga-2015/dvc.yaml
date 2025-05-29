@@ -1,0 +1,57 @@
+# Pipeline specific to GA Australian Coastal Sediment Compartments
+
+# Internal variables
+vars:
+  - archive_name: Shapefiles_v3.zip
+  - shapefile_name: Primary_compartments.shp
+  - extract_dir: in/acsc
+  - parquet_output: out/acsc-primary-compartments.parquet
+
+stages:
+  download_extract_acsc:
+    desc: Download and extract ACSC shapefile archive
+    cmd: |
+      mkdir -p ${extract_dir}
+      echo "Downloading from ${url}..." 
+      curl -L -o ${extract_dir}/${archive_name} ${url} 
+      echo "Unzipping..." 
+      unzip -o ${extract_dir}/${archive_name} -d ${extract_dir}
+    outs:
+      - ${extract_dir}:
+          cache: false
+
+  convert_acsc:
+    desc: Convert extracted shapefile to GeoParquet
+    cmd: >-
+      csdr geometries convert-vector 
+      --input-dir ${extract_dir} 
+      --input-glob ${shapefile_name} 
+      --target-crs EPSG:4326 
+      --output-path ${parquet_output}
+    deps:
+      - ${extract_dir}
+
+      - ../../csdr/cli_geometries.py
+    outs:
+      - ${parquet_output}:
+          cache: false
+
+  validate_acsc:
+    desc: Validate the generated GeoParquet file (schema, CRS, etc.)
+    cmd: >-
+      csdr geometries validate
+      --input-file ${parquet_output}
+      # --schema ../../../schemas/geoparquet_standard.json # Example schema path
+    deps:
+      - ${parquet_output}
+
+      - ../../csdr/cli_geometries.py
+
+  upload_acsc:
+    cmd: >-
+      if [[ ${out_s3_path} == s3://* ]]; then aws s3 cp ${parquet_output} ${out_s3_path}; else echo "out_s3_path does not start with s3://, skipping upload" && cp ${parquet_output} ${out_s3_path}; fi
+    deps:
+      - ${parquet_output}
+    outs:
+      - ${out_s3_path}:
+          cache: false

@@ -3,9 +3,12 @@
     "lock_file": "/datasets/tayaritja-seagrass/dvc.lock",
     "params": {
         "out_s3_path": "s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr",
-        "url": "https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-"
+        "url": "https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-",
+        "target_crs": "epsg:4326",
+        "target_resolution": 0.0004,
+        "resampling_method": "nearest"
     },
-    "git_commit": "63c666f01079bc333c7e5b8ed4ecc70c3ba7a2c8",
-    "git_commit_date": "2025-05-06 12:13:40 -0600",
+    "git_commit": "ccd35dbee651439e60785563ae7605d241f6e947",
+    "git_commit_date": "2025-05-23 12:01:45 -0600",
     "dependencies": []
 }
