@@ -12,12 +12,13 @@ stages:
       nfiles: 47
   convert_acsc:
     cmd: csdr geometries convert-vector  --input-dir in/acsc  --input-glob Primary_compartments.shp  --target-crs
-      EPSG:4326  --output-path out/acsc-primary-compartments.parquet
+      EPSG:4326  --output-path out/acsc-primary-compartments.parquet --name-property
+      Name
     deps:
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 81df0b0b51118ec2a451e7e60e13fa13
-      size: 5038
+      md5: e046408ff0900f26dac7cf33018d318b
+      size: 4856
     - path: in/acsc
       hash: md5
       md5: d44767fb4352eb2b55875af4db20289e.dir
@@ -26,7 +27,7 @@ stages:
     outs:
     - path: out/acsc-primary-compartments.parquet
       hash: md5
-      md5: b6df59c688f8019eac018b7fb4089d79
+      md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
   validate_acsc:
     cmd: 'csdr geometries validate --input-file out/acsc-primary-compartments.parquet
@@ -34,24 +35,24 @@ stages:
     deps:
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 81df0b0b51118ec2a451e7e60e13fa13
-      size: 5038
+      md5: e046408ff0900f26dac7cf33018d318b
+      size: 4856
     - path: out/acsc-primary-compartments.parquet
       hash: md5
-      md5: b6df59c688f8019eac018b7fb4089d79
+      md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
   upload_acsc:
-    cmd: if [[ /tmp/csdr/csdr-dvc-out/acsc-ga-2015.parquet == s3://* ]]; then aws
-      s3 cp out/acsc-primary-compartments.parquet /tmp/csdr/csdr-dvc-out/acsc-ga-2015.parquet;
+    cmd: if [[ s3://csdr-dvc-out/acsc-ga-2015.parquet == s3://* ]]; then aws s3 cp
+      out/acsc-primary-compartments.parquet s3://csdr-dvc-out/acsc-ga-2015.parquet;
       else echo "out_s3_path does not start with s3://, skipping upload" && cp out/acsc-primary-compartments.parquet
-      /tmp/csdr/csdr-dvc-out/acsc-ga-2015.parquet; fi
+      s3://csdr-dvc-out/acsc-ga-2015.parquet; fi
     deps:
     - path: out/acsc-primary-compartments.parquet
       hash: md5
-      md5: b6df59c688f8019eac018b7fb4089d79
+      md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
     outs:
-    - path: /tmp/csdr/csdr-dvc-out/acsc-ga-2015.parquet
+    - path: s3://csdr-dvc-out/acsc-ga-2015.parquet
       hash: md5
-      md5: b6df59c688f8019eac018b7fb4089d79
+      etag: 690cc905d526d6f14d1ac3f2fcb3662c-2
       size: 8959806

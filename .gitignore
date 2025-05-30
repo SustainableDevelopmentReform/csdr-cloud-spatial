@@ -176,3 +176,5 @@ tmp/
 
 # VS Code
 .vscode
+
+outputs/

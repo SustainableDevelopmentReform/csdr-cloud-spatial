@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from typing import Annotated
+import re
 
 import typer
 import yaml
@@ -185,21 +186,23 @@ def commit_if_changes(message: str) -> None:
 def generate_product_json_files(
         pipeline_base_path: str, product_out_path: str,
         pipeline_provenance_data: dict) -> None:
+    product_name = pipeline_base_path.split("/")[1]
+
     logger.info(
         f"Generating product JSON files for: {pipeline_base_path}, {product_out_path}")
     try:
-        if not "name" in pipeline_provenance_data["params"]:
-            logger.error(
-                "Pipeline params do not contain 'name' key. "
-                "Cannot generate product JSON files.")
-            raise typer.Exit(code=1)
-
         product_gdf = gpd.read_parquet(
             product_out_path,
         )
 
-        product_json_outputs_path = f"outputs/{pipeline_base_path}/out/products/"
+        product_json_outputs_path = f"outputs/{pipeline_base_path}/"
         os.makedirs(product_json_outputs_path, exist_ok=True)
+
+        # Rm existing JSON files in the output directory
+        print(f"Removing existing JSON files in {product_json_outputs_path}")
+        for file in os.listdir(product_json_outputs_path):
+            if file.endswith(".geojson"):
+                os.remove(os.path.join(product_json_outputs_path, file))
 
         features = product_gdf.iterfeatures()
 
@@ -211,13 +214,16 @@ def generate_product_json_files(
                 name = feature["properties"]["name"]
 
             # make name lowercase camelcase, and add pipeline name prefix
-            name = pipeline_provenance_data["params"]["name"] + "_" + "_".join(
-                word.lower() for word in name.split(" "))
+            name = product_name + "_" + "_".join(
+                word.lower()
+                for word in re.sub(r'[^a-zA-Z0-9\s]', '', name).split(" ")
+                if word)
 
             # Make sure we don't have any geometry column in the properties
             if "geometry" in feature["properties"]:
                 del feature["properties"]["geometry"]
 
+            print(f"Writing feature to {name}.geojson")
             with open(f"{product_json_outputs_path}{name}.geojson", "w") as f:
                 json.dump(feature, f, cls=ShapelyEncoder, indent=4)
 
@@ -390,6 +396,7 @@ def publish(
             if pipeline_path.startswith("products/"):
                 product_out_path = params.get("out_s3_path")
 
+                # TODO only generate product JSON files if product has changed
                 if product_out_path.endswith(".parquet"):
                     generate_product_json_files(
                         pipeline_base_path, product_out_path,

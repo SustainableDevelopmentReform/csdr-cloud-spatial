@@ -20,13 +20,13 @@ stages:
       size: 6566
     - path: in/resampled-geotiffs
       hash: md5
-      md5: 9388fb838b2205b932504612fe124d6b.dir
-      size: 9018731
+      md5: 4046da95defe9c5bd09233864ece8cec.dir
+      size: 9018730
       nfiles: 1
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 896d8117fe5782c098593599a3f99e78.dir
+      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
       size: 81802
       nfiles: 20
   validate_tsg:
@@ -38,31 +38,30 @@ stages:
       size: 6566
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 77a37dd1792d201e3d007d85d3148a64.dir
+      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
       size: 81802
       nfiles: 20
   upload_tsg:
-    cmd: if [[ /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]]; then
-      aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    cmd: if [[ s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]]; then
+      aws s3 cp out/nesp36_seagrass_baseline.zarr s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
       --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
-      && cp -r out/nesp36_seagrass_baseline.zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr;
+      && cp -r out/nesp36_seagrass_baseline.zarr s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr;
       fi
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 896d8117fe5782c098593599a3f99e78.dir
+      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
       size: 81802
       nfiles: 20
     outs:
-    - path: /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    - path: s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 896d8117fe5782c098593599a3f99e78.dir
+      md5: abb594c798da71a78339431e6097cdd6.dir
       size: 81802
       nfiles: 20
   warp_tsg:
     cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir "in/resampled-geotiffs"
-      --target-crs "+proj=longlat +datum=WGS84 +no_defs" --target-resolution "0.0004"
-      --resampling-method "nearest"
+      --target-crs "epsg:4326" --target-resolution "0.0004" --resampling-method "nearest"
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
@@ -76,6 +75,6 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: 9388fb838b2205b932504612fe124d6b.dir
-      size: 9018731
+      md5: 4046da95defe9c5bd09233864ece8cec.dir
+      size: 9018730
       nfiles: 1

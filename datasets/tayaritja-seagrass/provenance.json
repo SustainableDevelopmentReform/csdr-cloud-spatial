@@ -1,14 +1,14 @@
 {
-  "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/datasets/tayaritja-seagrass/dvc.yaml",
-  "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/datasets/tayaritja-seagrass/dvc.lock",
-  "params": {
-    "out_s3_path": "s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr",
-    "url": "https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-",
-    "target_crs": "epsg:4326",
-    "target_resolution": 0.0004,
-    "resampling_method": "nearest"
-  },
-  "git_commit": "ccd35dbee651439e60785563ae7605d241f6e947",
-  "git_commit_date": "2025-05-23 12:01:45 -0600",
-  "dependencies": []
+    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ccd35dbee651439e60785563ae7605d241f6e947/datasets/tayaritja-seagrass/dvc.yaml",
+    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ccd35dbee651439e60785563ae7605d241f6e947/datasets/tayaritja-seagrass/dvc.lock",
+    "params": {
+        "out_s3_path": "s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr",
+        "url": "https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-",
+        "target_crs": "epsg:4326",
+        "target_resolution": 0.0004,
+        "resampling_method": "nearest"
+    },
+    "git_commit": "ccd35dbee651439e60785563ae7605d241f6e947",
+    "git_commit_date": "2025-05-23 12:01:45 -0600",
+    "dependencies": []
 }

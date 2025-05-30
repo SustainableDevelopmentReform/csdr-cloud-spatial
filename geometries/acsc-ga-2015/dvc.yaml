@@ -28,6 +28,7 @@ stages:
       --input-glob ${shapefile_name} 
       --target-crs EPSG:4326 
       --output-path ${parquet_output}
+      --name-property ${name_property}
     deps:
       - ${extract_dir}
 
