@@ -1,0 +1,39 @@
+# Internal variables
+vars:
+  - tsg_data_variable: data_variable # Variable name within the Zarr
+  - geometry_name_dim: acsc # Dimension name for geometries in output
+  - fill_value: None # Value to fill nodata/NaN with before stats
+  - zonal_stats_output: out/tsg_zonal_stats_acsc.parquet # Output path for this product
+  - proj_crs: epsg:9473
+
+stages:
+  calculate_zonal_stats:
+    desc: Calculate zonal statistics per Australian Coastal Primary Sediment Compartment
+    params:
+      - zonal_stats
+    cmd: >-
+      csdr vector-cube zonal-stats
+      --input-zarr ${tsg_zarr_path}
+      --input-geoparquet ${acsc_geoparquet_path}
+      --output-path ${zonal_stats_output}
+      --data-variable ${tsg_data_variable}
+      --name-dim ${geometry_name_dim}
+      --fill-value ${fill_value}
+      --proj-crs ${proj_crs}
+    deps:
+      - ${tsg_zarr_path}
+      - ${acsc_geoparquet_path}
+      - ../../csdr/cli_vector_cube.py
+    outs:
+      - ${zonal_stats_output}:
+          cache: false
+
+  validate_zonal_stats:
+    desc: Validate the generated zonal statistics GeoParquet file
+    cmd: >-
+      csdr geometries validate
+      --input-file ${zonal_stats_output}
+      # Add --schema if a specific schema exists for validation
+    deps:
+      - ${zonal_stats_output}
+      - ../../csdr/cli_geometries.py

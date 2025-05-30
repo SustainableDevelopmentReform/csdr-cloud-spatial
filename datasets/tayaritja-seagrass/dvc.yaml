@@ -4,6 +4,7 @@
 vars:
   - geotiff_name: nesp36_seagrass_baseline.tif
   - download_dir: in/geotiffs
+  - resampled_dir: in/resampled-geotiffs
   - zarr_output: out/nesp36_seagrass_baseline.zarr
 
 stages:
@@ -17,13 +18,28 @@ stages:
       - ${download_dir}:
           cache: false
 
+  warp_tsg:
+    cmd: >-
+      csdr datasets warp-raster
+      --input-dir "${download_dir}"
+      --output-dir "${resampled_dir}"
+      --target-crs "${target_crs}"
+      --target-resolution "${target_resolution}"
+      --resampling-method "${resampling_method}"
+    deps:
+      - ${download_dir}
+      - ../../csdr/cli_datasets.py
+    outs:
+      - ${resampled_dir}:
+          cache: false
+
   raster_to_zarr_tsg:
     cmd: >-
       csdr datasets raster-to-zarr
-      --input-raster ${download_dir}/${geotiff_name}
+      --input-raster ${resampled_dir}/${geotiff_name}
       --output-zarr ${zarr_output}
     deps:
-      - ${download_dir}
+      - ${resampled_dir}
 
       - ../../csdr/cli_datasets.py
     outs:
