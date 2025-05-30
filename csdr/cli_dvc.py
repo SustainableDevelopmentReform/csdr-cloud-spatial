@@ -188,11 +188,17 @@ def generate_product_json_files(
     logger.info(
         f"Generating product JSON files for: {pipeline_base_path}, {product_out_path}")
     try:
+        if not "name" in pipeline_provenance_data["params"]:
+            logger.error(
+                "Pipeline params do not contain 'name' key. "
+                "Cannot generate product JSON files.")
+            raise typer.Exit(code=1)
+
         product_gdf = gpd.read_parquet(
             product_out_path,
         )
 
-        product_json_outputs_path = f"{pipeline_base_path}/out/products/"
+        product_json_outputs_path = f"outputs/{pipeline_base_path}/out/products/"
         os.makedirs(product_json_outputs_path, exist_ok=True)
 
         features = product_gdf.iterfeatures()
