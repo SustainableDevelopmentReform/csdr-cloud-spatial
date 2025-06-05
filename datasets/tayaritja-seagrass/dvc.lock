@@ -61,8 +61,7 @@ stages:
       nfiles: 20
   warp_tsg:
     cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir "in/resampled-geotiffs"
-      --target-crs "+proj=longlat +datum=WGS84 +no_defs" --target-resolution "0.0004"
-      --resampling-method "nearest"
+      --target-crs "epsg:4326" --target-resolution "0.0004" --resampling-method "nearest"
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
@@ -76,6 +75,6 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: 9388fb838b2205b932504612fe124d6b.dir
-      size: 9018731
-      nfiles: 1
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0

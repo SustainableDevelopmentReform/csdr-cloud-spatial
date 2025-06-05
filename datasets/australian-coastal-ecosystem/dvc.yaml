@@ -1,0 +1,64 @@
+# Pipeline specific to Australian Coastal Ecosystem products (ACE)
+
+# Internal variables
+vars:
+  - geotiff_name: ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.tif
+  - download_dir: in/geotiffs
+  - resampled_dir: in/resampled-geotiffs
+  - zarr_output: out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+
+stages:
+  download_ace:
+    desc: Download ACE GeoTIFF
+    cmd: |
+      mkdir -p ${download_dir}
+      echo "Downloading from ${url}..."
+      curl -L -o ${download_dir}/${geotiff_name} "${url}"
+    outs:
+      - ${download_dir}:
+          cache: false
+
+  warp_ace:
+    cmd: >-
+      csdr datasets warp-raster
+      --input-dir "${download_dir}"
+      --output-dir "${resampled_dir}"
+      --target-crs "${target_crs}"
+      --target-resolution "${target_resolution}"
+      --resampling-method "${resampling_method}"
+    deps:
+      - ${download_dir}
+      - ../../csdr/cli_datasets.py
+    outs:
+      - ${resampled_dir}:
+          cache: false
+
+  raster_to_zarr_ace:
+    cmd: >-
+      csdr datasets raster-to-zarr
+      --input-raster ${resampled_dir}/${geotiff_name}
+      --output-zarr ${zarr_output}
+    deps:
+      - ${download_dir}
+
+      - ../../csdr/cli_datasets.py
+    outs:
+      - ${zarr_output}:
+          cache: false
+
+  validate_ace:
+    cmd: >-
+      csdr datasets validate-zarr --input-zarr ${zarr_output}
+    deps:
+      - ${zarr_output}
+
+      - ../../csdr/cli_datasets.py
+
+  upload_ace:
+    cmd: >-
+      if [[ ${out_s3_path} == s3://* ]]; then aws s3 cp ${zarr_output} ${out_s3_path} --recursive; else echo "out_s3_path does not start with s3://, skipping upload" && cp -r ${zarr_output} ${out_s3_path}; fi
+    deps:
+      - ${zarr_output}
+    outs:
+      - ${out_s3_path}:
+          cache: false
