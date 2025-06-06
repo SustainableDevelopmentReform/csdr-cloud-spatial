@@ -1,17 +1,17 @@
 import json
 import logging
 import os
-from typing import Annotated
 import re
+from typing import Annotated
 
+import geopandas as gpd
 import typer
 import yaml
 from dvc.exceptions import NotDvcRepoError
 from dvc.repo import Repo
 from dvc.stage import PipelineStage
-import geopandas as gpd
-from shapely.geometry.base import BaseGeometry
 from shapely.geometry import mapping
+from shapely.geometry.base import BaseGeometry
 
 from csdr.utils import run_command
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class ShapelyEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: BaseGeometry | object) -> object:
         if isinstance(obj, BaseGeometry):
             return mapping(obj)
         return super().default(obj)
