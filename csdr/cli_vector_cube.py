@@ -78,22 +78,14 @@ def zonal_stats(
             "--data-variable are required."
         )
         raise typer.Exit(code=1)
-    params = dvc.api.params_show()
 
+    params_path = os.path.join(os.getcwd(), "params.yaml")
+    params = dvc.api.params_show(params_path)
     if "zonal_stats" in params:
         stats = params["zonal_stats"]
-    elif "params.yaml:zonal_stats" in params:
-        stats = params["params.yaml:zonal_stats"]
     else:
         logger.error("zonal_stats must be specified in params.yaml.")
         raise typer.Exit(code=1)
-
-    if "classes" in params:
-        classes = params["classes"]
-    elif "params.yaml:classes" in params:
-        classes = params["params.yaml:classes"]
-    else:
-        classes = None
 
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
@@ -118,6 +110,7 @@ def zonal_stats(
                 f"Reprojecting dataset from {da.odc.crs.to_wkt(pretty=True)} to {proj_crs}."
             )
             da = da.odc.reproject(proj_crs, resampling="nearest")
+            da.name = data_variable  # name gets changed by reproject
 
         logger.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
@@ -168,7 +161,8 @@ def zonal_stats(
         logger.info(
             f"Calculating zonal statistics ({[stat['stat'] for stat in stats]})"
         )
-        if classes:
+        if "classes" in params:
+            classes = params["classes"]
             stat_arrays = []
             for c in classes:
                 binary_mask = (da_filled == c).astype(int)
@@ -221,10 +215,10 @@ def zonal_stats(
             index=[
                 col
                 for col in stats_gdf.columns
-                if col not in ["zonal_statistics", "data_variable"]
+                if col not in ["zonal_statistics", data_variable]
             ],
             columns="zonal_statistics",
-            values="data_variable",
+            values=data_variable,
         )
         stats_gdf = stats_gdf.reset_index()
         # Merge the statistics back into the *original* filtered GeoDataFrame
