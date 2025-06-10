@@ -42,10 +42,10 @@ stages:
       size: 81802
       nfiles: 20
   upload_tsg:
-    cmd: if [[ /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr == s3://* ]]; then
-      aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    cmd: if [[ /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr == s3://* ]]; then
+      aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
-      && cp -r out/nesp36_seagrass_baseline.zarr /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr;
+      && cp -r out/nesp36_seagrass_baseline.zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr;
       fi
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
@@ -54,7 +54,7 @@ stages:
       size: 81802
       nfiles: 20
     outs:
-    - path: /tmp/csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    - path: /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
       md5: 896d8117fe5782c098593599a3f99e78.dir
       size: 81802
