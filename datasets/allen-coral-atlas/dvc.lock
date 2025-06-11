@@ -1,11 +1,14 @@
 schema: '2.0'
 stages:
   sync_zarr:
-    cmd: "if [[ s3://csdr-dvc-out/aca.zarr == s3://* ]]; then  aws
-      s3 sync s3://csdr-dvc-out/unsw/aca.zarr s3://csdr-dvc-out/aca.zarr
-      --quiet;  else  echo \"out_s3_path does not start with s3://, skipping upload\"\
-      \ &&  aws s3 sync s3://csdr-dvc-out/unsw/aca.zarr s3://csdr-dvc-out/aca.zarr
-      --quiet;  fi\n"
+    cmd: aws s3 sync s3://files.auspatious.com/unsw/aca.zarr s3://csdr-dvc-out/aca.zarr
+      --quiet;
+    deps:
+    - path: s3://files.auspatious.com/unsw/aca.zarr
+      hash: md5
+      md5: b51b7729c3104d4da1cc8f04487d0ec3.dir
+      size: 30797748
+      nfiles: 3130
     outs:
     - path: s3://csdr-dvc-out/aca.zarr
       hash: md5

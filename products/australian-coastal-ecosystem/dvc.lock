@@ -1,23 +1,23 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr
-      /tmp/csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
-      --input-geoparquet /tmp/csdr-dvc-out/acsc-ga-2015.parquet --output-path out/ace_zonal_stats_acsc.parquet
+    cmd: csdr vector-cube zonal-stats --input-zarr 
+      s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+      --input-geoparquet s3://csdr-dvc-out/acsc-ga-2015.parquet --output-path out/ace_zonal_stats_acsc.parquet
       --data-variable data_variable --name-dim acsc --fill-value 0
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: 492ced02c17010fad54735239141aa6e
-      size: 9543
-    - path: /tmp/csdr-dvc-out/acsc-ga-2015.parquet
+      md5: 4c0b1efbb9dbd21ff371f64ffda1bbc3
+      size: 9432
+    - path: s3://csdr-dvc-out/acsc-ga-2015.parquet
       hash: md5
-      md5: b6df59c688f8019eac018b7fb4089d79
+      etag: 690cc905d526d6f14d1ac3f2fcb3662c-2
       size: 8959806
-    - path:
-        /tmp/csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+    - path: 
+        s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: 25ebbb152fe7806403544b7469c97c1a.dir
+      md5: 5e051c5d75368aa2df12a7e32bd33952.dir
       size: 74244
       nfiles: 41
     params:
@@ -37,17 +37,32 @@ stages:
     outs:
     - path: out/ace_zonal_stats_acsc.parquet
       hash: md5
-      md5: f77957f252fef80597340f7437990253
-      size: 22583681
+      md5: c922cf736758ba66100959ca41e111b5
+      size: 22583674
   validate_zonal_stats:
     cmd: 'csdr geometries validate --input-file out/ace_zonal_stats_acsc.parquet #
       Add --schema if a specific schema exists for validation'
     deps:
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 95cc1509f8c7b0986bf3ecffe744294f
-      size: 4989
+      md5: e046408ff0900f26dac7cf33018d318b
+      size: 4856
     - path: out/ace_zonal_stats_acsc.parquet
       hash: md5
-      md5: f77957f252fef80597340f7437990253
-      size: 22583681
+      md5: c922cf736758ba66100959ca41e111b5
+      size: 22583674
+  upload:
+    cmd: if [[ s3://csdr-dvc-out/ace_zonal_stats_acsc.parquet == s3://* ]]; then aws
+      s3 cp out/ace_zonal_stats_acsc.parquet s3://csdr-dvc-out/ace_zonal_stats_acsc.parquet;
+      else echo "out_s3_path does not start with s3://, skipping upload" && cp out/ace_zonal_stats_acsc.parquet
+      s3://csdr-dvc-out/ace_zonal_stats_acsc.parquet; fi
+    deps:
+    - path: out/ace_zonal_stats_acsc.parquet
+      hash: md5
+      md5: c922cf736758ba66100959ca41e111b5
+      size: 22583674
+    outs:
+    - path: s3://csdr-dvc-out/ace_zonal_stats_acsc.parquet
+      hash: md5
+      etag: 7d3c129567221cc37840f5bd809a162d-3
+      size: 22583674

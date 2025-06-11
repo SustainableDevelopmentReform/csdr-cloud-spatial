@@ -7,22 +7,22 @@ stages:
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: b7ffeb202a50f159e91cbecec474fa87
-      size: 7887
+      md5: 4c0b1efbb9dbd21ff371f64ffda1bbc3
+      size: 9432
     - path: s3://csdr-dvc-out/asgs-ste-2021.parquet
       hash: md5
       etag: 3b1f37098f089a5dc970b4674540b305-4
       size: 28619293
     - path: s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: dbcade17475811d88dea98696b00cbd7.dir
+      md5: 863a7f637b996494419db5444ab7c830.dir
       size: 326561
       nfiles: 116
     outs:
     - path: out/gmw_zonal_stats_ste.parquet
       hash: md5
-      md5: 4353c71fdb8f65f63220a754bd9297dc
-      size: 57221150
+      md5: b28df89b2c0df1c8006da668a02e8b09
+      size: 57772464
   validate_zonal_stats:
     cmd: 'csdr geometries validate --input-file out/gmw_zonal_stats_ste.parquet #
       Add --schema if a specific schema exists for validation'
@@ -33,8 +33,8 @@ stages:
       size: 4856
     - path: out/gmw_zonal_stats_ste.parquet
       hash: md5
-      md5: 4353c71fdb8f65f63220a754bd9297dc
-      size: 57221150
+      md5: b28df89b2c0df1c8006da668a02e8b09
+      size: 57772464
   upload_asgs:
     cmd: if [[ 
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet
@@ -61,10 +61,10 @@ stages:
     deps:
     - path: out/gmw_zonal_stats_ste.parquet
       hash: md5
-      md5: 4353c71fdb8f65f63220a754bd9297dc
-      size: 57221150
+      md5: b28df89b2c0df1c8006da668a02e8b09
+      size: 57772464
     outs:
     - path: s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet
       hash: md5
-      etag: d473a6faeb1f0fd04228f3988b220ce4-7
-      size: 57221150
+      etag: faf3bdd7a4727c4d79b22707c96243b0-7
+      size: 57772464

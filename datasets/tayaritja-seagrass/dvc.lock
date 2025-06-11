@@ -26,7 +26,7 @@ stages:
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
+      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
       size: 81802
       nfiles: 20
   validate_tsg:
@@ -38,7 +38,7 @@ stages:
       size: 6566
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
+      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
       size: 81802
       nfiles: 20
   upload_tsg:
@@ -50,13 +50,13 @@ stages:
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 2c032a08911fdbd6cad820450fc6b58c.dir
+      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
       size: 81802
       nfiles: 20
     outs:
     - path: s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: abb594c798da71a78339431e6097cdd6.dir
+      md5: e9e5654fbd4ed65dbbb9777603f5fb92.dir
       size: 81802
       nfiles: 20
   warp_tsg:
@@ -75,6 +75,6 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: 4046da95defe9c5bd09233864ece8cec.dir
+      size: 9018730
+      nfiles: 1
