@@ -1,0 +1,10 @@
+{
+    "pipeline_file": "/datasets/allen-coral-atlas/dvc.yaml",
+    "lock_file": "/datasets/allen-coral-atlas/dvc.lock",
+    "params": {
+        "out_s3_path": "s3://csdr-dvc-out/testing/aca.zarr"
+    },
+    "git_commit": "3f844bb1ec2b05701f02cc070096f1b2007070c8",
+    "git_commit_date": "2025-05-09 17:00:05 +1000",
+    "dependencies": []
+}

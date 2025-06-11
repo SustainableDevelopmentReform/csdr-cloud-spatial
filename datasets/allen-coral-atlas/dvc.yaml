@@ -1,0 +1,15 @@
+# Pipeline specific to Allen Coral Atlas (region subset)
+
+# Internal variables
+vars:
+  - source_zarr: s3://files.auspatious.com/unsw/aca.zarr
+
+stages:
+  sync_zarr:
+    cmd: >
+      # This works both local and remote
+      aws s3 sync ${source_zarr} ${out_s3_path} --quiet;
+
+    outs:
+      - ${out_s3_path}:
+          cache: false
