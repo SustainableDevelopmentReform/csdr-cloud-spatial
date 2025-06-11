@@ -209,6 +209,13 @@ def generate_product_json_files(
         for i, feature in enumerate(features):
             feature["properties"]["provenance"] = pipeline_provenance_data
 
+            # TODO: get geometry_name_dim from params.yaml in geometries pipeline, and then remove this from the feature properties (as we are getting duplicate geometry)
+            # geometry_name_dim = pipeline_provenance_data.get(
+            #     "params", {}).get("geometry_name_dim")
+            # # Delete geometry_name_dim in properties if it exists
+            # if geometry_name_dim:
+            #     del feature["properties"][geometry_name_dim]
+
             name = f"product_{i}"
             if "name" in feature["properties"]:
                 name = feature["properties"]["name"]
