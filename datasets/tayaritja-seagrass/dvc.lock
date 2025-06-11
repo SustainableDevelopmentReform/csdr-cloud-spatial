@@ -75,6 +75,6 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: 4046da95defe9c5bd09233864ece8cec.dir
-      size: 9018730
-      nfiles: 1
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0

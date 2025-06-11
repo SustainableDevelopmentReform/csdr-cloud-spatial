@@ -78,11 +78,15 @@ def zonal_stats(
             "--data-variable are required."
         )
         raise typer.Exit(code=1)
-    params = dvc.api.params_show()
-    if "zonal_stats" not in params:
+
+    params_path = os.path.join(os.getcwd(), "params.yaml")
+    params = dvc.api.params_show(params_path)
+    if "zonal_stats" in params:
+        stats = params["zonal_stats"]
+    else:
         logger.error("zonal_stats must be specified in params.yaml.")
         raise typer.Exit(code=1)
-    stats = params["zonal_stats"]
+
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
 
@@ -106,6 +110,7 @@ def zonal_stats(
                 f"Reprojecting dataset from {da.odc.crs.to_wkt(pretty=True)} to {proj_crs}."
             )
             da = da.odc.reproject(proj_crs, resampling="nearest")
+            da.name = data_variable  # name gets changed by reproject
 
         logger.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
@@ -156,14 +161,31 @@ def zonal_stats(
         logger.info(
             f"Calculating zonal statistics ({[stat['stat'] for stat in stats]})"
         )
-        stats_da = da_filled.xvec.zonal_stats(
-            gdf_reprojected.geometry,
-            x_coords="x",
-            y_coords="y",
-            stats=[(stat["name"], stat["stat"]) for stat in stats],
-            name=name_dim,  # Use the specified name for the new dimension
-            index=True,  # Keep the original geometry index
-        )
+        if "classes" in params:
+            classes = params["classes"]
+            stat_arrays = []
+            for c in classes:
+                binary_mask = (da_filled == c).astype(int)
+                temp_da = binary_mask.xvec.zonal_stats(
+                    gdf_reprojected.geometry,
+                    x_coords="x",
+                    y_coords="y",
+                    stats=[(stat["name"], stat["stat"]) for stat in stats],
+                    name=name_dim,  # Use the specified name for the new dimension
+                    index=True,  # Keep the original geometry index
+                )
+                temp_da = temp_da.expand_dims({"class": [c]})
+                stat_arrays.append(temp_da)
+            stats_da = xr.concat(stat_arrays, dim="class")
+        else:
+            stats_da = da_filled.xvec.zonal_stats(
+                gdf_reprojected.geometry,
+                x_coords="x",
+                y_coords="y",
+                stats=[(stat["name"], stat["stat"]) for stat in stats],
+                name=name_dim,  # Use the specified name for the new dimension
+                index=True,  # Keep the original geometry index
+            )
 
         for stat in stats:
             # Calculate area-based statistics if requested:
@@ -188,9 +210,23 @@ def zonal_stats(
         logger.info("Formatting results into GeoDataFrame...")
         # Convert the DataArray results to a GeoDataFrame
         stats_gdf = stats_computed.xvec.to_geodataframe()
-
+        stats_gdf = stats_gdf.reset_index()
+        stats_gdf = stats_gdf.pivot(
+            index=[
+                col
+                for col in stats_gdf.columns
+                if col not in ["zonal_statistics", data_variable]
+            ],
+            columns="zonal_statistics",
+            values=data_variable,
+        )
+        stats_gdf = stats_gdf.reset_index()
         # Merge the statistics back into the *original* filtered GeoDataFrame
         stats_gdf = stats_gdf.merge(gdf_filtered, left_on="index", right_index=True)
+        # GeoDataFrame becomes a DataFrame after pivot, must make it a GeoDataFrame again
+        stats_gdf = gpd.GeoDataFrame(
+            stats_gdf, geometry="geometry", crs=gdf_filtered.crs
+        )
 
         # Reproject final output if needed
         if stats_gdf.crs != output_crs:
