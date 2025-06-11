@@ -2,9 +2,9 @@
     "pipeline_file": "/products/global-mangrove-watch-annual-extent/dvc.yaml",
     "lock_file": "/products/global-mangrove-watch-annual-extent/dvc.lock",
     "params": {
-        "out_s3_path": "s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet",
-        "asgs_abs_geoparquet_path": "s3://csdr-dvc-out/asgs-ste-2021.parquet",
-        "gmw_zarr_path": "s3://csdr-dvc-out/gmw-v4019-1km-mollweide.zarr",
+        "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet",
+        "asgs_abs_geoparquet_path": "s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet",
+        "gmw_zarr_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr",
         "zonal_stats": [
             {
                 "stat": "sum",

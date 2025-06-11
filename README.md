@@ -5,7 +5,6 @@
 - Create Python environment with GDAL and install the dependencies
 - Read [DVC](https://dvc.org/doc/start) docs
   - [Install DVC](https://dvc.org/doc/install)
-- In all `params.yaml` and `dvc.yaml` files, replace `s3://csdr-dvc-out` with your own S3 bucket (until we have another S3 bucket setup)
   - Alternatively, change it to a local directory (ideally outside the git repo) - for example `out_s3_path: /tmp/csdr/`
 - Run `csdr dvc status` - it should list all pipelines need to be run
 - Run `dvc dag` - have a look at the graph of compute
@@ -72,9 +71,7 @@ There are a few components to each pipeline
 
 This is used for storing intermediary datasets, geometries, and products - it does not cache input data, and it not a DVC remote (see DVC limitations). It is currently specified in each `params.yaml` file.
 
-To get this working locally, you will need to change all S3 paths (`s3://csdr-dvc-out`) in all `params.yaml` and `dvc.yaml` files to your own S3 bucket (until we have another S3 bucket setup).
-
-- Alternatively, change it to a local directory (ideally outside the git repo) - for example `/tmp/csdr/`
+Alternatively, change it to a local directory (ideally outside the git repo) - for example `/tmp/csdr/`
 
 ### Check status of the pipeline
 
