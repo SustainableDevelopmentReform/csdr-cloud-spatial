@@ -1,27 +1,29 @@
 {
-  "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8ab90b7cb65568768b368c082329e2e9090dff7a/products/global-mangrove-watch-annual-extent/dvc.yaml",
-  "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8ab90b7cb65568768b368c082329e2e9090dff7a/products/global-mangrove-watch-annual-extent/dvc.lock",
-  "params": {
-    "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet",
-    "asgs_abs_geoparquet_path": "s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet",
-    "gmw_zarr_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr",
-    "zonal_stats": [
-      {
-        "stat": "sum",
-        "mode": "area",
-        "name": "total_area"
-      },
-      {
-        "stat": "mean",
-        "mode": "pixel",
-        "name": "percent_cover"
-      }
+    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/products/global-mangrove-watch-annual-extent/dvc.yaml",
+    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/products/global-mangrove-watch-annual-extent/dvc.lock",
+    "params": {
+        "name": "gmw_zonal_stats_abs_asgs_ste",
+        "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet",
+        "json_out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste/",
+        "asgs_abs_geoparquet_path": "s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet",
+        "gmw_zarr_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr",
+        "zonal_stats": [
+            {
+                "stat": "sum",
+                "mode": "area",
+                "name": "total_area"
+            },
+            {
+                "stat": "mean",
+                "mode": "pixel",
+                "name": "percent_cover"
+            }
+        ]
+    },
+    "git_commit": "8497b69c449d3c0a895893614776b4787f3582a7",
+    "git_commit_date": "2025-06-26 02:17:33 +0000",
+    "dependencies": [
+        "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/datasets/global-mangrove-watch-annual-extent/dvc.yaml",
+        "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/geometries/abs-asgs-edition-3/dvc.yaml"
     ]
-  },
-  "git_commit": "8ab90b7cb65568768b368c082329e2e9090dff7a",
-  "git_commit_date": "2025-06-11 12:13:33 +1000",
-  "dependencies": [
-    "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8ab90b7cb65568768b368c082329e2e9090dff7a/datasets/global-mangrove-watch-annual-extent/dvc.yaml",
-    "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8ab90b7cb65568768b368c082329e2e9090dff7a/geometries/abs-asgs-edition-3/dvc.yaml"
-  ]
 }

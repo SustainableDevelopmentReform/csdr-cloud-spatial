@@ -419,8 +419,18 @@ def publish(
 
         if not no_commit:
             commit_if_changes(post_commit_message)
+
+            # Push to the remote
+            logger.info("Pushing changes to remote repository...")
+            push_success, push_output, push_stderr = run_command(["git", "push"])
+            if not push_success:
+                logger.error(f"Failed to push changes: {push_stderr}")
+                raise typer.Exit(code=1)
+            else:
+                logger.info(f"Successfully pushed changes: {push_output}")
         else:
             logger.info("Skipping Git commit - --no-commit flag used.")
+
 
     except NotDvcRepoError:
         logger.error("Current directory is not a DVC repository.")
