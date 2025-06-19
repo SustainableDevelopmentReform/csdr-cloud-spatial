@@ -1,3 +1,3 @@
 # These values will be included in the provenance file
 
-out_s3_path: s3://csdr-dvc-out/aca.zarr
+out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/aca.zarr
