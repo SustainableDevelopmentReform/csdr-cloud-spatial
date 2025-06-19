@@ -1,12 +1,11 @@
 {
-    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ed1b48f13cbd11aba55504424b7cc333354e28dc/geometries/acsc-ga-2015/dvc.yaml",
-    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ed1b48f13cbd11aba55504424b7cc333354e28dc/geometries/acsc-ga-2015/dvc.lock",
-    "params": {
-        "out_s3_path": "s3://csdr-dvc-out/acsc-ga-2015.parquet",
-        "url": "https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip",
-        "name_property": "Name"
-    },
-    "git_commit": "ed1b48f13cbd11aba55504424b7cc333354e28dc",
-    "git_commit_date": "2025-05-30 13:31:16 +1000",
-    "dependencies": []
+  "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ed1b48f13cbd11aba55504424b7cc333354e28dc/geometries/acsc-ga-2015/dvc.yaml",
+  "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/ed1b48f13cbd11aba55504424b7cc333354e28dc/geometries/acsc-ga-2015/dvc.lock",
+  "params": {
+    "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet",
+    "url": "https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip"
+  },
+  "git_commit": "ed1b48f13cbd11aba55504424b7cc333354e28dc",
+  "git_commit_date": "2025-05-30 13:31:16 +1000",
+  "dependencies": []
 }

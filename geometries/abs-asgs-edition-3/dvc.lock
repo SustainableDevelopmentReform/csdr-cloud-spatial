@@ -43,17 +43,17 @@ stages:
       md5: d30b066c8272157d35621f400b5d20fa
       size: 28619293
   upload_asgs:
-    cmd: if [[ s3://csdr-dvc-out/asgs-ste-2021.parquet == s3://* ]]; then aws s3 cp
-      out/asgs-ste-2021.parquet s3://csdr-dvc-out/asgs-ste-2021.parquet; else echo
+    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet == s3://* ]]; then aws s3 cp
+      out/asgs-ste-2021.parquet s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet; else echo
       "out_s3_path does not start with s3://, skipping upload" && cp out/asgs-ste-2021.parquet
-      s3://csdr-dvc-out/asgs-ste-2021.parquet; fi
+      s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet; fi
     deps:
     - path: out/asgs-ste-2021.parquet
       hash: md5
       md5: d30b066c8272157d35621f400b5d20fa
       size: 28619293
     outs:
-    - path: s3://csdr-dvc-out/asgs-ste-2021.parquet
+    - path: s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet
       hash: md5
       etag: 3b1f37098f089a5dc970b4674540b305-4
       size: 28619293

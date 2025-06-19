@@ -1,19 +1,19 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
-      --input-geoparquet s3://csdr-dvc-out/acsc-ga-2015.parquet --output-path out/tsg_zonal_stats_acsc.parquet
+    cmd: csdr vector-cube zonal-stats --input-zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      --input-geoparquet /tmp/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet --output-path out/tsg_zonal_stats_acsc.parquet
       --data-variable data_variable --name-dim acsc --fill-value None --proj-crs epsg:9473
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: 4c0b1efbb9dbd21ff371f64ffda1bbc3
-      size: 9432
-    - path: s3://csdr-dvc-out/acsc-ga-2015.parquet
+      md5: 780f9ccec47caae2578d6d94b5808ea6
+      size: 7835
+    - path: /tmp/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
       hash: md5
       etag: 690cc905d526d6f14d1ac3f2fcb3662c-2
       size: 8959806
-    - path: s3://csdr-dvc-out/nesp36_seagrass_baseline.zarr
+    - path: /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
       md5: e9e5654fbd4ed65dbbb9777603f5fb92.dir
       size: 81802

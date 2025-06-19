@@ -42,17 +42,17 @@ stages:
       md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
   upload_acsc:
-    cmd: if [[ s3://csdr-dvc-out/acsc-ga-2015.parquet == s3://* ]]; then aws s3 cp
-      out/acsc-primary-compartments.parquet s3://csdr-dvc-out/acsc-ga-2015.parquet;
+    cmd: if [[ /tmp/csdr/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet == s3://* ]]; then aws
+      s3 cp out/acsc-primary-compartments.parquet /tmp/csdr/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet;
       else echo "out_s3_path does not start with s3://, skipping upload" && cp out/acsc-primary-compartments.parquet
-      s3://csdr-dvc-out/acsc-ga-2015.parquet; fi
+      /tmp/csdr/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet; fi
     deps:
     - path: out/acsc-primary-compartments.parquet
       hash: md5
       md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
     outs:
-    - path: s3://csdr-dvc-out/acsc-ga-2015.parquet
+    - path: /tmp/csdr/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
       hash: md5
       etag: 690cc905d526d6f14d1ac3f2fcb3662c-2
       size: 8959806

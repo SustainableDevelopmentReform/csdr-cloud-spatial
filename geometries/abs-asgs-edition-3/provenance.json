@@ -1,12 +1,11 @@
 {
-    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/geometries/abs-asgs-edition-3/dvc.yaml",
-    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/geometries/abs-asgs-edition-3/dvc.lock",
-    "params": {
-        "out_s3_path": "s3://csdr-dvc-out/asgs-ste-2021.parquet",
-        "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip",
-        "name_property": "STE_NAME21"
-    },
-    "git_commit": "5f8ca12302939dde266d20736b3ab444cef8cd70",
-    "git_commit_date": "2025-05-21 10:04:39 +1000",
-    "dependencies": []
+  "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/geometries/abs-asgs-edition-3/dvc.yaml",
+  "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/5f8ca12302939dde266d20736b3ab444cef8cd70/geometries/abs-asgs-edition-3/dvc.lock",
+  "params": {
+    "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet",
+    "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip"
+  },
+  "git_commit": "5f8ca12302939dde266d20736b3ab444cef8cd70",
+  "git_commit_date": "2025-05-21 10:04:39 +1000",
+  "dependencies": []
 }
