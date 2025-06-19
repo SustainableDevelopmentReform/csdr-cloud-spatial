@@ -28,6 +28,7 @@ stages:
       --input-glob ${shapefile_name}
       --target-crs EPSG:4326
       --output-path ${parquet_output}
+      --name-property ${name_property}
     # Depend on the directory from previous stage and the script
     deps:
       - ${extract_dir}

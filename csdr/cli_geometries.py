@@ -31,6 +31,11 @@ def convert_vector(
         "--input-glob",
         help="Glob pattern to find the input vector file(s) within the input directory.",
     ),
+    name_property: str = typer.Option(
+        None,
+        "--name-property",
+        help="Name of the property to use as the name of the feature.",
+    ),
     source_crs_option: str = typer.Option(
         None,
         "--source-crs",
@@ -47,18 +52,21 @@ def convert_vector(
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        logger.error("--input-dir, --output-path, and --target-crs are required.")
+        logger.error(
+            "--input-dir, --output-path, and --target-crs are required.")
         raise typer.Exit(code=1)
 
     try:
         # Find input vector file using glob relative to input_dir
         # Search recursively within the input directory
         search_path = os.path.join(input_dir, "**", input_glob)
-        logger.info(f"Searching for input vector file(s) matching: {search_path}")
+        logger.info(
+            f"Searching for input vector file(s) matching: {search_path}")
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            logger.error(f"No files matching '{input_glob}' found within {input_dir}")
+            logger.error(
+                f"No files matching '{input_glob}' found within {input_dir}")
             raise typer.Exit(code=1)
 
         vector_file_path = found_files[0]  # Use the first found file
@@ -91,17 +99,8 @@ def convert_vector(
         logger.info(f"Projecting from {source_crs} to {target_crs}")
         gdf = gdf.to_crs(target_crs)
 
-        # --- Normalization Placeholder ---
-        # Add column renaming, dtype setting etc. here based on CLI options
-        # Example:
-        # if rename_cols:
-        #     import json
-        #     mapping = json.loads(rename_cols)
-        #     gdf = gdf.rename(columns=mapping)
-        # if set_dtypes:
-        #     import json
-        #     dtypes = json.loads(set_dtypes)
-        #     gdf = gdf.astype(dtypes)
+        if name_property:
+            gdf = gdf.rename(columns={name_property: "name"})
 
         logger.info("Applying schema/normalization (placeholder)...")
 

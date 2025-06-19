@@ -2,9 +2,9 @@ schema: '2.0'
 stages:
   download_extract_gmw:
     cmd: "mkdir -p in/geotiffs\necho \"Downloading from https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1...\"\
-      \ \ncurl -L -o in/geotiffs/gmw_mng_2020_v4019_gtiff.zip \"https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1\"\
-      \ \necho \"Unzipping...\"\nunzip -o in/geotiffs/gmw_mng_2020_v4019_gtiff.zip
-      -d in/geotiffs\n"
+      \ncurl -L -o in/geotiffs/gmw_mng_2020_v4019_gtiff.zip \"https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1\"\
+      \necho \"Unzipping...\"\nunzip -o in/geotiffs/gmw_mng_2020_v4019_gtiff.zip -d
+      in/geotiffs\n"
     outs:
     - path: in/geotiffs
       hash: md5
@@ -18,8 +18,8 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: aa51d8a81fc477c726b0a9969eb0e1a0
-      size: 6477
+      md5: da41e3e30a46292404913b08080c5cd9
+      size: 6566
     - path: in/geotiffs
       hash: md5
       md5: 57c331a471461096ee1bd5a5c20b6c69.dir
@@ -51,8 +51,8 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: aa51d8a81fc477c726b0a9969eb0e1a0
-      size: 6477
+      md5: da41e3e30a46292404913b08080c5cd9
+      size: 6566
     - path: in/projected-geotiffs.vrt
       hash: md5
       md5: 6cad439408dfe8227e4be6752f55050f
@@ -60,7 +60,7 @@ stages:
     outs:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: b2ce9f21be383a106ae30221551f33b1.dir
+      md5: e5d5cf0513199fa1c1cb89466d8c1d94.dir
       size: 326561
       nfiles: 116
   validate_gmw:
@@ -68,11 +68,11 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: aa51d8a81fc477c726b0a9969eb0e1a0
-      size: 6477
+      md5: da41e3e30a46292404913b08080c5cd9
+      size: 6566
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: b2ce9f21be383a106ae30221551f33b1.dir
+      md5: e5d5cf0513199fa1c1cb89466d8c1d94.dir
       size: 326561
       nfiles: 116
   upload_gmw:
@@ -84,12 +84,12 @@ stages:
     deps:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: b2ce9f21be383a106ae30221551f33b1.dir
+      md5: e5d5cf0513199fa1c1cb89466d8c1d94.dir
       size: 326561
       nfiles: 116
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: be6b4446fb861ed0eff99c7927bf0b98.dir
+      md5: 863a7f637b996494419db5444ab7c830.dir
       size: 326561
       nfiles: 116

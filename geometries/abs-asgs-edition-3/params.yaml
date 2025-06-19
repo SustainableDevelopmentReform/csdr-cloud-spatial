@@ -2,3 +2,4 @@
 
 out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet
 url: "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip"
+name_property: "STE_NAME21"

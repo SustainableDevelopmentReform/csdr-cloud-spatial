@@ -1,13 +1,17 @@
 import json
 import logging
 import os
+import re
 from typing import Annotated
 
+import geopandas as gpd
 import typer
 import yaml
 from dvc.exceptions import NotDvcRepoError
 from dvc.repo import Repo
 from dvc.stage import PipelineStage
+from shapely.geometry import mapping
+from shapely.geometry.base import BaseGeometry
 
 from csdr.utils import run_command
 
@@ -16,6 +20,14 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+class ShapelyEncoder(json.JSONEncoder):
+    def default(self, obj: BaseGeometry | object) -> object:
+        if isinstance(obj, BaseGeometry):
+            return mapping(obj)
+        return super().default(obj)
+
 
 dvc_app = typer.Typer()
 
@@ -152,10 +164,12 @@ def commit_if_changes(message: str) -> None:
         raise typer.Exit(code=1)
 
     if bool(git_status_output):
-        logger.info("Changes detected or commit forced. Staging and committing...")
+        logger.info(
+            "Changes detected or commit forced. Staging and committing...")
         add_success, _, add_stderr = run_command(["git", "add", "."])
         if not add_success:
-            logger.error(f"Failed to stage changes with 'git add .': {add_stderr}")
+            logger.error(
+                f"Failed to stage changes with 'git add .': {add_stderr}")
             raise typer.Exit(code=1)
 
         commit_cmd = ["git", "commit", "-m", message]
@@ -167,6 +181,63 @@ def commit_if_changes(message: str) -> None:
             logger.info(f"Committed changes with message: '{message}'")
     else:
         logger.info("No changes detected. Skipping commit.")
+
+
+def generate_product_json_files(
+        pipeline_base_path: str, product_out_path: str,
+        pipeline_provenance_data: dict) -> None:
+    product_name = pipeline_base_path.split("/")[1]
+
+    logger.info(
+        f"Generating product JSON files for: {pipeline_base_path}, {product_out_path}")
+    try:
+        product_gdf = gpd.read_parquet(
+            product_out_path,
+        )
+
+        product_json_outputs_path = f"outputs/{pipeline_base_path}/"
+        os.makedirs(product_json_outputs_path, exist_ok=True)
+
+        # Rm existing JSON files in the output directory
+        print(f"Removing existing JSON files in {product_json_outputs_path}")
+        for file in os.listdir(product_json_outputs_path):
+            if file.endswith(".geojson"):
+                os.remove(os.path.join(product_json_outputs_path, file))
+
+        features = product_gdf.iterfeatures()
+
+        for i, feature in enumerate(features):
+            feature["properties"]["provenance"] = pipeline_provenance_data
+
+            # TODO: get geometry_name_dim from params.yaml in geometries pipeline, and then remove this from the feature properties (as we are getting duplicate geometry)
+            # geometry_name_dim = pipeline_provenance_data.get(
+            #     "params", {}).get("geometry_name_dim")
+            # # Delete geometry_name_dim in properties if it exists
+            # if geometry_name_dim:
+            #     del feature["properties"][geometry_name_dim]
+
+            name = f"product_{i}"
+            if "name" in feature["properties"]:
+                name = feature["properties"]["name"]
+
+            # make name lowercase camelcase, and add pipeline name prefix
+            name = product_name + "_" + "_".join(
+                word.lower()
+                for word in re.sub(r'[^a-zA-Z0-9\s]', '', name).split(" ")
+                if word)
+
+            # Make sure we don't have any geometry column in the properties
+            if "geometry" in feature["properties"]:
+                del feature["properties"]["geometry"]
+
+            print(f"Writing feature to {name}.geojson")
+            with open(f"{product_json_outputs_path}{name}.geojson", "w") as f:
+                json.dump(feature, f, cls=ShapelyEncoder, indent=4)
+
+    except Exception as e:
+        logger.exception(
+            f"Failed to generate product JSON files: {e}")
+        raise typer.Exit(code=1)
 
 
 @dvc_app.command("publish")
@@ -187,6 +258,12 @@ def publish(
         False,
         "--no-commit",
         help="Do not commit changes to Git.",
+    ),
+    base_url: str = typer.Option(
+        "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/{commit_hash}/",
+        "--base-url",
+        "-b",
+        help="Base URL for git repository, with {commit_hash} placeholder for the commit hash.",
     ),
 ) -> None:
     """
@@ -221,7 +298,9 @@ def publish(
         logger.info(f"Found {len(pipelines)} DVC pipeline files.")
 
         for pipeline_path, stages_in_pipeline in pipelines.items():
-            provenance_file_path = pipeline_path.replace("dvc.yaml", "provenance.json")
+            pipeline_base_path = pipeline_path.replace("dvc.yaml", "")
+            provenance_file_path = pipeline_path.replace(
+                "dvc.yaml", "provenance.json")
 
             logger.info(
                 f"Processing pipeline: {pipeline_path} -> {provenance_file_path}"
@@ -231,13 +310,13 @@ def publish(
             dvc_lock_path = pipeline_path.replace("dvc.yaml", "dvc.lock")
 
             if not os.path.exists(dvc_lock_path):
-                logger.warning(f"DVC lock file not found for pipeline: {pipeline_path}")
+                logger.warning(
+                    f"DVC lock file not found for pipeline: {pipeline_path}")
                 continue
 
             # Call git command to get commit hash for dvc.lock file
             commit_hash_success, dvc_lock_commit_hash, commit_hash_stderr = run_command(
-                ["git", "rev-list", "-1", "HEAD", "--", dvc_lock_path]
-            )
+                ["git", "rev-list", "-1", "HEAD", "--", dvc_lock_path])
             if not commit_hash_success:
                 logger.error(
                     f"Failed to get git commit hash for pipeline: {pipeline_path} - {commit_hash_stderr}"
@@ -267,13 +346,17 @@ def publish(
                 with open(params_file_path) as f:
                     params = yaml.safe_load(f)
             else:
-                logger.warning(f"Params file not found for pipeline: {pipeline_path}")
+                logger.warning(
+                    f"Params file not found for pipeline: {pipeline_path}")
                 params = {}
+
+            base_url_with_commit_hash = base_url.format(
+                commit_hash=dvc_lock_commit_hash)
 
             # Initialize aggregated provenance data for the pipeline
             pipeline_provenance_data = {
-                "pipeline_file": "/" + pipeline_path,
-                "lock_file": "/" + dvc_lock_path,
+                "pipeline_file": base_url_with_commit_hash + pipeline_path,
+                "lock_file": base_url_with_commit_hash + dvc_lock_path,
                 "params": params,
                 "git_commit": dvc_lock_commit_hash,
                 "git_commit_date": dvc_lock_commit_date,
@@ -296,7 +379,7 @@ def publish(
                         not in pipeline_provenance_data["dependencies"]
                     ):
                         pipeline_provenance_data["dependencies"].append(
-                            dep_stage.relpath
+                            base_url_with_commit_hash + dep_stage.relpath
                         )
 
             # Write the aggregated JSON file for the pipeline
@@ -317,6 +400,18 @@ def publish(
                     f"{provenance_file_path}: {e}"
                 )
 
+            if pipeline_path.startswith("products/"):
+                product_out_path = params.get("out_s3_path")
+
+                # TODO only generate product JSON files if product has changed
+                if product_out_path.endswith(".parquet"):
+                    generate_product_json_files(
+                        pipeline_base_path, product_out_path,
+                        pipeline_provenance_data)
+                else:
+                    logger.info(
+                        f"Skipping product JSON files for: {pipeline_path} - only parquet products are supported")
+
         logger.info("Provenance generation finished.")
 
         if not no_commit:
@@ -328,7 +423,8 @@ def publish(
         logger.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.exception(f"Failed during DVC processing or provenance generation: {e} ")
+        logger.exception(
+            f"Failed during DVC processing or provenance generation: {e} ")
         raise typer.Exit(code=1)
 
 

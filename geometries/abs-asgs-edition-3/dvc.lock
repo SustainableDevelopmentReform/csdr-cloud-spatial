@@ -2,8 +2,8 @@ schema: '2.0'
 stages:
   download_extract_asgs:
     cmd: "mkdir -p in/asgs-ste-2021\necho \"Downloading from https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip...\"\
-      \ \ncurl -L -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip
-      \necho \"Unzipping...\" \nunzip -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip
+      \ncurl -L -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip\n
+      echo \"Unzipping...\"\nunzip -o in/asgs-ste-2021/STE_2021_AUST_SHP_GDA2020.zip
       -d in/asgs-ste-2021\n"
     outs:
     - path: in/asgs-ste-2021
@@ -12,17 +12,14 @@ stages:
       size: 51045181
       nfiles: 6
   convert_asgs:
-    cmd: csdr geometries convert-vector  --input-dir in/asgs-ste-2021  --input-glob
-      STE_2021_AUST_GDA2020.shp  --target-crs EPSG:4326  --output-path out/asgs-ste-2021.parquet
+    cmd: csdr geometries convert-vector --input-dir in/asgs-ste-2021 --input-glob
+      STE_2021_AUST_GDA2020.shp --target-crs EPSG:4326 --output-path out/asgs-ste-2021.parquet
+      --name-property STE_NAME21
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 81df0b0b51118ec2a451e7e60e13fa13
-      size: 5038
+      md5: e046408ff0900f26dac7cf33018d318b
+      size: 4856
     - path: in/asgs-ste-2021
       hash: md5
       md5: 08c751eeee0f605a11bf6827f70d7674.dir
@@ -31,24 +28,20 @@ stages:
     outs:
     - path: out/asgs-ste-2021.parquet
       hash: md5
-      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
-      size: 28619337
+      md5: d30b066c8272157d35621f400b5d20fa
+      size: 28619293
   validate_asgs:
     cmd: 'csdr geometries validate --input-file out/asgs-ste-2021.parquet # --schema
       ../../../schemas/geoparquet_standard.json # Example schema path'
     deps:
-    - path: ../../csdr/cli.py
-      hash: md5
-      md5: 49f6f06a492ad096172953a27667fa4a
-      size: 1498
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: 81df0b0b51118ec2a451e7e60e13fa13
-      size: 5038
+      md5: e046408ff0900f26dac7cf33018d318b
+      size: 4856
     - path: out/asgs-ste-2021.parquet
       hash: md5
-      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
-      size: 28619337
+      md5: d30b066c8272157d35621f400b5d20fa
+      size: 28619293
   upload_asgs:
     cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet == s3://* ]]; then aws s3 cp
       out/asgs-ste-2021.parquet s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet; else echo
@@ -57,10 +50,10 @@ stages:
     deps:
     - path: out/asgs-ste-2021.parquet
       hash: md5
-      md5: bcffd47b3c3f1b24dfe902d2d6b40fa3
-      size: 28619337
+      md5: d30b066c8272157d35621f400b5d20fa
+      size: 28619293
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet
       hash: md5
-      etag: 5678a37d9568e4df77cf408b92e97022-4
-      size: 28619337
+      etag: 3b1f37098f089a5dc970b4674540b305-4
+      size: 28619293
