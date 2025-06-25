@@ -52,21 +52,18 @@ def convert_vector(
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        logger.error(
-            "--input-dir, --output-path, and --target-crs are required.")
+        logger.error("--input-dir, --output-path, and --target-crs are required.")
         raise typer.Exit(code=1)
 
     try:
         # Find input vector file using glob relative to input_dir
         # Search recursively within the input directory
         search_path = os.path.join(input_dir, "**", input_glob)
-        logger.info(
-            f"Searching for input vector file(s) matching: {search_path}")
+        logger.info(f"Searching for input vector file(s) matching: {search_path}")
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            logger.error(
-                f"No files matching '{input_glob}' found within {input_dir}")
+            logger.error(f"No files matching '{input_glob}' found within {input_dir}")
             raise typer.Exit(code=1)
 
         vector_file_path = found_files[0]  # Use the first found file

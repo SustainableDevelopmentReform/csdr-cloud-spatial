@@ -67,6 +67,12 @@ def zonal_stats(
     proj_crs: str | None = typer.Option(
         None, "--proj-crs", help="Projected CRS to use for area based statistics."
     ),
+    decode_all: bool = typer.Option(
+        True,
+        "--decode-all/--no-decode-all",
+        help="Decode all coordinates in the Zarr dataset. "
+        "This can be useful for datasets with complex coordinate structures.",
+    ),
 ) -> None:
     """
     Calculates zonal statistics from a Zarr dataset based on geometries
@@ -90,13 +96,11 @@ def zonal_stats(
     try:
         logger.info(f"Reading Zarr dataset from: {zarr_path}")
 
-        if zarr_path.startswith("s3://"):
-            ds = xr.open_zarr(
-                zarr_path,
-                decode_coords="all",  # Ensure coords are decoded
-            )
-        else:
-            ds = xr.open_zarr(zarr_path, decode_coords="all")
+        options = {}
+        if decode_all:
+            options["decode_coords"] = "all"
+
+        ds = xr.open_zarr(zarr_path, **options)
 
         if data_variable not in ds:
             logger.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
@@ -144,9 +148,18 @@ def zonal_stats(
         # Crop the DataArray to the bounds of the reprojected geometries
         logger.info("Cropping Zarr data to geometry bounds...")
         minx, miny, maxx, maxy = gdf_reprojected.total_bounds
+
+        # Extract coordinate names
+        x_coord = "x" if "x" in da.coords else "lon"
+        y_coord = "y" if "y" in da.coords else "lat"
+
         # Ensure y slice is in correct order
-        # (max first for decreasing coordinates)
-        da_cropped = da.sel(x=slice(minx, maxx), y=slice(maxy, miny))
+        da_cropped = da.sel(
+            **{
+                x_coord: slice(minx, maxx),
+                y_coord: slice(maxy, miny),  # Note: max first for decreasing y
+            }
+        )
         logger.info("Cropping complete.")
 
         # Fill NaN values if requested
@@ -168,8 +181,8 @@ def zonal_stats(
                 binary_mask = (da_filled == c).astype(int)
                 temp_da = binary_mask.xvec.zonal_stats(
                     gdf_reprojected.geometry,
-                    x_coords="x",
-                    y_coords="y",
+                    x_coords=x_coord,
+                    y_coords=y_coord,
                     stats=[(stat["name"], stat["stat"]) for stat in stats],
                     name=name_dim,  # Use the specified name for the new dimension
                     index=True,  # Keep the original geometry index
@@ -180,8 +193,8 @@ def zonal_stats(
         else:
             stats_da = da_filled.xvec.zonal_stats(
                 gdf_reprojected.geometry,
-                x_coords="x",
-                y_coords="y",
+                x_coords=x_coord,
+                y_coords=y_coord,
                 stats=[(stat["name"], stat["stat"]) for stat in stats],
                 name=name_dim,  # Use the specified name for the new dimension
                 index=True,  # Keep the original geometry index

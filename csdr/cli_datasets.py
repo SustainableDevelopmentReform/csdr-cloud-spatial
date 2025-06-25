@@ -150,7 +150,7 @@ def warp_raster(
         if failed_warps > 0:
             logger.error(f"{failed_warps} files failed to warp.")
             # Optionally raise an error if any failures occurred
-            # raise typer.Exit(code=1)
+            raise typer.Exit(code=1)
 
     except Exception as e:
         logger.exception(f"Raster warping process failed: {e}")
