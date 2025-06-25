@@ -27,7 +27,7 @@ stages:
       --target-resolution "${target_resolution}"
       --resampling-method "${resampling_method}"
     deps:
-      - ${download_dir}
+      - ${download_dir}/${geotiff_name}
       - ../../csdr/cli_datasets.py
     outs:
       - ${resampled_dir}:

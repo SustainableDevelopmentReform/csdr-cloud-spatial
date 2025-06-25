@@ -10,55 +10,6 @@ stages:
       md5: fdaed1f09be2fe4e09276a33587365b1.dir
       size: 1546732
       nfiles: 1
-  raster_to_zarr_tsg:
-    cmd: csdr datasets raster-to-zarr --input-raster in/resampled-geotiffs/nesp36_seagrass_baseline.tif
-      --output-zarr out/nesp36_seagrass_baseline.zarr
-    deps:
-    - path: ../../csdr/cli_datasets.py
-      hash: md5
-      md5: da41e3e30a46292404913b08080c5cd9
-      size: 6566
-    - path: in/resampled-geotiffs
-      hash: md5
-      md5: 4046da95defe9c5bd09233864ece8cec.dir
-      size: 9018730
-      nfiles: 1
-    outs:
-    - path: out/nesp36_seagrass_baseline.zarr
-      hash: md5
-      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
-      size: 81802
-      nfiles: 20
-  validate_tsg:
-    cmd: csdr datasets validate-zarr --input-zarr out/nesp36_seagrass_baseline.zarr
-    deps:
-    - path: ../../csdr/cli_datasets.py
-      hash: md5
-      md5: da41e3e30a46292404913b08080c5cd9
-      size: 6566
-    - path: out/nesp36_seagrass_baseline.zarr
-      hash: md5
-      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
-      size: 81802
-      nfiles: 20
-  upload_tsg:
-    cmd: if [[ /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr == s3://* ]]; then
-      aws s3 cp out/nesp36_seagrass_baseline.zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-      --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
-      && cp -r out/nesp36_seagrass_baseline.zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr;
-      fi
-    deps:
-    - path: out/nesp36_seagrass_baseline.zarr
-      hash: md5
-      md5: 6576f8377fa4666f50cc1b87c22ab0a6.dir
-      size: 81802
-      nfiles: 20
-    outs:
-    - path: /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-      hash: md5
-      md5: e9e5654fbd4ed65dbbb9777603f5fb92.dir
-      size: 81802
-      nfiles: 20
   warp_tsg:
     cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir "in/resampled-geotiffs"
       --target-crs "epsg:4326" --target-resolution "0.0004" --resampling-method "nearest"
@@ -75,6 +26,54 @@ stages:
     outs:
     - path: in/resampled-geotiffs
       hash: md5
-      md5: 4046da95defe9c5bd09233864ece8cec.dir
-      size: 9018730
-      nfiles: 1
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+  raster_to_zarr_tsg:
+    cmd: csdr datasets raster-to-zarr --input-raster in/geotiffs/nesp36_seagrass_baseline.tif
+      --output-zarr out/nesp36_seagrass_baseline.zarr
+    deps:
+    - path: ../../csdr/cli_datasets.py
+      hash: md5
+      md5: a2c3b22ddfba9cd7a06885d846acd9a7
+      size: 6564
+    - path: in/geotiffs/nesp36_seagrass_baseline.tif
+      hash: md5
+      md5: 1a652c94f19bfda30caeac8254d75b77
+      size: 1546732
+    outs:
+    - path: out/nesp36_seagrass_baseline.zarr
+      hash: md5
+      md5: ea5acc097cefd01f2a8921cec71bda0e.dir
+      size: 705037
+      nfiles: 52
+  upload_tsg:
+    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      == s3://* ]]; then aws s3 cp out/nesp36_seagrass_baseline.zarr s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
+      && cp -r out/nesp36_seagrass_baseline.zarr s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr;
+      fi
+    deps:
+    - path: out/nesp36_seagrass_baseline.zarr
+      hash: md5
+      md5: ea5acc097cefd01f2a8921cec71bda0e.dir
+      size: 705037
+      nfiles: 52
+    outs:
+    - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      hash: md5
+      md5: 9d323f4003423484eb8558f49d2583cf.dir
+      size: 705037
+      nfiles: 52
+  validate_tsg:
+    cmd: csdr datasets validate-zarr --input-zarr out/nesp36_seagrass_baseline.zarr
+    deps:
+    - path: ../../csdr/cli_datasets.py
+      hash: md5
+      md5: a2c3b22ddfba9cd7a06885d846acd9a7
+      size: 6564
+    - path: out/nesp36_seagrass_baseline.zarr
+      hash: md5
+      md5: ea5acc097cefd01f2a8921cec71bda0e.dir
+      size: 705037
+      nfiles: 52

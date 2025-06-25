@@ -1,22 +1,23 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats  --input-zarr s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
-      --input-geoparquet s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet --output-path out/gmw_zonal_stats_ste.parquet
-      --data-variable data_variable --stat mean --name-dim asgs_ste --fill-value 0
+    cmd: csdr vector-cube zonal-stats --input-zarr s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
+      --input-geoparquet s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet
+      --output-path out/gmw_zonal_stats_ste.parquet --data-variable data_variable
+      --name-dim asgs_ste --fill-value 0
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: d8cc9191a55342b660f96ee0538effad
-      size: 6711
+      md5: 243fb8ef37091f88eb193fd151c44626
+      size: 9783
     - path: s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet
       hash: md5
-      etag: 5678a37d9568e4df77cf408b92e97022-4
-      size: 28619337
+      etag: 3b1f37098f089a5dc970b4674540b305-4
+      size: 28619293
     - path: s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 863a7f637b996494419db5444ab7c830.dir
-      size: 326561
+      md5: 661d75420827c033158fb5be2fcaae54.dir
+      size: 326453
       nfiles: 116
     outs:
     - path: out/gmw_zonal_stats_ste.parquet
@@ -36,9 +37,9 @@ stages:
       md5: b28df89b2c0df1c8006da668a02e8b09
       size: 57772464
   upload_asgs:
-    cmd: if [[ 
+    cmd: if [[
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet
-      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet 
+      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet;
       else echo "out_s3_path does not start with s3://, skipping upload" && cp out/gmw_zonal_stats_ste.parquet
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet;
@@ -54,17 +55,17 @@ stages:
       md5: 6e5453b788b00a1f1e4e0bf3fa28677b
       size: 57221016
   upload:
-    cmd: if [[ s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet == s3://* ]]; then aws
-      s3 cp out/gmw_zonal_stats_ste.parquet s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet;
+    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet ==
+      s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet;
       else echo "out_s3_path does not start with s3://, skipping upload" && cp out/gmw_zonal_stats_ste.parquet
-      s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet; fi
+      s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet; fi
     deps:
     - path: out/gmw_zonal_stats_ste.parquet
       hash: md5
       md5: b28df89b2c0df1c8006da668a02e8b09
       size: 57772464
     outs:
-    - path: s3://csdr-dvc-out/gmw_zonal_stats_ste.parquet
+    - path: s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet
       hash: md5
       etag: faf3bdd7a4727c4d79b22707c96243b0-7
       size: 57772464
