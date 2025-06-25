@@ -1,23 +1,24 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-      --input-geoparquet /tmp/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet --output-path out/tsg_zonal_stats_acsc.parquet
-      --data-variable data_variable --name-dim acsc --fill-value None --proj-crs epsg:9473
+    cmd: csdr vector-cube zonal-stats --input-zarr s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      --input-geoparquet s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
+      --output-path out/tsg_zonal_stats_acsc.parquet --data-variable data_variable
+      --name-dim acsc --fill-value None --proj-crs epsg:9473
     deps:
     - path: ../../csdr/cli_vector_cube.py
       hash: md5
-      md5: 780f9ccec47caae2578d6d94b5808ea6
-      size: 7835
-    - path: /tmp/csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
+      md5: 243fb8ef37091f88eb193fd151c44626
+      size: 9783
+    - path: s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
       hash: md5
       etag: 690cc905d526d6f14d1ac3f2fcb3662c-2
       size: 8959806
-    - path: /tmp/csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+    - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: e9e5654fbd4ed65dbbb9777603f5fb92.dir
-      size: 81802
-      nfiles: 20
+      md5: 9d323f4003423484eb8558f49d2583cf.dir
+      size: 705037
+      nfiles: 52
     params:
       params.yaml:
         zonal_stats:
@@ -30,7 +31,7 @@ stages:
     outs:
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 378b90f9ce337f124e5a1e2ac540156d
+      md5: e900afbb61d455eadbb5728b4410d6fe
       size: 22578192
   validate_zonal_stats:
     cmd: 'csdr geometries validate --input-file out/tsg_zonal_stats_acsc.parquet #
@@ -42,20 +43,20 @@ stages:
       size: 4856
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 378b90f9ce337f124e5a1e2ac540156d
+      md5: e900afbb61d455eadbb5728b4410d6fe
       size: 22578192
   upload:
-    cmd: if [[ s3://csdr-dvc-out/tsg_zonal_stats_acsc.parquet == s3://* ]]; then aws
-      s3 cp out/tsg_zonal_stats_acsc.parquet s3://csdr-dvc-out/tsg_zonal_stats_acsc.parquet;
+    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet
+      == s3://* ]]; then aws s3 cp out/tsg_zonal_stats_acsc.parquet s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet;
       else echo "out_s3_path does not start with s3://, skipping upload" && cp out/tsg_zonal_stats_acsc.parquet
-      s3://csdr-dvc-out/tsg_zonal_stats_acsc.parquet; fi
+      s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet; fi
     deps:
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 378b90f9ce337f124e5a1e2ac540156d
+      md5: e900afbb61d455eadbb5728b4410d6fe
       size: 22578192
     outs:
-    - path: s3://csdr-dvc-out/tsg_zonal_stats_acsc.parquet
+    - path: s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet
       hash: md5
-      etag: 57c9e4508f1ff2f1562a6c2780c8c736-3
+      etag: 0c880f6de14fc5f8271266aa408e55e9-3
       size: 22578192

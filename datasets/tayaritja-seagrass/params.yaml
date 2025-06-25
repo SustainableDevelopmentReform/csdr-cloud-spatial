@@ -2,6 +2,3 @@
 
 out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
 url: https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-
-target_crs: epsg:4326
-target_resolution: 0.0004
-resampling_method: nearest

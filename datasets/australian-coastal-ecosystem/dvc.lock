@@ -17,13 +17,13 @@ stages:
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: da41e3e30a46292404913b08080c5cd9
-      size: 6566
-    - path: in/geotiffs
+      md5: a2c3b22ddfba9cd7a06885d846acd9a7
+      size: 6564
+    - path:
+        in/geotiffs/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.tif
       hash: md5
-      md5: 7ef5cf0bcc45aa968e2941c05a764f5a.dir
+      md5: 3f88e3644ba2b6390b6bb2c129c87c6a
       size: 636387129
-      nfiles: 1
     outs:
     - path: in/resampled-geotiffs
       hash: md5
@@ -31,63 +31,63 @@ stages:
       size: 15742647
       nfiles: 1
   raster_to_zarr_ace:
-    cmd: csdr datasets raster-to-zarr --input-raster 
+    cmd: csdr datasets raster-to-zarr --input-raster
       in/resampled-geotiffs/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.tif
-      --output-zarr 
+      --output-zarr
       out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: da41e3e30a46292404913b08080c5cd9
-      size: 6566
+      md5: a2c3b22ddfba9cd7a06885d846acd9a7
+      size: 6564
     - path: in/resampled-geotiffs
       hash: md5
       md5: 6459a2fb5180501a3ccabffef47395eb.dir
       size: 15742647
       nfiles: 1
     outs:
-    - path: 
+    - path:
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: c8d2aea4b1cf08d01383a36a6361ac50.dir
+      md5: 2fcdf09a22fedaf5f9f47283d538ae28.dir
       size: 74244
       nfiles: 41
   upload_ace:
-    cmd: if [[ 
-      s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
-      == s3://* ]]; then aws s3 cp 
+    cmd: if [[
+      s3://csdr-dev-env-data-ap-southeast-2/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+      == s3://* ]]; then aws s3 cp
       out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
-      s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+      s3://csdr-dev-env-data-ap-southeast-2/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       --recursive; else echo "out_s3_path does not start with s3://, skipping upload"
-      && cp -r 
+      && cp -r
       out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
-      s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr;
+      s3://csdr-dev-env-data-ap-southeast-2/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr;
       fi
     deps:
-    - path: 
+    - path:
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: c8d2aea4b1cf08d01383a36a6361ac50.dir
+      md5: 2fcdf09a22fedaf5f9f47283d538ae28.dir
       size: 74244
       nfiles: 41
     outs:
-    - path: 
-        s3://csdr-dvc-out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
+    - path:
+        s3://csdr-dev-env-data-ap-southeast-2/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: 5e051c5d75368aa2df12a7e32bd33952.dir
+      md5: 147c5f517136ecd32bb8029a4a351efe.dir
       size: 74244
       nfiles: 41
   validate_ace:
-    cmd: csdr datasets validate-zarr --input-zarr 
+    cmd: csdr datasets validate-zarr --input-zarr
       out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
       hash: md5
-      md5: da41e3e30a46292404913b08080c5cd9
-      size: 6566
-    - path: 
+      md5: a2c3b22ddfba9cd7a06885d846acd9a7
+      size: 6564
+    - path:
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: c8d2aea4b1cf08d01383a36a6361ac50.dir
+      md5: 2fcdf09a22fedaf5f9f47283d538ae28.dir
       size: 74244
       nfiles: 41

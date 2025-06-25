@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   sync_zarr:
-    cmd: aws s3 sync s3://files.auspatious.com/unsw/aca.zarr s3://csdr-dvc-out/aca.zarr
+    cmd: aws s3 sync s3://files.auspatious.com/unsw/aca.zarr s3://csdr-dev-env-data-ap-southeast-2/aca.zarr
       --quiet;
     deps:
     - path: s3://files.auspatious.com/unsw/aca.zarr
@@ -10,7 +10,7 @@ stages:
       size: 30797748
       nfiles: 3130
     outs:
-    - path: s3://csdr-dvc-out/aca.zarr
+    - path: s3://csdr-dev-env-data-ap-southeast-2/aca.zarr
       hash: md5
       md5: b51b7729c3104d4da1cc8f04487d0ec3.dir
       size: 30797748
