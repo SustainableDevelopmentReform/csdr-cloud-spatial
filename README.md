@@ -163,3 +163,66 @@ This workflow builds a Docker container image and pushes it to Amazon ECR in two
 - **Manual Trigger:** Developers can manually trigger the workflow (using `workflow_dispatch`) to create and push a test build from their feature branch without the `latest` tag.
 
 **Note:** If you build from a feature branch, you will need to visit AWS Batch and create a new revision of the job definition `csdr-dev-env-csdr-cloud-spatial` that uses your custom container image tag.
+
+## Building and Running the Docker Image
+
+To build the Docker image locally using [Buildx](https://docs.docker.com/buildx/working-with-buildx/), run:
+
+```bash
+docker buildx build . --tag csdr-cloud-spatial:latest
+```
+
+Once built, you can run the container:
+
+```bash
+docker run -it --rm 
+  -e GIT_USER_NAME="Your Name" 
+  -e GIT_USER_EMAIL="your_email@example.com" 
+  -e GIT_DEPLOY_KEY_B64="base64-encoded-private-key" 
+  csdr-cloud-spatial:latest
+```
+
+### Providing GitHub Deploy Key
+
+This project requires access to a private GitHub repository (`git@github.com:SustainableDevelopmentReform/csdr-cloud-spatial.git`) during execution. This is managed through a **GitHub Deploy Key**, stored in **base64 format**.
+
+You can provide the key in two ways:
+
+1. **Via Environment Variable (Local Development):**
+
+   ```bash
+   export GIT_DEPLOY_KEY_B64=$(base64 -w 0 ~/.ssh/csdr-cloud-spatial-deploy-key)
+   docker run -e GIT_DEPLOY_KEY_B64="$GIT_DEPLOY_KEY_B64" csdr-cloud-spatial:latest
+   ```
+
+2. **Via AWS Secrets Manager (Production / AWS Batch):**
+
+   If `GIT_DEPLOY_KEY_B64` is not provided as an environment variable, the container will attempt to fetch the key from AWS Secrets Manager. The secret should be in this format:
+
+   ```json
+   {
+     "private_key_b64": "BASE64_STRING_FOR_PRIVATE_KEY",
+     "public_key_b64": "BASE64_STRING_FOR_PUBLIC_KEY"
+   }
+   ```
+
+   Make sure your container's IAM role has permission to read the secret:
+
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": "secretsmanager:GetSecretValue",
+     "Resource": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:csdr/github-deploy-key-b64"
+   }
+   ```
+
+### Setting Git Identity (Optional)
+
+For provenance generation or Git interactions that require user identity, you can set the following environment variables:
+
+```bash
+-e GIT_USER_NAME="CI Bot" 
+-e GIT_USER_EMAIL="ci@example.com"
+```
+
+If not set, the container will proceed without Git user identity.

@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
     build-essential \
+    jq \
     && apt-get autoclean \
     && apt-get autoremove \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
@@ -40,4 +41,6 @@ RUN uv sync --no-dev
 # Place executables in the environment at the front of the path
 ENV PATH="/code/.venv/bin:$PATH"
 
-CMD ["dvc", "repro", "-P"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

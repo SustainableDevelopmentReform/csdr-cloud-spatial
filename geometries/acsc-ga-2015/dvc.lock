@@ -2,8 +2,8 @@ schema: '2.0'
 stages:
   download_extract_acsc:
     cmd: "mkdir -p in/acsc\necho \"Downloading from https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip...\"\
-      \ \ncurl -L -o in/acsc/Shapefiles_v3.zip https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip
-      \necho \"Unzipping...\" \nunzip -o in/acsc/Shapefiles_v3.zip -d in/acsc\n"
+      \ \ncurl -L -o in/acsc/Shapefiles_v3.zip https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip\
+      \ \necho \"Unzipping...\" \nunzip -o in/acsc/Shapefiles_v3.zip -d in/acsc\n"
     outs:
     - path: in/acsc
       hash: md5
@@ -11,14 +11,14 @@ stages:
       size: 56024355
       nfiles: 47
   convert_acsc:
-    cmd: csdr geometries convert-vector  --input-dir in/acsc  --input-glob Primary_compartments.shp  --target-crs
-      EPSG:4326  --output-path out/acsc-primary-compartments.parquet --name-property
-      Name
+    cmd: csdr geometries convert-vector  --input-dir in/acsc  --input-glob 
+      Primary_compartments.shp  --target-crs EPSG:4326  --output-path 
+      out/acsc-primary-compartments.parquet --name-property Name
     deps:
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: e046408ff0900f26dac7cf33018d318b
-      size: 4856
+      md5: 780de4983800dd5a90e6053cc8d3783a
+      size: 4813
     - path: in/acsc
       hash: md5
       md5: d44767fb4352eb2b55875af4db20289e.dir
@@ -35,16 +35,18 @@ stages:
     deps:
     - path: ../../csdr/cli_geometries.py
       hash: md5
-      md5: e046408ff0900f26dac7cf33018d318b
-      size: 4856
+      md5: 780de4983800dd5a90e6053cc8d3783a
+      size: 4813
     - path: out/acsc-primary-compartments.parquet
       hash: md5
       md5: 5159cbe6bd6273f69e465115674673f3
       size: 8959806
   upload_acsc:
-    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet == s3://*
-      ]]; then aws s3 cp out/acsc-primary-compartments.parquet s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet;
-      else echo "out_s3_path does not start with s3://, skipping upload" && cp out/acsc-primary-compartments.parquet
+    cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet == 
+      s3://* ]]; then aws s3 cp out/acsc-primary-compartments.parquet 
+      s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet; else echo 
+      "out_s3_path does not start with s3://, skipping upload" && cp 
+      out/acsc-primary-compartments.parquet 
       s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet; fi
     deps:
     - path: out/acsc-primary-compartments.parquet

@@ -1,8 +1,8 @@
 schema: '2.0'
 stages:
   sync_zarr:
-    cmd: aws s3 sync s3://files.auspatious.com/unsw/aca.zarr s3://csdr-dev-env-data-ap-southeast-2/aca.zarr
-      --quiet;
+    cmd: "# This works both local and remote\naws s3 sync s3://files.auspatious.com/unsw/aca.zarr
+      s3://csdr-dev-env-data-ap-southeast-2/aca.zarr --quiet;\n"
     deps:
     - path: s3://files.auspatious.com/unsw/aca.zarr
       hash: md5

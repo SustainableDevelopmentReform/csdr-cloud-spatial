@@ -6,7 +6,8 @@ vars:
 
 stages:
   sync_zarr:
-    cmd: >-
+    cmd: |
+      # This works both local and remote
       aws s3 sync ${source_zarr} ${out_s3_path} --quiet;
     deps:
       - ${source_zarr}

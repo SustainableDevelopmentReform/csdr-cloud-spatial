@@ -1,4 +1,3 @@
-notebooks
-examples
-Dockerfile
 tmp/
+in/
+out/
