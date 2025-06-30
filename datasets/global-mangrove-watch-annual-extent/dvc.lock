@@ -61,7 +61,7 @@ stages:
     outs:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 479bb003524d78b83ec6a64d5ba0f483.dir
+      md5: 0b66f012c64d86eef618f1612af529c1.dir
       size: 326561
       nfiles: 116
   validate_gmw:
@@ -74,7 +74,7 @@ stages:
       size: 6564
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 479bb003524d78b83ec6a64d5ba0f483.dir
+      md5: 0b66f012c64d86eef618f1612af529c1.dir
       size: 326561
       nfiles: 116
   upload_gmw:
@@ -88,12 +88,12 @@ stages:
     deps:
     - path: out/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 479bb003524d78b83ec6a64d5ba0f483.dir
+      md5: 0b66f012c64d86eef618f1612af529c1.dir
       size: 326561
       nfiles: 116
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: fddc38aed96940f1e06791abec4b9135.dir
+      md5: 72977c272f004a4fdc66ab16f32f3f54.dir
       size: 326561
       nfiles: 116

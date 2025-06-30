@@ -18,7 +18,7 @@ stages:
       size: 8959806
     - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: f4ec1bc5ef37373b11b9bd71dc7a80b7.dir
+      md5: 7c77c5ad497a6a1e348fb2b37f304c23.dir
       size: 705037
       nfiles: 52
     params:
