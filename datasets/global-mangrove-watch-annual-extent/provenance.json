@@ -1,6 +1,6 @@
 {
-    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/datasets/global-mangrove-watch-annual-extent/dvc.yaml",
-    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/8497b69c449d3c0a895893614776b4787f3582a7/datasets/global-mangrove-watch-annual-extent/dvc.lock",
+    "pipeline_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/c59c5dbde8cf3c029c801b42543a484372647969/datasets/global-mangrove-watch-annual-extent/dvc.yaml",
+    "lock_file": "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/blob/c59c5dbde8cf3c029c801b42543a484372647969/datasets/global-mangrove-watch-annual-extent/dvc.lock",
     "params": {
         "out_s3_path": "s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr",
         "url": "https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
@@ -8,7 +8,7 @@
         "target_resolution": 1000,
         "resampling_method": "nearest"
     },
-    "git_commit": "8497b69c449d3c0a895893614776b4787f3582a7",
-    "git_commit_date": "2025-06-26 02:17:33 +0000",
+    "git_commit": "c59c5dbde8cf3c029c801b42543a484372647969",
+    "git_commit_date": "2025-06-30 02:18:43 +0000",
     "dependencies": []
 }
