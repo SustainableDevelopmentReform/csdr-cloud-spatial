@@ -178,3 +178,5 @@ tmp/
 .vscode
 
 outputs/
+
+cache

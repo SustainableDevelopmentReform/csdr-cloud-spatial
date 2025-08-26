@@ -431,7 +431,6 @@ def publish(
         else:
             logger.info("Skipping Git commit - --no-commit flag used.")
 
-
     except NotDvcRepoError:
         logger.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)

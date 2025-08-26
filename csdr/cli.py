@@ -4,11 +4,11 @@ from json import dumps
 import boto3
 import typer
 
-# Import the subcommand applications
-from .cli_datasets import dataset_app
-from .cli_dvc import dvc_app
-from .cli_geometries import geometry_app
-from .cli_vector_cube import vector_cube_app
+from csdr.cli_dataset_gmw import gmw_app
+from csdr.cli_datasets import dataset_app
+from csdr.cli_dvc import dvc_app
+from csdr.cli_geometries import geometry_app
+from csdr.cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
 
@@ -23,6 +23,9 @@ app.add_typer(
     help="Commands for vector-cube operations like zonal statistics.",
 )
 app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
+
+# GMW
+app.add_typer(gmw_app, name="gmw", help="Cache the GMW dataset.")
 
 
 @app.command()
