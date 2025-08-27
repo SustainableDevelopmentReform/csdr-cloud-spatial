@@ -178,3 +178,6 @@ tmp/
 .vscode
 
 outputs/
+
+cache
+Testing.ipynb

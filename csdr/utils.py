@@ -6,6 +6,7 @@ from typing import Any, TypedDict, cast
 import boto3
 import requests
 from affine import Affine
+from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geobox import GeoBox, GeoboxTiles
 
 
@@ -27,6 +28,14 @@ WGS84GRID30 = GeoboxTiles(
     ),
     (5000, 5000),
 )
+
+
+def exists(store: HTTPStore | S3Store | LocalStore, path: str) -> bool:
+    try:
+        store.head(path)
+    except FileNotFoundError:
+        return False
+    return True
 
 
 # Submit a batch job
