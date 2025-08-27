@@ -11,7 +11,6 @@ from loguru import logger
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.cog import write_cog
-from pystac import Item
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
@@ -19,8 +18,6 @@ from rustac import write
 from csdr.utils import exists
 
 gmw_app = typer.Typer()
-
-logger.add("Only this")
 
 
 async def run_cache_gmw(
@@ -204,7 +201,7 @@ def extract_gmw(
     logger.info("GMW extraction process completed.")
 
 
-async def run_index_gmw(source_location: str, validate: bool = False) -> None:
+async def run_index_gmw(source_location: str) -> None:
     store = None
     s3_prefix = None
     bucket = None
@@ -218,31 +215,27 @@ async def run_index_gmw(source_location: str, validate: bool = False) -> None:
 
     # Find all the the GMW STAC files
     list_of_stac_files = []
-    for batch in store.list():
+    for batch in store.list(s3_prefix):
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
                 list_of_stac_files.append(stac_file)
 
     logger.info(f"Found {len(list_of_stac_files)} STAC items to index.")
 
-    items = []
-    for stac_file in list_of_stac_files:
-        item_json = json.load(BytesIO(store.get(stac_file["path"]).bytes()))
-        item = Item.from_dict(item_json)
-        if validate:
-            try:
-                item.validate()
-                items.append(item_json)
-            except Exception as e:
-                logger.error(f"Error validating STAC item {stac_file['path']}: {e}")
-        else:
-            items.append(item_json)
+    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
+        obj = await store.get_async(stac_file["path"])
+        data = BytesIO(obj.bytes())
+        return json.load(data)
+
+    item_dicts = await asyncio.gather(
+        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
+    )
 
     target = "gmw.parquet"
     if s3_prefix is not None and s3_prefix != "":
         target = f"{s3_prefix}/{target}"
 
-    await write(target, items, store=store)
+    await write(target, item_dicts, store=store)
 
     if source_location.startswith("s3://"):
         logger.info(f"Finished writing to s3://{bucket}/{target}")
@@ -256,10 +249,7 @@ def index_gmw(
         help="Local or remote path (file:// or s3://) to the GMW files.",
         default="./cache",
     ),
-    validate: bool = typer.Option(
-        False, help="Validate STAC items against the STAC schema."
-    ),
 ) -> None:
     logger.info("Starting GMW indexing process...")
-    asyncio.run(run_index_gmw(source_location, validate=validate))
+    asyncio.run(run_index_gmw(source_location))
     logger.info("GMW indexing process completed.")
