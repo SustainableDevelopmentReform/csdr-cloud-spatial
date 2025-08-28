@@ -8,6 +8,7 @@ from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
+from csdr.cli_geometry_eez import eez_app
 from csdr.cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
@@ -25,7 +26,10 @@ app.add_typer(
 app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
 # GMW
-app.add_typer(gmw_app, name="gmw", help="Cache the GMW dataset.")
+app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW dataset.")
+
+# EEZ
+app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
 
 
 @app.command()
