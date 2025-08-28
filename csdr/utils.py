@@ -1,13 +1,21 @@
+import asyncio
 import logging
 import subprocess
 import zipfile
+from collections.abc import Iterable
 from typing import Any, TypedDict, cast
 
 import boto3
 import requests
+import rustac
 from affine import Affine
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geobox import GeoBox, GeoboxTiles
+from odc.geo.geom import Geometry
+from odc.geo.xr import mask
+from odc.stac import load
+from pystac import ItemCollection
+from xarray import Dataset
 
 
 class Event(TypedDict):
@@ -214,3 +222,35 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         cmd_str = " ".join(command)
         util_logger.exception(f"Failed to run command '{cmd_str}': {e}")
         return False, "", str(e)
+
+
+def open_stacgeoparquet(path: str) -> ItemCollection:
+    """Opens a STAC GeoParquet file and returns an ItemCollection."""
+
+    async def _read_thing() -> ItemCollection:
+        return await rustac.read(path)
+
+    item_dict = asyncio.run(_read_thing())
+    return ItemCollection.from_dict(item_dict)
+
+
+def load_xarray_stacgeoparquet(
+    items: ItemCollection,
+    bbox: Iterable[float] | None = None,
+    geom: Geometry | None = None,
+    **load_kwargs: str,
+) -> Dataset:
+    data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
+
+    return data
+
+
+def xarray_calculate_area(data: Dataset, variable: str, geom: Geometry) -> float:
+    masked = mask(data, geom)
+    # Count all the non-nan cells
+    count = float(masked[variable].notnull().sum().values)
+    one_pixel_area = abs(
+        masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
+    )
+
+    return float(count) * one_pixel_area
