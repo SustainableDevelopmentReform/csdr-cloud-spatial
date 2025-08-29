@@ -15,7 +15,7 @@ from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
-from xarray import Dataset
+from xarray import DataArray, Dataset
 
 
 class Event(TypedDict):
@@ -245,10 +245,27 @@ def load_xarray_stacgeoparquet(
     return data
 
 
-def xarray_calculate_area(data: Dataset, variable: str, geom: Geometry) -> float:
-    masked = mask(data, geom)
-    # Count all the non-nan cells
-    count = float(masked[variable].notnull().sum().values)
+def xarray_calculate_area(
+    data: Dataset | DataArray,
+    geom: Geometry,
+    variable: str | None = None,
+    value: int | float | None = None,
+) -> float:
+    # Work with a dataarray, not a dataset, so it's a singular thing
+    if type(data) is not DataArray:
+        if variable is None:
+            raise ValueError("Variable must be specified when data is a Dataset.")
+        data = data[variable]
+
+    # Only select a specific value. This will convert to float, with nans
+    if value is not None:
+        data = data.where(data == value)
+
+    # Mask out regions outsize the geometry
+    masked = mask(data, geom.to_crs(data.odc.crs))
+
+    # Count all the non-nan cells, and multiply by area
+    count = float(masked.notnull().sum().values)
     one_pixel_area = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )

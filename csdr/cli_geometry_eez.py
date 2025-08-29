@@ -65,7 +65,7 @@ def cache_eez(
     ),
     target_zip_name: str = typer.Option(
         help="Name of the zip file to save the GMW data as.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
+        default="EEZ_land_union_v4_202410.zip",
     ),
 ) -> None:
     logger.info("Starting GMW caching process...")
