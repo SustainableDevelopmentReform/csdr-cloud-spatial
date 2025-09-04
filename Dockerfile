@@ -44,3 +44,6 @@ ENV PATH="/code/.venv/bin:$PATH"
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Smoketest
+RUN csdr --help
