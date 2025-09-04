@@ -59,23 +59,28 @@ def extract_gmw(
         )
 
     # Set up the target store
-    target_path = source_zip_name_path.replace(".zip", ".parquet")
     target_store = None
     full_destination_str = None
+    target_path_file = Path(source_zip_name_path).name.replace(".zip", ".parquet")
 
     if target_location.startswith("s3://"):
         target_s3_url = urlparse(target_location)
         bucket = target_s3_url.netloc
         target_store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        full_destination_str = f"s3://{bucket}/{target_path}"
+        target_path = target_s3_url.path.lstrip("/")
+
+        if target_path != "":
+            target_path_file = f"{target_path}/{target_path_file}"
+
+        full_destination_str = f"s3://{bucket}/{target_path_file}"
     else:
         target_store = LocalStore(prefix=Path(target_location), mkdir=True)
-        full_destination_str = str(Path(target_location) / target_path)
+        full_destination_str = str(Path(target_location) / target_path_file)
 
     # Check if target file already exists
     if exists(target_store, target_path) and not overwrite:
         logger.warning(
-            f"Target parquet file already exists at {target_location}/{target_path}. Use --overwrite to replace."
+            f"Target parquet file already exists at {target_location}/{target_path_file}. Use --overwrite to replace."
         )
         raise typer.Exit(code=0)
 
@@ -91,17 +96,12 @@ def extract_gmw(
     logger.info(f"Loaded {len(gdf)} records from the shapefile.")
 
     # Write GeoDataFrame to a GeoParquet file in memory
-    full_destination_str = None
     with BytesIO() as parquet_buffer:
         gdf.to_parquet(parquet_buffer, engine="pyarrow")
         parquet_buffer.seek(0)
 
         # Write the parquet bytes to the target store using obstore
-        target_store.put(target_path, parquet_buffer.getvalue())
-        if target_location.startswith("s3://"):
-            full_destination_str = f"s3://{bucket}/{target_path}"
-        else:
-            full_destination_str = str(Path(target_location) / target_path)
+        target_store.put(target_path_file, parquet_buffer.getvalue())
 
     logger.info(
         f"Parquet extraction process completed. Wrote file to {full_destination_str}"
