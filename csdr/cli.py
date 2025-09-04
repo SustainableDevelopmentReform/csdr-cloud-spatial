@@ -4,6 +4,7 @@ from json import dumps
 import boto3
 import typer
 
+from csdr.cli_conversion import conversion_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
@@ -30,6 +31,9 @@ app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW dataset.")
 
 # EEZ
 app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
+
+# Generic conversion tools
+app.add_typer(conversion_app, name="convert", help="Data conversion tools.")
 
 
 @app.command()
