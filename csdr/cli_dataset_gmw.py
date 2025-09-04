@@ -201,7 +201,7 @@ def extract_gmw(
     logger.info("GMW extraction process completed.")
 
 
-async def run_index_gmw(source_location: str) -> None:
+async def run_index_gmw(source_location: str, target_location: str) -> None:
     store = None
     s3_prefix = None
     bucket = None
@@ -212,6 +212,16 @@ async def run_index_gmw(source_location: str) -> None:
         s3_prefix = s3_url.path.lstrip("/").rstrip("/")
     else:
         store = LocalStore(prefix=Path(source_location), mkdir=True)
+
+    dest = store
+    dest_s3_prefix = None
+    if target_location.startswith("s3://"):
+        s3_url = urlparse(target_location)
+        bucket = s3_url.netloc
+        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
+        dest_s3_prefix = s3_url.path.lstrip("/").rstrip("/")
+    else:
+        dest = LocalStore(prefix=Path(target_location), mkdir=True)
 
     # Find all the the GMW STAC files
     list_of_stac_files = []
@@ -232,12 +242,12 @@ async def run_index_gmw(source_location: str) -> None:
     )
 
     target = "gmw.parquet"
-    if s3_prefix is not None and s3_prefix != "":
-        target = f"{s3_prefix}/{target}"
+    if dest_s3_prefix is not None and dest_s3_prefix != "":
+        target = f"{dest_s3_prefix}/{target}"
 
-    await write(target, item_dicts, store=store)
+    await write(target, item_dicts, store=dest)
 
-    if source_location.startswith("s3://"):
+    if target_location.startswith("s3://"):
         logger.info(f"Finished writing to s3://{bucket}/{target}")
     else:
         logger.info(f"Finished writing to {source_location}/{target}")
@@ -249,7 +259,11 @@ def index_gmw(
         help="Local or remote path (file:// or s3://) to the GMW files.",
         default="./cache",
     ),
+    target_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
+        default="./cache",
+    ),
 ) -> None:
     logger.info("Starting GMW indexing process...")
-    asyncio.run(run_index_gmw(source_location))
+    asyncio.run(run_index_gmw(source_location, target_location))
     logger.info("GMW indexing process completed.")
