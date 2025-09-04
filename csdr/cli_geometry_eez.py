@@ -13,7 +13,11 @@ eez_app = typer.Typer()
 
 
 async def run_cache_eez(
-    source_url: str, target_location: str, target_path: str, target_zip_name: str
+    source_url: str,
+    target_location: str,
+    target_path: str,
+    target_zip_name: str,
+    overwrite: bool,
 ) -> None:
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
 
@@ -32,25 +36,30 @@ async def run_cache_eez(
     else:
         dest = LocalStore(prefix=Path(target_location), mkdir=True)
 
-    download = True
     target_zip_name = f"{target_path}/{target_zip_name}"
 
-    if exists(dest, target_zip_name):
+    if exists(dest, target_zip_name) and not overwrite:
         dest_meta = dest.head(target_zip_name)
         if size is not None and "size" in dest_meta and dest_meta["size"] == size:
             logger.info(
                 f"File already exists at target location with matching size of {size}. Skipping download."
             )
-            download = False
+            raise typer.Exit(code=0)  # Exit successfully, nothing to do
         else:
             logger.info(
                 f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
             )
+    else:
+        if exists(dest, target_zip_name):
+            logger.info(
+                "File already exists at target location, but overwrite is enabled. Re-downloading."
+            )
+        else:
+            logger.info("File does not exist at target location. Downloading.")
 
-    if download:
-        logger.info("Cached file doesn't exist, get it.")
-        result = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded {result} bytes")
+    logger.info("Cached file doesn't exist, get it.")
+    result = await dest.put_async(target_zip_name, source.get(url.path))
+    logger.info(f"File cached successfully, downloaded {result} bytes")
 
 
 @eez_app.command("cache")
@@ -67,6 +76,9 @@ def cache_eez(
         help="Name of the zip file to save the GMW data as.",
         default="EEZ_land_union_v4_202410.zip",
     ),
+    overwrite: bool = typer.Option(
+        True, help="Replace existing zip file if it exists."
+    ),
 ) -> None:
     logger.info("Starting GMW caching process...")
     target_path = ""
@@ -74,7 +86,9 @@ def cache_eez(
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
     asyncio.run(
-        run_cache_eez(source_url, target_location, target_path, target_zip_name)
+        run_cache_eez(
+            source_url, target_location, target_path, target_zip_name, overwrite
+        )
     )
     logger.info(
         f"EEZ caching process completed. Cached to {target_location.rstrip('/')}/{target_zip_name}"
