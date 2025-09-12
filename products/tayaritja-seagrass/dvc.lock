@@ -18,7 +18,7 @@ stages:
       size: 8959806
     - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 7c77c5ad497a6a1e348fb2b37f304c23.dir
+      md5: 11093f304dc3de4b683615b304275ced.dir
       size: 705037
       nfiles: 52
     params:
@@ -33,7 +33,7 @@ stages:
     outs:
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 3494dc0fb6d9b6838d06930b6916fa2c
+      md5: d539bfe9a05472caa82aa940c229ba4f
       size: 22578199
   validate_zonal_stats:
     cmd: 'csdr geometries validate --input-file out/tsg_zonal_stats_acsc.parquet #
@@ -45,7 +45,7 @@ stages:
       size: 4813
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 3494dc0fb6d9b6838d06930b6916fa2c
+      md5: d539bfe9a05472caa82aa940c229ba4f
       size: 22578199
   upload:
     cmd: if [[ 
@@ -58,10 +58,10 @@ stages:
     deps:
     - path: out/tsg_zonal_stats_acsc.parquet
       hash: md5
-      md5: 3494dc0fb6d9b6838d06930b6916fa2c
+      md5: d539bfe9a05472caa82aa940c229ba4f
       size: 22578199
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet
       hash: md5
-      etag: a9d0039393d3f862cf6859d9136a37bf-3
+      etag: 6bd7b4b360da13b0ebe8eee574814252-3
       size: 22578199

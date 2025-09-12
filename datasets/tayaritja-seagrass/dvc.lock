@@ -46,7 +46,7 @@ stages:
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8c344fe60016626633f47f8881c7b7d1.dir
+      md5: 3dafb633489e9dd795d9c7987b361295.dir
       size: 705037
       nfiles: 52
   upload_tsg:
@@ -60,13 +60,13 @@ stages:
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8c344fe60016626633f47f8881c7b7d1.dir
+      md5: 3dafb633489e9dd795d9c7987b361295.dir
       size: 705037
       nfiles: 52
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 7c77c5ad497a6a1e348fb2b37f304c23.dir
+      md5: 11093f304dc3de4b683615b304275ced.dir
       size: 705037
       nfiles: 52
   validate_tsg:
@@ -79,6 +79,6 @@ stages:
       size: 6564
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 8c344fe60016626633f47f8881c7b7d1.dir
+      md5: 3dafb633489e9dd795d9c7987b361295.dir
       size: 705037
       nfiles: 52
