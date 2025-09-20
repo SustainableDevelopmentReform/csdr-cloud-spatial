@@ -7,7 +7,7 @@ from loguru import logger
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 
-from csdr.utils import exists
+from csdr.io import exists
 
 eez_app = typer.Typer()
 

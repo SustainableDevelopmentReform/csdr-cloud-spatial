@@ -7,6 +7,7 @@ from csdr.utils import load_xarray_stacgeoparquet, xarray_calculate_area
 def test_sample_polygon(sample_polygon: polygon) -> None:
     assert sample_polygon is not None
     assert sample_polygon.geom_type == "Polygon"
+    assert sample_polygon.is_valid
 
 
 def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
@@ -22,5 +23,5 @@ def test_intersection(
     )
     assert data is not None
 
-    area = xarray_calculate_area(data, "asset", sample_polygon)
-    assert area == 241_159_600.0
+    area = xarray_calculate_area(data, sample_polygon, "asset", 1)
+    assert area == 19833900.0

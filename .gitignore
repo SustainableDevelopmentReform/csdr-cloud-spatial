@@ -181,3 +181,6 @@ outputs/
 
 cache
 Testing.ipynb
+
+# Ignore test files
+tests/data/gmw/gmw.provenance.json

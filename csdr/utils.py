@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import subprocess
+import uuid
 import zipfile
 from collections.abc import Iterable
 from typing import Any, TypedDict, cast
@@ -9,7 +10,6 @@ import boto3
 import requests
 import rustac
 from affine import Affine
-from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geobox import GeoBox, GeoboxTiles
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
@@ -36,14 +36,6 @@ WGS84GRID30 = GeoboxTiles(
     ),
     (5000, 5000),
 )
-
-
-def exists(store: HTTPStore | S3Store | LocalStore, path: str) -> bool:
-    try:
-        store.head(path)
-    except FileNotFoundError:
-        return False
-    return True
 
 
 # Submit a batch job
@@ -240,7 +232,7 @@ def load_xarray_stacgeoparquet(
     geom: Geometry | None = None,
     **load_kwargs: str,
 ) -> Dataset:
-    data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
+    data = load(items, bbox=bbox, geom=geom, **load_kwargs)
 
     return data
 
@@ -261,8 +253,8 @@ def xarray_calculate_area(
     if value is not None:
         data = data.where(data == value)
 
-    # Mask out regions outsize the geometry
-    masked = mask(data, geom.to_crs(data.odc.crs))
+    # Mask out regions outside the geometry
+    masked = mask(data, geom)
 
     # Count all the non-nan cells, and multiply by area
     count = float(masked.notnull().sum().values)
@@ -271,3 +263,12 @@ def xarray_calculate_area(
     )
 
     return float(count) * one_pixel_area
+
+
+# Make a UUID
+def make_uuid(thing: str) -> str:
+    namespace = uuid.uuid5(
+        uuid.NAMESPACE_URL,
+        "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial",
+    )
+    return str(uuid.uuid5(namespace, thing))

@@ -47,7 +47,7 @@ dependencies = [
     "zarr"
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "poetry",
     "bokeh",
@@ -55,10 +55,13 @@ dev = [
     "jinja2",
     "matplotlib",
     "ruff",
+    "moto[server]",
     "mypy",
     "types-requests",
     "types-PyYAML",
     "pre-commit",
+    "pytest",
+    "pytest-cov",
 ]
 
 [project.scripts]

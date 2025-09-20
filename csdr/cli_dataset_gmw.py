@@ -15,7 +15,7 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.utils import exists
+from csdr.io import exists, write_json
 
 gmw_app = typer.Typer()
 
@@ -185,10 +185,8 @@ def extract_gmw(
                     with_proj=True,
                     with_raster=True,
                 )
-                target_store.put(
-                    out_key.replace(".tif", ".stac-item.json"),
-                    json.dumps(stac_doc.to_dict(), indent=2).encode("utf-8"),
-                    attributes={"Content-Type": "application/json"},
+                write_json(
+                    out_key.replace(".tif", ".stac-item.json"), stac_doc.to_dict()
                 )
             else:
                 logger.info("STAC file already exists, skipping.")
