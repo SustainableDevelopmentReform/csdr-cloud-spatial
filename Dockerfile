@@ -1,8 +1,18 @@
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3
+# Example of an optimized version - you don't need to use this, just showing possibilities
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3 AS base
+
+# Build args include DOCKER_IMAGE and COMMIT
+ARG DOCKER_IMAGE=unknown
+ARG DEV=false
+ARG COMMIT=unknown
+ENV COMMIT=${COMMIT}
+ENV IMAGE_TAG="${DOCKER_IMAGE}"
+ENV IMAGE_REPO="https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/${COMMIT}/"
 
 # Don't use old pygeos
 ENV USE_PYGEOS=0
 
+# Install system dependencies (this layer rarely changes)
 RUN apt-get update && apt-get install -y \
     python3-dev \
     git \
@@ -14,36 +24,35 @@ RUN apt-get update && apt-get install -y \
     && apt-get autoremove \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
 
+# Install AWS CLI (this layer rarely changes)
 RUN cd /tmp && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
-# Download the latest installer
+# Install UV (this layer rarely changes)
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
-
-# Run the installer then remove it
 RUN sh /uv-installer.sh && rm /uv-installer.sh
-
-# Ensure the installed binary is on the `PATH`
 ENV PATH="/root/.local/bin/:$PATH"
 
 # Make bash the default shell
 RUN ln -sf /bin/bash /bin/sh
 
-# Copy the current directory into the container
-ADD . /code/
 WORKDIR /code
+COPY . .
 
-# Install the package...
-RUN uv sync --no-dev
+# Install dependencies in a separate layer
+RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ "$DEV" = "true" ] ; then \
+        uv sync --no-progress; \
+    else \
+        uv sync --no-dev --no-progress; \
+    fi
 
-# Place executables in the environment at the front of the path
 ENV PATH="/code/.venv/bin:$PATH"
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
 # Smoketest
 RUN csdr --help
+
+RUN echo "Image: ${IMAGE_TAG}" && echo "Repo: ${IMAGE_REPO}"
