@@ -55,13 +55,16 @@ def get_store_for_url(
         return HTTPStore()
     else:
         the_path = Path(url)
-        if the_path.is_dir() and mkdir:
-            the_path.mkdir(parents=True, exist_ok=True)
-        else:
-            the_path = the_path.parent
-            if mkdir:
+        # Ensure the directory exists
+        if mkdir:
+            if the_path.suffix:  # It's a file path
+                the_path.parent.mkdir(parents=True, exist_ok=True)
+            else:  # It's a directory path
                 the_path.mkdir(parents=True, exist_ok=True)
-        return LocalStore(prefix=Path(the_path))
+
+        # LocalStore expects the directory, not a file
+        path_prefix = the_path if not the_path.suffix else the_path.parent
+        return LocalStore(prefix=path_prefix)
 
 
 def get_file_name_from_url(url: str) -> str:
