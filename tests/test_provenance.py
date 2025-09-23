@@ -9,8 +9,8 @@ from csdr.provenance import get_dataset_provenance, get_image_state
 PROVENANCE_DETAILS = {
     "source_url": "https://example.com/source",
     "source_metadata_url": "https://example.com/source/metadata",
-    "file_url": "s3://example.com/file",
-    "file_type": "stacgeoparquet",
+    "dataset_url": "s3://example.com/file",
+    "dataset_type": "stacgeoparquet",
 }
 
 TEST_GEOPARQUET_NAME = "example-global-test-geoparquet"
