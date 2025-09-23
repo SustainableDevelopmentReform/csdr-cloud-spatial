@@ -10,7 +10,7 @@ PROVENANCE_DETAILS = {
     "source_url": "https://example.com/source",
     "source_metadata_url": "https://example.com/source/metadata",
     "dataset_url": "s3://example.com/file",
-    "dataset_type": "stacgeoparquet",
+    "dataset_type": "stac-geoparquet",
 }
 
 TEST_GEOPARQUET_NAME = "example-global-test-geoparquet"
