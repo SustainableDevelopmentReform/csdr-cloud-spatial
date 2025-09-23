@@ -1,4 +1,5 @@
 import os
+from datetime import UTC, datetime
 
 from obstore.store import HTTPStore, LocalStore, S3Store
 
@@ -28,6 +29,9 @@ def get_dataset_provenance(
     info = get_file_info(store, path)
     image_state = get_image_state()
 
+    # TODO:
+    # - Add dates. Date added/updated/etc.
+
     return {
         "name": name,
         "uuid": uuid or make_uuid(name),
@@ -40,5 +44,6 @@ def get_dataset_provenance(
         "source_metadata_url": source_metadata_url,
         "file_url": file_url,
         "file_type": file_type,
+        "provenance_updated": datetime.now(UTC).isoformat() + "Z",
         **(extra_info_dict or {}),
     }
