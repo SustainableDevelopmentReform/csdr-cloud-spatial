@@ -5,13 +5,11 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 from urllib.parse import urlparse
 from zipfile import ZipFile
 
 import typer
 from loguru import logger
-from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
@@ -25,7 +23,11 @@ gmw_app = typer.Typer()
 
 
 async def run_cache_gmw(
-    source_url: str, target_location: str, target_path: str, target_zip_name: str
+    source_url: str,
+    target_location: str,
+    target_path: str,
+    target_zip_name: str,
+    overwrite: bool,
 ) -> None:
     logger.info(f"Caching GMW from {source_url} to {target_location}...")
 
@@ -41,7 +43,7 @@ async def run_cache_gmw(
     dest = get_store_for_url(target_location)
     target_zip_name = f"{target_path}/{target_zip_name}"
 
-    if exists(dest, target_zip_name):
+    if exists(dest, target_zip_name) and not overwrite:
         dest_meta = dest.head(target_zip_name)
         if size is not None and "size" in dest_meta and dest_meta["size"] == size:
             logger.info(
@@ -53,7 +55,10 @@ async def run_cache_gmw(
                 f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
             )
 
-    logger.info("Cached file doesn't exist, get it.")
+    if overwrite:
+        logger.info("Overwrite is enabled, re-downloading file.")
+    else:
+        logger.info("File does not exist at target location, downloading.")
     result = await dest.put_async(target_zip_name, source.get(url.path))
     logger.info(f"File cached successfully, downloaded {result} bytes")
 
@@ -73,6 +78,9 @@ def cache_gmw(
         help="Name of the zip file to save the GMW data as.",
         default="gmw_mng_2020_v4019_gtiff.zip",
     ),
+    overwrite: bool = typer.Option(
+        False, help="Replace existing files during caching."
+    ),
 ) -> None:
     logger.info("Starting GMW caching process...")
     target_path = ""
@@ -80,7 +88,9 @@ def cache_gmw(
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
     asyncio.run(
-        run_cache_gmw(source_url, target_location, target_path, target_zip_name)
+        run_cache_gmw(
+            source_url, target_location, target_path, target_zip_name, overwrite
+        )
     )
     logger.info(
         f"GMW caching process completed. Cached to {target_location.rstrip('/')}/{target_zip_name}"
@@ -102,22 +112,31 @@ async def process_single_file(
         out_stac = name.replace(".tif", ".stac-item.json")
 
         # If S3, we need a S3 URI, otherwise, just a local path
-        if target_location.startswith("s3://"):
-            s3_url = urlparse(target_location)
-            bucket = s3_url.netloc
-            s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-            if s3_prefix is not None and s3_prefix != "":
+        if type(target_store) is S3Store:
+            s3_prefix = get_s3_prefix(target_location)
+            if s3_prefix is not None:
                 out_key = f"{s3_prefix}/{out_key}"
-            target_uri = f"s3://{bucket}/{out_key}"
+                out_stac = f"{s3_prefix}/{out_stac}"
+            target_uri = f"s3://{target_store.config['bucket']}/{out_key}"
         else:
             target_uri = f"{target_location}/{out_key}"
 
         stac_uri = target_uri.replace(".tif", ".stac-item.json")
+        logger.info(f"Target STAC will be at {stac_uri}")
 
         # Check if the STAC doc exists, and skip if it does
+        logger.info(f"Checking existence of {out_stac}...")
+        logger.info(
+            f"Store is type: {type(target_store)} and config is {target_store.config}"
+        )
         if exists(target_store, out_stac) and not overwrite:
-            logger.info(f"STAC doc already exists for {name}, skipping.")
+            logger.info(f"STAC doc already exists for {stac_uri}, skipping.")
             return
+        else:
+            if overwrite:
+                logger.info(f"Overwrite is enabled, re-processing {stac_uri}.")
+            else:
+                logger.info(f"STAC does not exist for {stac_uri}, processing.")
 
         # Get the data from memory into a rasterio dataset
         data = open_rasterio(zip_file.open(name))
@@ -138,9 +157,8 @@ async def process_single_file(
         )
 
         # Write STAC doc
-        stac_key = out_key.replace(".tif", ".stac-item.json")
         stac_data = json.dumps(stac_doc.to_dict()).encode()
-        await target_store.put_async(stac_key, stac_data)
+        await target_store.put_async(out_stac, stac_data)
 
         logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
@@ -184,14 +202,16 @@ async def run_extract_gmw(
     """Async function to run the GMW extraction with parallel processing."""
     store = None
     s3_prefix = None
-    if source_location.startswith("s3://"):
-        s3_url = urlparse(source_location)
-        bucket = s3_url.netloc
-        store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-        source_zip_name = f"{s3_prefix}/{source_zip_name}"
-    else:
-        store = LocalStore(prefix=Path(source_location), mkdir=True)
+
+    # Cleanup...
+    source_location = source_location.rstrip("/")
+
+    store = get_store_for_url(source_location)
+
+    if type(store) is S3Store:
+        s3_prefix = get_s3_prefix(source_location)
+        if s3_prefix is not None:
+            source_zip_name = f"{s3_prefix}/{source_zip_name}"
 
     source_exists = exists(store, source_zip_name)
     if not source_exists:
