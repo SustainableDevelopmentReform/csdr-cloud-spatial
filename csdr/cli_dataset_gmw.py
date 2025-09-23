@@ -1,5 +1,8 @@
+# Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
+import logging
+import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -15,7 +18,8 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists
+from csdr.io import exists, get_s3_prefix, get_store_for_url
+from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
 
@@ -33,14 +37,8 @@ async def run_cache_gmw(
     size = source_meta.get("size", None)
 
     dest = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-    else:
-        dest = LocalStore(prefix=Path(target_location), mkdir=True)
 
-    download = True
+    dest = get_store_for_url(target_location)
     target_zip_name = f"{target_path}/{target_zip_name}"
 
     if exists(dest, target_zip_name):
@@ -49,16 +47,15 @@ async def run_cache_gmw(
             logger.info(
                 f"File already exists at target location with matching size of {size}. Skipping download."
             )
-            download = False
+            return
         else:
             logger.info(
                 f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
             )
 
-    if download:
-        logger.info("Cached file doesn't exist, get it.")
-        result = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded {result} bytes")
+    logger.info("Cached file doesn't exist, get it.")
+    result = await dest.put_async(target_zip_name, source.get(url.path))
+    logger.info(f"File cached successfully, downloaded {result} bytes")
 
 
 @gmw_app.command("cache")
@@ -207,13 +204,7 @@ async def run_extract_gmw(
             f"Source zip file found at {source_location}/{source_zip_name}, proceeding with extraction."
         )
 
-    target_store = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        target_store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-    else:
-        target_store = LocalStore(prefix=Path(target_location), mkdir=True)
+    target_store = get_store_for_url(target_location)
 
     # Open the zip file, and extract all files into memory
     # Load the file as bytes first
@@ -246,26 +237,16 @@ async def run_extract_gmw(
 
 
 async def run_index_gmw(source_location: str, target_location: str) -> None:
-    store = None
+    store = get_store_for_url(source_location)
     s3_prefix = None
-    bucket = None
-    if source_location.startswith("s3://"):
-        s3_url = urlparse(source_location)
-        bucket = s3_url.netloc
-        store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-    else:
-        store = LocalStore(prefix=Path(source_location), mkdir=True)
-
-    dest = store
     dest_s3_prefix = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        dest_s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-    else:
-        dest = LocalStore(prefix=Path(target_location), mkdir=True)
+    if type(store) is S3Store:
+        s3_prefix = get_s3_prefix(source_location)
+
+    dest = get_store_for_url(target_location)
+    dest_s3_prefix = None
+    if type(dest) is S3Store:
+        dest_s3_prefix = get_s3_prefix(target_location)
 
     # Find all the the GMW STAC files
     list_of_stac_files = []
@@ -289,10 +270,25 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
     if dest_s3_prefix is not None and dest_s3_prefix != "":
         target = f"{dest_s3_prefix}/{target}"
 
-    await write(target, item_dicts, store=dest)
+    # Multiple approaches to suppress rustac verbose logging
+    os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
+    os.environ["RUST_BACKTRACE"] = "0"  # Disable Rust backtraces too
+
+    # Suppress any Python loggers that might be involved
+    for logger_name in ["rustac", "arrow", "datafusion", "polars"]:
+        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+
+    # Suppress stdout/stderr during rustac write to catch any remaining logs
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet...")
+
+    with suppress_rust_output():
+        await write(target, item_dicts, store=dest)
+
+    logger.info("Parquet write completed.")
 
     if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{bucket}/{target}")
+        dest.buck
+        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{target}")
     else:
         logger.info(f"Finished writing to {source_location}/{target}")
 

@@ -3,7 +3,8 @@ import logging
 import subprocess
 import uuid
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable
+from contextlib import contextmanager
 from typing import Any, TypedDict, cast
 
 import boto3
@@ -272,3 +273,29 @@ def make_uuid(thing: str) -> str:
         "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial",
     )
     return str(uuid.uuid5(namespace, thing))
+
+
+@contextmanager
+def suppress_rust_output() -> Generator[None, None, None]:
+    """Context manager to suppress all output from Rust code using OS-level redirection."""
+    import os
+
+    # Save original file descriptors
+    stdout_fd = os.dup(1)
+    stderr_fd = os.dup(2)
+
+    try:
+        # Redirect stdout and stderr to /dev/null (Unix) or NUL (Windows)
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, 1)  # Redirect stdout
+        os.dup2(devnull, 2)  # Redirect stderr
+        os.close(devnull)
+
+        yield
+
+    finally:
+        # Restore original file descriptors
+        os.dup2(stdout_fd, 1)
+        os.dup2(stderr_fd, 2)
+        os.close(stdout_fd)
+        os.close(stderr_fd)
