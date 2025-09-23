@@ -1,15 +1,13 @@
-from datetime import datetime
-from json import dumps
-
-import boto3
 import typer
 
+from csdr import get_version
 from csdr.cli_conversion import conversion_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_eez import eez_app
+from csdr.cli_provenance import provenance_app
 from csdr.cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
@@ -35,39 +33,17 @@ app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
 # Generic conversion tools
 app.add_typer(conversion_app, name="convert", help="Data conversion tools.")
 
+# Provenance and metadata
+app.add_typer(provenance_app, name="provenance", help="Provenance tools.")
 
+
+# Work for version and --version
 @app.command()
-def hello(
-    bucket: str = "csdr-data-dev",
-    bucket_path: str | None = None,
-) -> None:
-    """Write a little json doc to the bucket
+def version() -> None:
+    """Echo the version of the software."""
 
-    Args:
-        bucket (str): The name of the S3 bucket to write to.
-        bucket_path (str | None): A path within the bucket to write to.
-
-    Run with `csdr hello --bucket csdr-data-dev --bucket-path test`.
-    """
-
-    dictionary = {
-        "hello": "world",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-    key = "hello.json"
-    if bucket_path is not None:
-        key = f"{bucket_path}/{key}"
-
-    s3 = boto3.client("s3")
-    s3.put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=dumps(dictionary).encode("utf-8"),
-    )
-    typer.echo(f"Hello, {bucket}!")
-    typer.echo(f"Path: {bucket_path}")
-    typer.echo("Object written to bucket.")
+    version = get_version()
+    typer.echo(version)
 
     return
 

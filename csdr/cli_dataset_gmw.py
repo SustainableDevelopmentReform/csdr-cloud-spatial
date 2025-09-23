@@ -1,5 +1,8 @@
+# Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
+import logging
+import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -15,7 +18,8 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists, write_json
+from csdr.io import exists, get_s3_prefix, get_store_for_url
+from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
 
@@ -33,14 +37,8 @@ async def run_cache_gmw(
     size = source_meta.get("size", None)
 
     dest = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-    else:
-        dest = LocalStore(prefix=Path(target_location), mkdir=True)
 
-    download = True
+    dest = get_store_for_url(target_location)
     target_zip_name = f"{target_path}/{target_zip_name}"
 
     if exists(dest, target_zip_name):
@@ -49,16 +47,15 @@ async def run_cache_gmw(
             logger.info(
                 f"File already exists at target location with matching size of {size}. Skipping download."
             )
-            download = False
+            return
         else:
             logger.info(
                 f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
             )
 
-    if download:
-        logger.info("Cached file doesn't exist, get it.")
-        result = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded {result} bytes")
+    logger.info("Cached file doesn't exist, get it.")
+    result = await dest.put_async(target_zip_name, source.get(url.path))
+    logger.info(f"File cached successfully, downloaded {result} bytes")
 
 
 @gmw_app.command("cache")
@@ -70,7 +67,7 @@ def cache_gmw(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     target_zip_name: str = typer.Option(
         help="Name of the zip file to save the GMW data as.",
@@ -90,11 +87,69 @@ def cache_gmw(
     )
 
 
+async def process_single_file(
+    name: str,
+    zip_file: ZipFile,
+    target_location: str,
+    target_store: S3Store | LocalStore,
+    overwrite: bool,
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """Process a single file from the zip archive."""
+    async with semaphore:
+        logger.info(f"Working on {name}...")
+        out_key = name
+        out_stac = name.replace(".tif", ".stac-item.json")
+
+        # If S3, we need a S3 URI, otherwise, just a local path
+        if target_location.startswith("s3://"):
+            s3_url = urlparse(target_location)
+            bucket = s3_url.netloc
+            s3_prefix = s3_url.path.lstrip("/").rstrip("/")
+            if s3_prefix is not None and s3_prefix != "":
+                out_key = f"{s3_prefix}/{out_key}"
+            target_uri = f"s3://{bucket}/{out_key}"
+        else:
+            target_uri = f"{target_location}/{out_key}"
+
+        stac_uri = target_uri.replace(".tif", ".stac-item.json")
+
+        # Check if the STAC doc exists, and skip if it does
+        if exists(target_store, out_stac) and not overwrite:
+            logger.info(f"STAC doc already exists for {name}, skipping.")
+            return
+
+        # Get the data from memory into a rasterio dataset
+        data = open_rasterio(zip_file.open(name))
+
+        # Write it as a COG
+        cog_data = write_cog(data, ":mem:")
+        await target_store.put_async(out_key, cog_data)
+
+        # Create the STAC doc and write it
+        stac_doc = create_stac_item(
+            target_uri,
+            input_datetime=datetime(2024, 1, 1),
+            collection="gmw",
+            id=name,
+            asset_name="mangrove",
+            with_proj=True,
+            with_raster=True,
+        )
+
+        # Write STAC doc
+        stac_key = out_key.replace(".tif", ".stac-item.json")
+        stac_data = json.dumps(stac_doc.to_dict()).encode()
+        await target_store.put_async(stac_key, stac_data)
+
+        logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
+
+
 @gmw_app.command("extract")
 def extract_gmw(
     source_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     source_zip_name: str = typer.Option(
         help="Name of the zip file to extract the GMW data from.",
@@ -102,17 +157,31 @@ def extract_gmw(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
     ),
-    overwrite_stac: bool = typer.Option(
-        True, help="Replace existing STAC files during extraction."
+    max_concurrent: int = typer.Option(
+        32, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
     logger.info("Starting GMW extraction process...")
+    asyncio.run(
+        run_extract_gmw(
+            source_location, source_zip_name, target_location, overwrite, max_concurrent
+        )
+    )
 
+
+async def run_extract_gmw(
+    source_location: str,
+    source_zip_name: str,
+    target_location: str,
+    overwrite: bool,
+    max_concurrent: int,
+) -> None:
+    """Async function to run the GMW extraction with parallel processing."""
     store = None
     s3_prefix = None
     if source_location.startswith("s3://"):
@@ -135,13 +204,7 @@ def extract_gmw(
             f"Source zip file found at {source_location}/{source_zip_name}, proceeding with extraction."
         )
 
-    target_store = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        target_store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-    else:
-        target_store = LocalStore(prefix=Path(target_location), mkdir=True)
+    target_store = get_store_for_url(target_location)
 
     # Open the zip file, and extract all files into memory
     # Load the file as bytes first
@@ -149,77 +212,41 @@ def extract_gmw(
     zip_bytes = BytesIO(store.get(source_zip_name).bytes())
     logger.info("Finished loading data")
 
+    # Create semaphore to limit concurrent operations
+    semaphore = asyncio.Semaphore(max_concurrent)
+
     with ZipFile(zip_bytes) as z:
-        for name in z.namelist():
-            logger.info(f"Converting {name}...")
-            # Get the data from memory into a rasterio dataset
-            data = open_rasterio(z.open(name))
-            out_key = name
-            # If S3, we need a S3 URI, otherwise, just a local path
-            if target_location.startswith("s3://"):
-                s3_url = urlparse(target_location)
-                bucket = s3_url.netloc
-                s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-                if s3_prefix is not None and s3_prefix != "":
-                    out_key = f"{s3_prefix}/{out_key}"
-                target_uri = f"s3://{bucket}/{out_key}"
-            else:
-                target_uri = f"{target_location}/{out_key}"
+        # Get list of TIF files to process
+        tif_files = [name for name in z.namelist() if name.endswith(".tif")]
+        logger.info(
+            f"Found {len(tif_files)} TIF files to process with max {max_concurrent} concurrent operations."
+        )
 
-            if not exists(target_store, out_key) or overwrite:
-                target_store.put(f"{out_key}", write_cog(data, ":mem:"))
-                logger.info(f"Converted to COG and wrote to {target_uri}")
-            else:
-                logger.info("File already exists, skipping.")
+        # Create tasks for parallel processing
+        tasks = [
+            process_single_file(
+                name, z, target_location, target_store, overwrite, semaphore
+            )
+            for name in tif_files
+        ]
 
-            if (
-                not exists(target_store, out_key.replace(".tif", ".stac-item.json"))
-                or overwrite_stac
-            ):
-                stac_doc = create_stac_item(
-                    target_uri,
-                    input_datetime=datetime(2024, 1, 1),
-                    collection="gmw",
-                    id=name,
-                    asset_name="mangrove",
-                    with_proj=True,
-                    with_raster=True,
-                )
-                write_json(
-                    out_key.replace(".tif", ".stac-item.json"), stac_doc.to_dict()
-                )
-            else:
-                logger.info("STAC file already exists, skipping.")
-
-            if target_location.startswith("s3://"):
-                logger.info(
-                    f"Finished. STAC doc is at {target_uri.replace('.tif', '.stac-item.json')}"
-                )
+        # Execute all tasks concurrently
+        await asyncio.gather(*tasks)
 
     logger.info("GMW extraction process completed.")
 
 
 async def run_index_gmw(source_location: str, target_location: str) -> None:
-    store = None
+    store = get_store_for_url(source_location)
     s3_prefix = None
-    bucket = None
-    if source_location.startswith("s3://"):
-        s3_url = urlparse(source_location)
-        bucket = s3_url.netloc
-        store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-    else:
-        store = LocalStore(prefix=Path(source_location), mkdir=True)
-
-    dest = store
     dest_s3_prefix = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        dest_s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-    else:
-        dest = LocalStore(prefix=Path(target_location), mkdir=True)
+    if type(store) is S3Store:
+        s3_prefix = get_s3_prefix(source_location)
+
+    dest = get_store_for_url(target_location)
+    dest_s3_prefix = None
+    if type(dest) is S3Store:
+        dest_s3_prefix = get_s3_prefix(target_location)
 
     # Find all the the GMW STAC files
     list_of_stac_files = []
@@ -243,10 +270,25 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
     if dest_s3_prefix is not None and dest_s3_prefix != "":
         target = f"{dest_s3_prefix}/{target}"
 
-    await write(target, item_dicts, store=dest)
+    # Multiple approaches to suppress rustac verbose logging
+    os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
+    os.environ["RUST_BACKTRACE"] = "0"  # Disable Rust backtraces too
+
+    # Suppress any Python loggers that might be involved
+    for logger_name in ["rustac", "arrow", "datafusion", "polars"]:
+        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+
+    # Suppress stdout/stderr during rustac write to catch any remaining logs
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet...")
+
+    with suppress_rust_output():
+        await write(target, item_dicts, store=dest)
+
+    logger.info("Parquet write completed.")
 
     if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{bucket}/{target}")
+        dest.buck
+        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{target}")
     else:
         logger.info(f"Finished writing to {source_location}/{target}")
 
@@ -255,11 +297,11 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
 def index_gmw(
     source_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
-        default="./cache",
+        default="./cache/gmw",
     ),
 ) -> None:
     logger.info("Starting GMW indexing process...")
