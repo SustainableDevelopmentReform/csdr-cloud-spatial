@@ -6,6 +6,10 @@ from obstore.store import HTTPStore, LocalStore, S3Store
 from csdr.io import get_file_info
 from csdr.utils import make_uuid
 
+SUPPORTED_DATASET_TYPES = [
+    "stac-geoparquet",
+]
+
 
 def get_image_state() -> dict[str, str]:
     """Get the image state from environment variables"""
@@ -16,7 +20,7 @@ def get_image_state() -> dict[str, str]:
 
 
 def get_dataset_provenance(
-    name: str,
+    id: str,
     store: HTTPStore | S3Store | LocalStore,
     path: str,
     source_url: str,
@@ -26,6 +30,11 @@ def get_dataset_provenance(
     uuid: str | None = None,
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
+    if dataset_type not in SUPPORTED_DATASET_TYPES:
+        raise ValueError(
+            f"Unsupported dataset type: {dataset_type}. Supported types are: {SUPPORTED_DATASET_TYPES}"
+        )
+
     info = get_file_info(store, path)
     image_state = get_image_state()
 
@@ -33,8 +42,8 @@ def get_dataset_provenance(
     # - Add dates. Date added/updated/etc.
 
     return {
-        "name": name,
-        "uuid": uuid or make_uuid(name),
+        "id": id,
+        "uuid": uuid or make_uuid(id),
         "data_path": path,
         "data_size": info["size"],
         "data_etag": info["e_tag"].strip('"'),

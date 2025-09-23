@@ -16,6 +16,10 @@ provenance_app = Typer()
 def write_dataset_provenance(
     id: str = typer.Option(..., help="ID of the dataset"),
     dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
+    dataset_type: str = typer.Option(
+        "not-set",
+        help="Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
+    ),
     source_metadata_url: str = typer.Option(
         ...,
         help="URL of the source metadata, such as https://example.com/metadata.html",
@@ -56,7 +60,7 @@ def write_dataset_provenance(
         dataset_url=dataset_url,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
-        dataset_type="not-set",
+        dataset_type=dataset_type,
     )
     logger.info(provenance)
 
