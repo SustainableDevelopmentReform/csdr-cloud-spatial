@@ -14,7 +14,7 @@ provenance_app = Typer()
 
 @provenance_app.command("dataset")
 def write_dataset_provenance(
-    name: str = typer.Option(..., help="Name of the dataset"),
+    id: str = typer.Option(..., help="Name of the dataset"),
     dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
     source_metadata_url: str = typer.Option(
         ...,
@@ -50,13 +50,13 @@ def write_dataset_provenance(
     logger.info(f"Dataset name: {dataset_name}")
 
     provenance = get_dataset_provenance(
-        name=name,
+        id=id,
         store=store,
         path=dataset_name,
-        file_url=dataset_url,
+        dataset_url=dataset_url,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
-        file_type="not-set",
+        dataset_type="not-set",
     )
     logger.info(provenance)
 

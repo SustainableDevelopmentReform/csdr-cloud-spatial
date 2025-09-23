@@ -21,8 +21,8 @@ def get_dataset_provenance(
     path: str,
     source_url: str,
     source_metadata_url: str,
-    file_url: str,
-    file_type: str,
+    dataset_url: str,
+    dataset_type: str,
     uuid: str | None = None,
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
@@ -42,8 +42,8 @@ def get_dataset_provenance(
         "image_tag": image_state["image_tag"],
         "source_url": source_url,
         "source_metadata_url": source_metadata_url,
-        "file_url": file_url,
-        "file_type": file_type,
+        "dataset_url": dataset_url,
+        "dataset_type": dataset_type,
         "provenance_updated": datetime.now(UTC).isoformat() + "Z",
         **(extra_info_dict or {}),
     }
