@@ -15,7 +15,7 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists, write_json
+from csdr.io import exists
 
 gmw_app = typer.Typer()
 
@@ -90,6 +90,64 @@ def cache_gmw(
     )
 
 
+async def process_single_file(
+    name: str,
+    zip_file: ZipFile,
+    target_location: str,
+    target_store: S3Store | LocalStore,
+    overwrite: bool,
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """Process a single file from the zip archive."""
+    async with semaphore:
+        logger.info(f"Working on {name}...")
+        out_key = name
+        out_stac = name.replace(".tif", ".stac-item.json")
+
+        # If S3, we need a S3 URI, otherwise, just a local path
+        if target_location.startswith("s3://"):
+            s3_url = urlparse(target_location)
+            bucket = s3_url.netloc
+            s3_prefix = s3_url.path.lstrip("/").rstrip("/")
+            if s3_prefix is not None and s3_prefix != "":
+                out_key = f"{s3_prefix}/{out_key}"
+            target_uri = f"s3://{bucket}/{out_key}"
+        else:
+            target_uri = f"{target_location}/{out_key}"
+
+        stac_uri = target_uri.replace(".tif", ".stac-item.json")
+
+        # Check if the STAC doc exists, and skip if it does
+        if exists(target_store, out_stac) and not overwrite:
+            logger.info(f"STAC doc already exists for {name}, skipping.")
+            return
+
+        # Get the data from memory into a rasterio dataset
+        data = open_rasterio(zip_file.open(name))
+
+        # Write it as a COG
+        cog_data = write_cog(data, ":mem:")
+        await target_store.put_async(out_key, cog_data)
+
+        # Create the STAC doc and write it
+        stac_doc = create_stac_item(
+            target_uri,
+            input_datetime=datetime(2024, 1, 1),
+            collection="gmw",
+            id=name,
+            asset_name="mangrove",
+            with_proj=True,
+            with_raster=True,
+        )
+
+        # Write STAC doc
+        stac_key = out_key.replace(".tif", ".stac-item.json")
+        stac_data = json.dumps(stac_doc.to_dict()).encode()
+        await target_store.put_async(stac_key, stac_data)
+
+        logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
+
+
 @gmw_app.command("extract")
 def extract_gmw(
     source_location: str = typer.Option(
@@ -107,12 +165,26 @@ def extract_gmw(
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
     ),
-    overwrite_stac: bool = typer.Option(
-        True, help="Replace existing STAC files during extraction."
+    max_concurrent: int = typer.Option(
+        32, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
     logger.info("Starting GMW extraction process...")
+    asyncio.run(
+        run_extract_gmw(
+            source_location, source_zip_name, target_location, overwrite, max_concurrent
+        )
+    )
 
+
+async def run_extract_gmw(
+    source_location: str,
+    source_zip_name: str,
+    target_location: str,
+    overwrite: bool,
+    max_concurrent: int,
+) -> None:
+    """Async function to run the GMW extraction with parallel processing."""
     store = None
     s3_prefix = None
     if source_location.startswith("s3://"):
@@ -149,52 +221,26 @@ def extract_gmw(
     zip_bytes = BytesIO(store.get(source_zip_name).bytes())
     logger.info("Finished loading data")
 
+    # Create semaphore to limit concurrent operations
+    semaphore = asyncio.Semaphore(max_concurrent)
+
     with ZipFile(zip_bytes) as z:
-        for name in z.namelist():
-            logger.info(f"Converting {name}...")
-            # Get the data from memory into a rasterio dataset
-            data = open_rasterio(z.open(name))
-            out_key = name
-            # If S3, we need a S3 URI, otherwise, just a local path
-            if target_location.startswith("s3://"):
-                s3_url = urlparse(target_location)
-                bucket = s3_url.netloc
-                s3_prefix = s3_url.path.lstrip("/").rstrip("/")
-                if s3_prefix is not None and s3_prefix != "":
-                    out_key = f"{s3_prefix}/{out_key}"
-                target_uri = f"s3://{bucket}/{out_key}"
-            else:
-                target_uri = f"{target_location}/{out_key}"
+        # Get list of TIF files to process
+        tif_files = [name for name in z.namelist() if name.endswith(".tif")]
+        logger.info(
+            f"Found {len(tif_files)} TIF files to process with max {max_concurrent} concurrent operations."
+        )
 
-            if not exists(target_store, out_key) or overwrite:
-                target_store.put(f"{out_key}", write_cog(data, ":mem:"))
-                logger.info(f"Converted to COG and wrote to {target_uri}")
-            else:
-                logger.info("File already exists, skipping.")
+        # Create tasks for parallel processing
+        tasks = [
+            process_single_file(
+                name, z, target_location, target_store, overwrite, semaphore
+            )
+            for name in tif_files
+        ]
 
-            if (
-                not exists(target_store, out_key.replace(".tif", ".stac-item.json"))
-                or overwrite_stac
-            ):
-                stac_doc = create_stac_item(
-                    target_uri,
-                    input_datetime=datetime(2024, 1, 1),
-                    collection="gmw",
-                    id=name,
-                    asset_name="mangrove",
-                    with_proj=True,
-                    with_raster=True,
-                )
-                write_json(
-                    out_key.replace(".tif", ".stac-item.json"), stac_doc.to_dict()
-                )
-            else:
-                logger.info("STAC file already exists, skipping.")
-
-            if target_location.startswith("s3://"):
-                logger.info(
-                    f"Finished. STAC doc is at {target_uri.replace('.tif', '.stac-item.json')}"
-                )
+        # Execute all tasks concurrently
+        await asyncio.gather(*tasks)
 
     logger.info("GMW extraction process completed.")
 
