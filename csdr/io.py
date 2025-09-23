@@ -44,9 +44,7 @@ def write_json(
         )
 
 
-def get_store_for_url(
-    url: str, mkdir: bool = False
-) -> HTTPStore | S3Store | LocalStore:
+def get_store_for_url(url: str, mkdir: bool = True) -> HTTPStore | S3Store | LocalStore:
     if url.startswith("s3://"):
         s3_url = urlparse(url)
         bucket = s3_url.netloc

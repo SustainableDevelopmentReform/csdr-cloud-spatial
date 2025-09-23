@@ -107,7 +107,7 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        logger.info(f"Working on {name}...")
+        # logger.info(f"Working on {name}...")
         out_key = name
         out_stac = name.replace(".tif", ".stac-item.json")
 
@@ -255,7 +255,9 @@ def extract_gmw(
     )
 
 
-async def run_index_gmw(source_location: str, target_location: str) -> None:
+async def run_index_gmw(
+    source_location: str, target_location: str, overwrite: bool = True
+) -> None:
     store = get_store_for_url(source_location)
     s3_prefix = None
     dest_s3_prefix = None
@@ -264,8 +266,26 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
 
     dest = get_store_for_url(target_location)
     dest_s3_prefix = None
+
+    out_filename = "gmw.parquet"
+    dest_s3_prefix = None
+
     if type(dest) is S3Store:
         dest_s3_prefix = get_s3_prefix(target_location)
+        if dest_s3_prefix is not None:
+            out_filename = f"{dest_s3_prefix}/{out_filename}"
+
+    # Check for existing geoparquet file
+    if exists(dest, out_filename) and not overwrite:
+        logger.info(
+            f"Parquet file already exists at {out_filename}, skipping indexing."
+        )
+        return
+    else:
+        if overwrite:
+            logger.info("Overwrite is enabled, re-indexing GMW.")
+        else:
+            logger.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
     list_of_stac_files = []
@@ -285,10 +305,6 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
         *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
     )
 
-    target = "gmw.parquet"
-    if dest_s3_prefix is not None and dest_s3_prefix != "":
-        target = f"{dest_s3_prefix}/{target}"
-
     # Multiple approaches to suppress rustac verbose logging
     os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
     os.environ["RUST_BACKTRACE"] = "0"  # Disable Rust backtraces too
@@ -297,19 +313,18 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
     for logger_name in ["rustac", "arrow", "datafusion", "polars"]:
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)
 
-    # Suppress stdout/stderr during rustac write to catch any remaining logs
-    logger.info(f"Writing {len(item_dicts)} STAC items to parquet...")
-
+    logger.info(
+        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
+    )
     with suppress_rust_output():
-        await write(target, item_dicts, store=dest)
+        await write(out_filename, item_dicts, store=dest)
 
     logger.info("Parquet write completed.")
 
     if target_location.startswith("s3://"):
-        dest.buck
-        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{target}")
+        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
     else:
-        logger.info(f"Finished writing to {source_location}/{target}")
+        logger.info(f"Finished writing to {source_location}/{out_filename}")
 
 
 @gmw_app.command("index")
@@ -322,7 +337,8 @@ def index_gmw(
         help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
         default="./cache/gmw",
     ),
+    overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
     logger.info("Starting GMW indexing process...")
-    asyncio.run(run_index_gmw(source_location, target_location))
+    asyncio.run(run_index_gmw(source_location, target_location, overwrite))
     logger.info("GMW indexing process completed.")
