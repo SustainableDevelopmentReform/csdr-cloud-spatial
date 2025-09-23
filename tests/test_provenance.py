@@ -90,7 +90,7 @@ def test_s3_dataset_provenance(
     assert (
         isinstance(provenance["data_etag"], str)
         and provenance["data_etag"]
-        == '"255ab95f6888079345b27aa2e1547796"'  # Why quoted?!
+        == "255ab95f6888079345b27aa2e1547796"  # Why quoted?!
     )
     assert provenance["image_repo"] in [
         "not-set",

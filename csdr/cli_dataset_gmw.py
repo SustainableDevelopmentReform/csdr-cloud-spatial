@@ -67,7 +67,7 @@ def cache_gmw(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     target_zip_name: str = typer.Option(
         help="Name of the zip file to save the GMW data as.",
@@ -149,7 +149,7 @@ async def process_single_file(
 def extract_gmw(
     source_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     source_zip_name: str = typer.Option(
         help="Name of the zip file to extract the GMW data from.",
@@ -157,7 +157,7 @@ def extract_gmw(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
@@ -297,11 +297,11 @@ async def run_index_gmw(source_location: str, target_location: str) -> None:
 def index_gmw(
     source_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the GMW files.",
-        default="./cache",
+        default="./cache/gmw",
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
-        default="./cache",
+        default="./cache/gmw",
     ),
 ) -> None:
     logger.info("Starting GMW indexing process...")
