@@ -72,10 +72,17 @@ def get_file_name_from_url(url: str) -> str:
     return Path(parsed_url.path).name
 
 
-def get_s3_prefix(s3_url_str: str) -> str:
+def get_s3_prefix(s3_url_str: str) -> str | None:
     s3_url = urlparse(s3_url_str)
     file_name = get_file_name_from_url(s3_url_str)
+
+    s3_prefix = None
     if s3_url.path.endswith(file_name):
-        return s3_url.path.lstrip("/").replace(file_name, "").rstrip("/")
+        s3_prefix = s3_url.path.lstrip("/").replace(file_name, "").rstrip("/")
     else:
-        return s3_url.path.lstrip("/").rstrip("/")
+        s3_prefix = s3_url.path.lstrip("/").rstrip("/")
+
+    if s3_prefix == "":
+        s3_prefix = None
+
+    return s3_prefix
