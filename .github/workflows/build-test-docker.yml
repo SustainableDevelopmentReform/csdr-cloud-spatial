@@ -1,4 +1,4 @@
-name : Build Docker Image
+name : Lint, Test and Build Docker Image
 
 env:
   REGISTRY: ghcr.io
