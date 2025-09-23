@@ -122,13 +122,6 @@ async def process_single_file(
             target_uri = f"{target_location}/{out_key}"
 
         stac_uri = target_uri.replace(".tif", ".stac-item.json")
-        logger.info(f"Target STAC will be at {stac_uri}")
-
-        # Check if the STAC doc exists, and skip if it does
-        logger.info(f"Checking existence of {out_stac}...")
-        logger.info(
-            f"Store is type: {type(target_store)} and config is {target_store.config}"
-        )
         if exists(target_store, out_stac) and not overwrite:
             logger.info(f"STAC doc already exists for {stac_uri}, skipping.")
             return
@@ -163,35 +156,6 @@ async def process_single_file(
         logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
 
-@gmw_app.command("extract")
-def extract_gmw(
-    source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/gmw",
-    ),
-    source_zip_name: str = typer.Option(
-        help="Name of the zip file to extract the GMW data from.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
-    ),
-    target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/gmw",
-    ),
-    overwrite: bool = typer.Option(
-        True, help="Replace existing files during extraction."
-    ),
-    max_concurrent: int = typer.Option(
-        32, help="Maximum number of files to process concurrently."
-    ),
-) -> None:
-    logger.info("Starting GMW extraction process...")
-    asyncio.run(
-        run_extract_gmw(
-            source_location, source_zip_name, target_location, overwrite, max_concurrent
-        )
-    )
-
-
 async def run_extract_gmw(
     source_location: str,
     source_zip_name: str,
@@ -213,15 +177,21 @@ async def run_extract_gmw(
         if s3_prefix is not None:
             source_zip_name = f"{s3_prefix}/{source_zip_name}"
 
+    logger.info(f"Checking for source zip file at path {source_zip_name}...")
+    if type(store) is S3Store:
+        logger.info(
+            f"Store is S3Store with bucket {store.config['bucket']} and prefix {s3_prefix}"
+        )
+
     source_exists = exists(store, source_zip_name)
     if not source_exists:
         logger.error(
-            f"Source zip file does not exist at {source_location}/{source_zip_name}. Cannot extract."
+            f"Source zip file does not exist at {source_location}. Cannot extract."
         )
         raise typer.Exit(code=1)
     else:
         logger.info(
-            f"Source zip file found at {source_location}/{source_zip_name}, proceeding with extraction."
+            f"Source zip file found at {source_location}, proceeding with extraction."
         )
 
     target_store = get_store_for_url(target_location)
@@ -254,6 +224,35 @@ async def run_extract_gmw(
         await asyncio.gather(*tasks)
 
     logger.info("GMW extraction process completed.")
+
+
+@gmw_app.command("extract")
+def extract_gmw(
+    source_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
+        default="./cache/gmw",
+    ),
+    source_zip_name: str = typer.Option(
+        help="Name of the zip file to extract the GMW data from.",
+        default="gmw_mng_2020_v4019_gtiff.zip",
+    ),
+    target_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
+        default="./cache/gmw",
+    ),
+    overwrite: bool = typer.Option(
+        True, help="Replace existing files during extraction."
+    ),
+    max_concurrent: int = typer.Option(
+        32, help="Maximum number of files to process concurrently."
+    ),
+) -> None:
+    logger.info("Starting GMW extraction process...")
+    asyncio.run(
+        run_extract_gmw(
+            source_location, source_zip_name, target_location, overwrite, max_concurrent
+        )
+    )
 
 
 async def run_index_gmw(source_location: str, target_location: str) -> None:

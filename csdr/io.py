@@ -76,8 +76,11 @@ def get_s3_prefix(s3_url_str: str) -> str | None:
     s3_url = urlparse(s3_url_str)
     file_name = get_file_name_from_url(s3_url_str)
 
+    if "." not in file_name:
+        file_name = None
+
     s3_prefix = None
-    if s3_url.path.endswith(file_name):
+    if file_name is not None and s3_url.path.endswith(file_name):
         s3_prefix = s3_url.path.lstrip("/").replace(file_name, "").rstrip("/")
     else:
         s3_prefix = s3_url.path.lstrip("/").rstrip("/")
