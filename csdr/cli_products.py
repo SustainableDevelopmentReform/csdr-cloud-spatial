@@ -2,6 +2,7 @@ import json
 import sys
 
 import typer
+from dask.distributed import Client
 from loguru import logger
 from obstore.store import S3Store
 
@@ -72,6 +73,17 @@ def process_geometry(
         help="Location to write the results to (otherwise print to console)",
     ),
     geometry_id: str = typer.Option(..., help="ID of the geometry to process"),
+    use_dask: bool = typer.Option(
+        False, help="Whether to use Dask distributed for processing"
+    ),
+    dask_client_opts: dict[str, str] = typer.Option(
+        {},
+        "--dask-opts",
+        help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
+        parser=lambda s: dict(
+            item.split("=", 1) for item in s.split(",") if "=" in item
+        ),
+    ),
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
 
@@ -93,9 +105,29 @@ def process_geometry(
     #     raise typer.Exit(code=1)
 
     geometry = get_geom_from_gdf(gdf, geometry_id)
+
+    # Use Dask distributed here
+    if use_dask:
+        logger.info(f"Starting Dask client with options: {dask_client_opts}")
+
+        # Parse the client opts, making them integers if they can be
+        for key, value in dask_client_opts.items():
+            try:
+                dask_client_opts[key] = int(value)
+            except ValueError:
+                pass
+
+        client = Client(**dask_client_opts)
+        logger.info(
+            f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
+        )
+
     results = process_variables_for_geometry(
         geometry, variables_to_extract, dataset_provenance_url
     )
+
+    if use_dask:
+        client.close()
 
     logger.info(f"Results for geometry {geometry_id}: {results}")
 
