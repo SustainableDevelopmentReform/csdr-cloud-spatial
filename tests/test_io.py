@@ -50,7 +50,9 @@ def test_get_file_name_from_url() -> None:
         ("/tmp/file.txt", "/tmp/file.txt"),
     ],
 )
-def test_get_url_from_store_filename(url: str, expected_url: str) -> None:
+def test_get_url_from_store_filename(
+    url: str, expected_url: str, aws_credentials: dict
+) -> None:
     store = get_store_for_url(url, mkdir=False)
     filename = get_dataset_name_from_url(store, url)
     assert filename is not None

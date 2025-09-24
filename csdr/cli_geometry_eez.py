@@ -24,26 +24,22 @@ async def run_cache_eez(
     dest = get_store_for_url(target_location)
     dest_name = get_dataset_name_from_url(source, source_url, keep_path)
 
-    if exists(dest, dest_name) and not overwrite:
-        dest_meta = dest.head(name)
-        if size is not None and "size" in dest_meta and dest_meta["size"] == size:
-            logger.info(
-                f"File already exists at target location with matching size of {size}. Skipping download."
-            )
+    if exists(dest, dest_name):
+        if not overwrite:
+            logger.info("File already exists at target location, skipping download.")
             raise typer.Exit(code=0)  # Exit successfully, nothing to do
         else:
-            logger.info(
-                f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
-            )
-    else:
-        if exists(dest, dest_name):
-            logger.info(
-                "File already exists at target location, but overwrite is enabled. Re-downloading."
-            )
-        else:
-            logger.info("File does not exist at target location. Downloading.")
+            dest_meta = dest.head(dest_name)
+            if size is not None and "size" in dest_meta and dest_meta["size"] == size:
+                logger.info(
+                    f"File already exists at target location with matching size of {size}. Skipping download."
+                )
+                raise typer.Exit(code=0)  # Exit successfully, nothing to do
+            else:
+                logger.info(
+                    f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
+                )
 
-    logger.info("Cached file doesn't exist, get it.")
     logger.info(
         f"Downloading {name} from {source_url} to {target_location}/{dest_name}..."
     )
