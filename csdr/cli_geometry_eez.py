@@ -1,13 +1,9 @@
 import asyncio
-from pathlib import Path
-from urllib.parse import urlparse
 
 import typer
 from loguru import logger
-from obstore.auth.boto3 import Boto3CredentialProvider
-from obstore.store import HTTPStore, LocalStore, S3Store
 
-from csdr.io import exists
+from csdr.io import exists, get_dataset_name_from_url, get_file_info, get_store_for_url
 
 eez_app = typer.Typer()
 
@@ -15,31 +11,21 @@ eez_app = typer.Typer()
 async def run_cache_eez(
     source_url: str,
     target_location: str,
-    target_path: str,
-    target_zip_name: str,
+    keep_path: bool,
     overwrite: bool,
 ) -> None:
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
+    target_location = target_location.rstrip("/")
 
-    url = urlparse(source_url)
+    source = get_store_for_url(source_url)
+    name = get_dataset_name_from_url(source, source_url)
+    size = get_file_info(source, name).get("size", None)
 
-    source = HTTPStore(f"{url.scheme}://{url.netloc}")
-    source_meta = source.head(url.path)
+    dest = get_store_for_url(target_location)
+    dest_name = get_dataset_name_from_url(source, source_url, keep_path)
 
-    size = source_meta.get("size", None)
-
-    dest = None
-    if target_location.startswith("s3://"):
-        s3_url = urlparse(target_location)
-        bucket = s3_url.netloc
-        dest = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-    else:
-        dest = LocalStore(prefix=Path(target_location), mkdir=True)
-
-    target_zip_name = f"{target_path}/{target_zip_name}"
-
-    if exists(dest, target_zip_name) and not overwrite:
-        dest_meta = dest.head(target_zip_name)
+    if exists(dest, dest_name) and not overwrite:
+        dest_meta = dest.head(name)
         if size is not None and "size" in dest_meta and dest_meta["size"] == size:
             logger.info(
                 f"File already exists at target location with matching size of {size}. Skipping download."
@@ -50,7 +36,7 @@ async def run_cache_eez(
                 f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
             )
     else:
-        if exists(dest, target_zip_name):
+        if exists(dest, dest_name):
             logger.info(
                 "File already exists at target location, but overwrite is enabled. Re-downloading."
             )
@@ -58,8 +44,12 @@ async def run_cache_eez(
             logger.info("File does not exist at target location. Downloading.")
 
     logger.info("Cached file doesn't exist, get it.")
-    result = await dest.put_async(target_zip_name, source.get(url.path))
-    logger.info(f"File cached successfully, downloaded {result} bytes")
+    logger.info(
+        f"Downloading {name} from {source_url} to {target_location}/{dest_name}..."
+    )
+    await dest.put_async(dest_name, source.get(name))
+
+    return f"{target_location}/{dest_name}"
 
 
 @eez_app.command("cache")
@@ -70,26 +60,18 @@ def cache_eez(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached EEZ file.",
-        default="./cache",
+        default="./cache/eez",
     ),
-    target_zip_name: str = typer.Option(
-        help="Name of the zip file to save the GMW data as.",
-        default="EEZ_land_union_v4_202410.zip",
+    keep_path: bool = typer.Option(
+        False, help="Keep the full path from the source URL in the target location."
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
     ),
 ) -> None:
-    logger.info("Starting GMW caching process...")
-    target_path = ""
-    if target_location.startswith("s3://"):
-        target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
+    logger.info("Starting EEZ caching process...")
 
-    asyncio.run(
-        run_cache_eez(
-            source_url, target_location, target_path, target_zip_name, overwrite
-        )
+    result_path = asyncio.run(
+        run_cache_eez(source_url, target_location, keep_path, overwrite)
     )
-    logger.info(
-        f"EEZ caching process completed. Cached to {target_location.rstrip('/')}/{target_zip_name}"
-    )
+    logger.info(f"EEZ caching process completed. Cached to {result_path}")

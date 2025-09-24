@@ -1,15 +1,18 @@
 from io import BytesIO
-from pathlib import Path
-from urllib.parse import urlparse
 
 import geopandas as gpd
 import typer
 from fiona.io import ZipMemoryFile
 from loguru import logger
-from obstore.auth.boto3 import Boto3CredentialProvider
-from obstore.store import LocalStore, S3Store
+from obstore.store import S3Store
 
-from csdr.io import exists
+from csdr.io import (
+    exists,
+    get_dataset_name_from_url,
+    get_prefix,
+    get_store_for_url,
+    get_url_from_store_filename,
+)
 
 conversion_app = typer.Typer()
 
@@ -36,19 +39,10 @@ def extract_gmw(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    store = None
-    source_zip_name_path = None
-    if source_zip_location.startswith("s3://"):
-        s3_url = urlparse(source_zip_location)
-        bucket = s3_url.netloc
-        store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        source_zip_name_path = s3_url.path.lstrip("/")
-    else:
-        store = LocalStore(prefix=Path(source_zip_location).parent, mkdir=True)
-        source_zip_name_path = Path(source_zip_location).name
+    store = get_store_for_url(source_zip_location)
+    source_zip_name_path = get_dataset_name_from_url(store, source_zip_location)
 
-    source_exists = exists(store, source_zip_name_path)
-    if not source_exists:
+    if not exists(store, source_zip_name_path):
         logger.error(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
@@ -58,29 +52,24 @@ def extract_gmw(
             f"Source zip file found at {source_zip_location}, proceeding with extraction."
         )
 
+    target_location = target_location.rstrip("/")
+
     # Set up the target store
-    target_store = None
-    full_destination_str = None
-    target_path_file = Path(source_zip_name_path).name.replace(".zip", ".parquet")
-
-    if target_location.startswith("s3://"):
-        target_s3_url = urlparse(target_location)
-        bucket = target_s3_url.netloc
-        target_store = S3Store(bucket, credential_provider=Boto3CredentialProvider())
-        target_path = target_s3_url.path.lstrip("/")
-
-        if target_path != "":
-            target_path_file = f"{target_path}/{target_path_file}"
-
-        full_destination_str = f"s3://{bucket}/{target_path_file}"
-    else:
-        target_store = LocalStore(prefix=Path(target_location), mkdir=True)
-        full_destination_str = str(Path(target_location) / target_path_file)
+    target_store = get_store_for_url(target_location)
+    target_filename = source_internal_path_name.split("/")[-1].replace(
+        ".shp", ".parquet"
+    )
+    if type(target_store) is S3Store:
+        # S3Store needs the full path including prefix
+        path = get_prefix(target_location)
+        if path is not None:
+            target_filename = f"{path}/{target_filename}"
+    target_url = get_url_from_store_filename(target_store, target_filename)
 
     # Check if target file already exists
-    if exists(target_store, target_path) and not overwrite:
+    if exists(target_store, target_filename) and not overwrite:
         logger.warning(
-            f"Target parquet file already exists at {target_location}/{target_path_file}. Use --overwrite to replace."
+            f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
         raise typer.Exit(code=0)
 
@@ -101,8 +90,8 @@ def extract_gmw(
         parquet_buffer.seek(0)
 
         # Write the parquet bytes to the target store using obstore
-        target_store.put(target_path_file, parquet_buffer.getvalue())
+        target_store.put(target_filename, parquet_buffer.getvalue())
 
-    logger.info(
-        f"Parquet extraction process completed. Wrote file to {full_destination_str}"
-    )
+    logger.info(f"Target store is {target_store}, filename is {target_filename}")
+
+    logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")

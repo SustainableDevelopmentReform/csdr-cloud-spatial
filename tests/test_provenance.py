@@ -4,7 +4,7 @@ import pytest
 from obstore.store import LocalStore, S3Store
 
 from csdr.io import write_json
-from csdr.provenance import get_dataset_provenance, get_image_state
+from csdr.provenance import get_image_state, get_provenance
 
 PROVENANCE_DETAILS = {
     "source_url": "https://example.com/source",
@@ -22,7 +22,7 @@ def test_write_provenance(
     geoparquet_relative: str,
 ) -> None:
     """Test writing provenance information to both local and S3 stores"""
-    provenance_dict = get_dataset_provenance(
+    provenance_dict = get_provenance(
         TEST_GEOPARQUET_NAME,
         local_testdata_obstore,
         geoparquet_relative,
@@ -46,17 +46,16 @@ def test_local_dataset_provenance(
 ) -> None:
     """Test getting provenance information from a local file"""
 
-    provenance = get_dataset_provenance(
+    provenance = get_provenance(
         TEST_GEOPARQUET_NAME,
         local_testdata_obstore,
         geoparquet_relative,
         **PROVENANCE_DETAILS,
     )
 
-    assert provenance["data_path"] == geoparquet_relative
     assert isinstance(provenance["data_size"], int) and provenance["data_size"] == 15836
     assert isinstance(provenance["data_etag"], str)
-    assert provenance["image_repo"] in [
+    assert provenance["image_code"] in [
         "not-set",
         "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/fake-sha-commit/",
     ]
@@ -78,21 +77,20 @@ def test_s3_dataset_provenance(
 ) -> None:
     """Test getting provenance information from a mocked S3 file"""
 
-    provenance = get_dataset_provenance(
+    provenance = get_provenance(
         TEST_GEOPARQUET_NAME,
         s3_testdata_obstore,
         geoparquet_relative,
         **PROVENANCE_DETAILS,
     )
 
-    assert provenance["data_path"] == str(geoparquet_relative)
     assert isinstance(provenance["data_size"], int) and provenance["data_size"] == 15836
     assert (
         isinstance(provenance["data_etag"], str)
         and provenance["data_etag"]
         == "255ab95f6888079345b27aa2e1547796"  # Why quoted?!
     )
-    assert provenance["image_repo"] in [
+    assert provenance["image_code"] in [
         "not-set",
         "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/fake-sha-commit/",
     ]
@@ -116,7 +114,7 @@ def test_get_image_state() -> None:
 
     image_provenance = get_image_state()
 
-    assert image_provenance["image_repo"] == "test-repo"
+    assert image_provenance["image_code"] == "test-repo"
     assert image_provenance["image_tag"] == "abc-123"
 
     # Clean up environment variables
@@ -149,10 +147,10 @@ def test_docker_image_state() -> None:
         )
         output = result.stdout.strip().split("\n")
         assert len(output) == 2
-        image_repo, image_tag = output
+        image_code, image_tag = output
 
         assert (
-            image_repo
+            image_code
             == "https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/unknown-commit/"
         )
         assert image_tag == "unknown"

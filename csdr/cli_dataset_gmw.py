@@ -16,7 +16,7 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists, get_s3_prefix, get_store_for_url
+from csdr.io import exists, get_prefix, get_store_for_url
 from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
@@ -113,7 +113,7 @@ async def process_single_file(
 
         # If S3, we need a S3 URI, otherwise, just a local path
         if type(target_store) is S3Store:
-            s3_prefix = get_s3_prefix(target_location)
+            s3_prefix = get_prefix(target_location)
             if s3_prefix is not None:
                 out_key = f"{s3_prefix}/{out_key}"
                 out_stac = f"{s3_prefix}/{out_stac}"
@@ -173,7 +173,7 @@ async def run_extract_gmw(
     store = get_store_for_url(source_location)
 
     if type(store) is S3Store:
-        s3_prefix = get_s3_prefix(source_location)
+        s3_prefix = get_prefix(source_location)
         if s3_prefix is not None:
             source_zip_name = f"{s3_prefix}/{source_zip_name}"
 
@@ -262,7 +262,7 @@ async def run_index_gmw(
     s3_prefix = None
     dest_s3_prefix = None
     if type(store) is S3Store:
-        s3_prefix = get_s3_prefix(source_location)
+        s3_prefix = get_prefix(source_location)
 
     dest = get_store_for_url(target_location)
     dest_s3_prefix = None
@@ -271,7 +271,7 @@ async def run_index_gmw(
     dest_s3_prefix = None
 
     if type(dest) is S3Store:
-        dest_s3_prefix = get_s3_prefix(target_location)
+        dest_s3_prefix = get_prefix(target_location)
         if dest_s3_prefix is not None:
             out_filename = f"{dest_s3_prefix}/{out_filename}"
 
