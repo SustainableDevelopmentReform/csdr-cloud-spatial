@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -50,7 +51,8 @@ def get_store_for_url(url: str, mkdir: bool = True) -> HTTPStore | S3Store | Loc
         bucket = s3_url.netloc
         return S3Store(bucket, credential_provider=Boto3CredentialProvider())
     elif url.startswith("http://") or url.startswith("https://"):
-        return HTTPStore()
+        parsed = urlparse(url)
+        return HTTPStore(f"{parsed.scheme}://{parsed.netloc}")
     else:
         the_path = Path(url)
         # Ensure the directory exists
@@ -67,15 +69,19 @@ def get_store_for_url(url: str, mkdir: bool = True) -> HTTPStore | S3Store | Loc
 
 def get_file_name_from_url(url: str) -> str:
     parsed_url = urlparse(url)
-    return Path(parsed_url.path).name
-
-
-def get_s3_prefix(s3_url_str: str) -> str | None:
-    s3_url = urlparse(s3_url_str)
-    file_name = get_file_name_from_url(s3_url_str)
-
+    file_name = os.path.basename(parsed_url.path)
     if "." not in file_name:
         file_name = None
+
+    if file_name is not None:
+        file_name = file_name.lstrip("/")
+
+    return file_name
+
+
+def get_prefix(url: str) -> str | None:
+    s3_url = urlparse(url)
+    file_name = get_file_name_from_url(url)
 
     s3_prefix = None
     if file_name is not None and s3_url.path.endswith(file_name):
@@ -86,4 +92,38 @@ def get_s3_prefix(s3_url_str: str) -> str | None:
     if s3_prefix == "":
         s3_prefix = None
 
+    if s3_prefix is not None:
+        s3_prefix = s3_prefix.lstrip("/").rstrip("/")
+
     return s3_prefix
+
+
+def get_dataset_name_from_url(
+    store: HTTPStore | S3Store | LocalStore, url: str, keep_path: bool = True
+) -> str:
+    dataset_name = get_file_name_from_url(url)
+    if dataset_name is None:
+        raise ValueError(f"Could not determine dataset name from URL: {url}")
+
+    if keep_path:
+        if type(store) in (S3Store, HTTPStore):
+            s3_prefix = get_prefix(url)
+            if s3_prefix is not None:
+                dataset_name = f"{s3_prefix}/{dataset_name}"
+
+    dataset_name = dataset_name.lstrip("/").rstrip("/")
+
+    return dataset_name
+
+
+def get_url_from_store_filename(
+    store: HTTPStore | S3Store | LocalStore, filename: str
+) -> str:
+    if type(store) is HTTPStore:
+        return f"{store.url.rstrip('/')}/{filename.lstrip('/')}"
+    elif type(store) is S3Store:
+        return f"s3://{store.config['bucket']}/{filename.lstrip('/')}"
+    elif type(store) is LocalStore:
+        return f"{store.prefix}/{filename}"
+    else:
+        raise ValueError(f"Unsupported store type: {type(store)}")
