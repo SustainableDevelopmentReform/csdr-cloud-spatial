@@ -147,7 +147,7 @@ def convert_geospatial_file_to_parquet(
         raise typer.Exit(code=0)
 
     # Read the geospatial file into a GeoDataFrame
-    gdf = read_geospatial_file(store, source_name_path)
+    gdf = read_geospatial_file(source_location)
 
     logger.info(f"Opened file with {len(gdf)} features")
 
