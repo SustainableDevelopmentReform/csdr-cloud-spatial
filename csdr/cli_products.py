@@ -110,6 +110,14 @@ def process_geometry(
         if prefix is not None:
             path = f"{prefix}/{path}"
 
-    write_json(dest, path, results)
+    product_output = {
+        "geometry_id": geometry_id,
+        "product_name": product_name,
+        "variables": results,
+        "geometry_provenance_url": geometry_provenance_url,
+        "dataset_provenance_url": dataset_provenance_url,
+    }
+
+    write_json(dest, path, product_output)
 
     logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
