@@ -46,7 +46,7 @@ def process_variables_for_geometry(
     for var in variables:
         if var == "sum-area-by-value":
             area_by_value = get_area_from_dataset_geometry(
-                dataset_provenance_url, geometry, variable="asset", value=1
+                dataset_provenance_url, geometry, variable="mangrove", value=1
             )
             results["sum-area-by-value"] = area_by_value
             logger.info(f"Area by value: {area_by_value}")

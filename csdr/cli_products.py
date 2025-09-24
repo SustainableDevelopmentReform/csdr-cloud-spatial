@@ -50,8 +50,6 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
-    logger.info(provenance)
-
 
 @products_app.command("process-geometry")
 def process_geometry(
