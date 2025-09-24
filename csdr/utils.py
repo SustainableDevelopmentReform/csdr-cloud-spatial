@@ -237,7 +237,7 @@ def load_xarray_stacgeoparquet(
     items: ItemCollection,
     bbox: Iterable[float] | None = None,
     geom: Geometry | None = None,
-    **load_kwargs: str,
+    **load_kwargs: dict[str, Any],
 ) -> Dataset:
     data = load(items, bbox=bbox, geom=geom, **load_kwargs)
 

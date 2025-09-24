@@ -23,5 +23,5 @@ def test_intersection(
     )
     assert data is not None
 
-    area = xarray_calculate_area(data, sample_polygon, "asset", 1)
+    area = xarray_calculate_area(data, sample_polygon, "mangrove", 1)
     assert area == 19833900.0

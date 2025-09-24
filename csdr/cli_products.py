@@ -1,5 +1,6 @@
 import json
 import sys
+from typing import Any
 
 import typer
 from dask.distributed import Client
@@ -21,6 +22,25 @@ products_app = typer.Typer()
 
 
 KNOWN_VARIABLES = ["sum-area-by-value"]
+
+
+def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
+    if type(s) is dict:
+        return s
+
+    result = dict(item.split("=", 1) for item in s.split(",") if "=" in item)
+
+    # Try parsing values to int or float
+    for key, value in result.items():
+        try:
+            result[key] = int(value)
+        except ValueError:
+            try:
+                result[key] = float(value)
+            except ValueError:
+                pass
+
+    return result
 
 
 @products_app.command("list-geometries")
@@ -73,6 +93,12 @@ def process_geometry(
         help="Location to write the results to (otherwise print to console)",
     ),
     geometry_id: str = typer.Option(..., help="ID of the geometry to process"),
+    load_kwargs: dict[str, str] = typer.Option(
+        {},
+        "--load-kwargs",
+        help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
+        parser=opt_dict_parser,
+    ),
     use_dask: bool = typer.Option(
         False, help="Whether to use Dask distributed for processing"
     ),
@@ -80,9 +106,7 @@ def process_geometry(
         {},
         "--dask-opts",
         help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
-        parser=lambda s: dict(
-            item.split("=", 1) for item in s.split(",") if "=" in item
-        ),
+        parser=opt_dict_parser,
     ),
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
@@ -123,7 +147,7 @@ def process_geometry(
         )
 
     results = process_variables_for_geometry(
-        geometry, variables_to_extract, dataset_provenance_url
+        geometry, variables_to_extract, dataset_provenance_url, load_kwargs=load_kwargs
     )
 
     if use_dask:

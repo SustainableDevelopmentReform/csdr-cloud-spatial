@@ -10,7 +10,11 @@ from csdr.utils import (
 
 
 def get_area_from_dataset_geometry(
-    dataset_provenance_url: str, geometry: Geometry, variable: str, value: float
+    dataset_provenance_url: str,
+    geometry: Geometry,
+    variable: str,
+    value: float,
+    load_kwargs: dict = {},
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     logger.info(f"Loading dataset from {dataset_provenance_url}")
@@ -28,7 +32,7 @@ def get_area_from_dataset_geometry(
 
     # Load the dataset
     data = load_xarray_stacgeoparquet(
-        items, geom=geometry, chunks={"x": 2048, "y": 2048}
+        items, geom=geometry, chunks={"x": 2048, "y": 2048}, **load_kwargs
     )
     logger.info(
         f"Loaded data with shape {data.dims} and variables {list(data.data_vars)}"
@@ -40,13 +44,20 @@ def get_area_from_dataset_geometry(
 
 
 def process_variables_for_geometry(
-    geometry: Geometry, variables: list[str], dataset_provenance_url: str
+    geometry: Geometry,
+    variables: list[str],
+    dataset_provenance_url: str,
+    load_kwargs: dict = {},
 ) -> dict[str, str | float]:
     results = {}
     for var in variables:
         if var == "sum-area-by-value":
             area_by_value = get_area_from_dataset_geometry(
-                dataset_provenance_url, geometry, variable="mangrove", value=1
+                dataset_provenance_url,
+                geometry,
+                variable="asset",
+                value=1,
+                load_kwargs=load_kwargs,
             )
             results["sum-area-by-value"] = area_by_value
             logger.info(f"Area by value: {area_by_value}")
