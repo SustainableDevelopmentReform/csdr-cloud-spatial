@@ -7,6 +7,7 @@ from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_eez import eez_app
+from csdr.cli_products import products_app
 from csdr.cli_provenance import provenance_app
 from csdr.cli_vector_cube import vector_cube_app
 
@@ -35,6 +36,9 @@ app.add_typer(conversion_app, name="convert", help="Data conversion tools.")
 
 # Provenance and metadata
 app.add_typer(provenance_app, name="provenance", help="Provenance tools.")
+
+# Products
+app.add_typer(products_app, name="products", help="Product generation tools.")
 
 
 # Work for version and --version

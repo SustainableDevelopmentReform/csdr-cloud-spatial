@@ -11,12 +11,15 @@ import boto3
 import requests
 import rustac
 from affine import Affine
+from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
 from xarray import DataArray, Dataset
+
+from csdr.io import get_dataset_name_from_url, get_store_for_url
 
 
 class Event(TypedDict):
@@ -220,8 +223,11 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 def open_stacgeoparquet(path: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
+    store = get_store_for_url(path)
+    filepath = get_dataset_name_from_url(store, path)
+
     async def _read_thing() -> ItemCollection:
-        return await rustac.read(path)
+        return await rustac.read(filepath, store=store)
 
     item_dict = asyncio.run(_read_thing())
     return ItemCollection.from_dict(item_dict)
@@ -299,3 +305,11 @@ def suppress_rust_output() -> Generator[None, None, None]:
         os.dup2(stderr_fd, 2)
         os.close(stdout_fd)
         os.close(stderr_fd)
+
+
+def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
+    # TODO: Support non-integer IDs and select-by-column
+    geom = gdf.iloc[int(geometry_id)]
+
+    # Convert to ODC geometry
+    return Geometry(geom.geometry, crs=gdf.crs)

@@ -1,9 +1,11 @@
 import json
 import os
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import geopandas as gpd
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 
@@ -127,3 +129,13 @@ def get_url_from_store_filename(
         return f"{store.prefix}/{filename}"
     else:
         raise ValueError(f"Unsupported store type: {type(store)}")
+
+
+def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
+    store = get_store_for_url(url)
+    path = get_dataset_name_from_url(store, url)
+
+    with BytesIO(store.get(path).bytes()) as buffer:
+        # TODO: Make it read more things, not just parquet
+        gdf = gpd.read_parquet(buffer, **kwargs)
+        return gdf

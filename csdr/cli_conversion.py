@@ -12,13 +12,14 @@ from csdr.io import (
     get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
+    read_geospatial_file,
 )
 
 conversion_app = typer.Typer()
 
 
 @conversion_app.command("zip-to-parquet")
-def extract_gmw(
+def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the zip file containing the geospatial data.",
         default="./cache/example.zip",
@@ -95,3 +96,67 @@ def extract_gmw(
     logger.info(f"Target store is {target_store}, filename is {target_filename}")
 
     logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
+
+
+@conversion_app.command("geo-to-parquet")
+def convert_geospatial_file_to_parquet(
+    source_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to the geospatial file.",
+        default="./tests/data/single_geometry.geojson",
+    ),
+    target_location: str | None = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the converted file.",
+        default=None,
+    ),
+    overwrite: bool = typer.Option(
+        True, help="Replace existing parquet file if it exists."
+    ),
+) -> None:
+    logger.info("Starting geospatial to parquet conversion process...")
+
+    store = get_store_for_url(source_location)
+    source_name_path = get_dataset_name_from_url(store, source_location)
+
+    if not exists(store, source_name_path):
+        logger.error(
+            f"Source geospatial file does not exist at {source_location}. Cannot convert."
+        )
+        raise typer.Exit(code=1)
+    else:
+        logger.info(
+            f"Source geospatial file found at {source_location}, proceeding with conversion."
+        )
+    if target_location is None:
+        target_location = source_location
+
+    # Set up the target store
+    target_store = get_store_for_url(target_location)
+    target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
+    if type(target_store) is S3Store:
+        # S3Store needs the full path including prefix
+        path = get_prefix(target_location)
+        if path is not None:
+            target_filename = f"{path}/{target_filename}"
+    target_url = get_url_from_store_filename(target_store, target_filename)
+
+    # Check if target file already exists
+    if exists(target_store, target_filename) and not overwrite:
+        logger.warning(
+            f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
+        )
+        raise typer.Exit(code=0)
+
+    # Read the geospatial file into a GeoDataFrame
+    gdf = read_geospatial_file(source_location)
+
+    logger.info(f"Opened file with {len(gdf)} features")
+
+    with BytesIO() as parquet_buffer:
+        gdf.to_parquet(parquet_buffer, engine="pyarrow")
+        parquet_buffer.seek(0)
+
+        # Write the parquet bytes to the target store using obstore
+        target_store.put(target_filename, parquet_buffer.getvalue())
+
+    logger.info(f"Loaded {len(gdf)} records from the geospatial file.")
+    logger.info(f"Parquet conversion process completed. Wrote file to {target_url}")
