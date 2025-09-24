@@ -1,9 +1,11 @@
 import os
 from datetime import UTC, datetime
+from io import BytesIO
+from json import load
 
 from obstore.store import HTTPStore, LocalStore, S3Store
 
-from csdr.io import get_file_info
+from csdr.io import get_dataset_name_from_url, get_file_info, get_store_for_url
 from csdr.utils import make_uuid
 
 SUPPORTED_DATASET_FORMATS = [
@@ -56,3 +58,11 @@ def get_provenance(
         "provenance_updated": datetime.now(UTC).isoformat() + "Z",
         **(extra_info_dict or {}),
     }
+
+
+def read_provenance(url: str) -> dict[str, str | int]:
+    store = get_store_for_url(url)
+    path = get_dataset_name_from_url(store, url)
+    document = BytesIO(store.get(path).bytes())
+
+    return load(document)

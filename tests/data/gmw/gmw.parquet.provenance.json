@@ -1,0 +1,13 @@
+{
+  "id": "test-example",
+  "uuid": "daec2434-50cc-5e28-b7a9-322b1a5cfc5f",
+  "data_size": 15836,
+  "data_etag": "1c9851c-63d635653ed39-3ddc",
+  "image_code": "not-set",
+  "image_tag": "not-set",
+  "source_url": "tests/data/gmw/gmw.parquet",
+  "source_metadata_url": "https://example.com",
+  "dataset_url": "tests/data/gmw/gmw.parquet",
+  "dataset_type": "stac-geoparquet",
+  "provenance_updated": "2025-09-24T04:00:46.528183+00:00Z"
+}

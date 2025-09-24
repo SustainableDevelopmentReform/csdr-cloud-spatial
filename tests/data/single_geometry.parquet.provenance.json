@@ -1,0 +1,13 @@
+{
+  "id": "test-example-local-v1",
+  "uuid": "8611ba50-cd6e-59c0-ae49-f80f8170e3c0",
+  "data_size": 10215,
+  "data_etag": "21b6bab-63f832760be46-27e7",
+  "image_code": "not-set",
+  "image_tag": "not-set",
+  "source_url": "tests/data/single_geometry.parquet",
+  "source_metadata_url": "https://thing.com",
+  "dataset_url": "tests/data/single_geometry.parquet",
+  "dataset_type": "geoparquet",
+  "provenance_updated": "2025-09-24T02:55:08.973667+00:00Z"
+}
