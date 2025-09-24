@@ -55,7 +55,7 @@ def process_variables_for_geometry(
             area_by_value = get_area_from_dataset_geometry(
                 dataset_provenance_url,
                 geometry,
-                variable="asset",
+                variable="mangrove",
                 value=1,
                 load_kwargs=load_kwargs,
             )
