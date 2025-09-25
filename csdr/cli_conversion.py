@@ -40,7 +40,6 @@ def convert_zipfile_to_parquet(
     geometry_id: str | None = typer.Option(
         None,
         help="Value to use for the id. Should be kebab-case, no spaces. Defaults to None, which uses the filename.",
-        prompt_required=True,
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing parquet file if it exists."
