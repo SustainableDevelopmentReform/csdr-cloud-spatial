@@ -1,8 +1,6 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
-import logging
-import os
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import urlparse
@@ -16,7 +14,13 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists, get_prefix, get_store_for_url
+from csdr.io import (
+    exists,
+    get_prefix,
+    get_stac_item_dicts_from_store,
+    get_store_for_url,
+    get_url_from_store_filename,
+)
 from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
@@ -260,12 +264,10 @@ async def run_index_gmw(
 ) -> None:
     store = get_store_for_url(source_location)
     s3_prefix = None
-    dest_s3_prefix = None
     if type(store) is S3Store:
         s3_prefix = get_prefix(source_location)
 
     dest = get_store_for_url(target_location)
-    dest_s3_prefix = None
 
     out_filename = "gmw.parquet"
     dest_s3_prefix = None
@@ -288,43 +290,15 @@ async def run_index_gmw(
             logger.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
-    list_of_stac_files = []
-    for batch in store.list(s3_prefix):
-        for stac_file in batch:
-            if stac_file["path"].endswith(".stac-item.json"):
-                list_of_stac_files.append(stac_file)
+    item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    logger.info(f"Found {len(list_of_stac_files)} STAC items to index.")
+    result_location = get_url_from_store_filename(dest, out_filename)
 
-    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
-        obj = await store.get_async(stac_file["path"])
-        data = BytesIO(obj.bytes())
-        return json.load(data)
-
-    item_dicts = await asyncio.gather(
-        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
-    )
-
-    # Multiple approaches to suppress rustac verbose logging
-    os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
-    os.environ["RUST_BACKTRACE"] = "0"  # Disable Rust backtraces too
-
-    # Suppress any Python loggers that might be involved
-    for logger_name in ["rustac", "arrow", "datafusion", "polars"]:
-        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-
-    logger.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
-    )
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
         await write(out_filename, item_dicts, store=dest)
 
-    logger.info("Parquet write completed.")
-
-    if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
-    else:
-        logger.info(f"Finished writing to {source_location}/{out_filename}")
+    logger.info(f"Parquet write completed, wrote to {result_location}")
 
 
 @gmw_app.command("index")

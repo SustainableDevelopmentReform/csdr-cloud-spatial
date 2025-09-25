@@ -6,7 +6,6 @@ from json import load
 from obstore.store import HTTPStore, LocalStore, S3Store
 
 from csdr.io import get_dataset_name_from_url, get_file_info, get_store_for_url
-from csdr.utils import make_uuid
 
 SUPPORTED_DATASET_FORMATS = [
     "stac-geoparquet",
@@ -30,7 +29,6 @@ def get_provenance(
     source_metadata_url: str,
     dataset_url: str,
     dataset_type: str,
-    uuid: str | None = None,
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
     if dataset_type not in SUPPORTED_DATASET_FORMATS:
@@ -46,7 +44,6 @@ def get_provenance(
 
     return {
         "id": id,
-        "uuid": uuid or make_uuid(id),
         "data_size": info["size"],
         "data_etag": info["e_tag"].strip('"'),
         "image_code": image_state["image_code"],

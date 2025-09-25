@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from io import BytesIO
@@ -47,14 +48,16 @@ def write_json(
         )
 
 
-def get_store_for_url(url: str, mkdir: bool = True) -> HTTPStore | S3Store | LocalStore:
+def get_store_for_url(
+    url: str, mkdir: bool = True, **kwargs: dict
+) -> HTTPStore | S3Store | LocalStore:
     if url.startswith("s3://"):
         s3_url = urlparse(url)
         bucket = s3_url.netloc
-        return S3Store(bucket, credential_provider=Boto3CredentialProvider())
+        return S3Store(bucket, credential_provider=Boto3CredentialProvider(), **kwargs)
     elif url.startswith("http://") or url.startswith("https://"):
         parsed = urlparse(url)
-        return HTTPStore(f"{parsed.scheme}://{parsed.netloc}")
+        return HTTPStore(f"{parsed.scheme}://{parsed.netloc}", **kwargs)
     else:
         the_path = Path(url)
         # Ensure the directory exists
@@ -66,7 +69,7 @@ def get_store_for_url(url: str, mkdir: bool = True) -> HTTPStore | S3Store | Loc
 
         # LocalStore expects the directory, not a file
         path_prefix = the_path if not the_path.suffix else the_path.parent
-        return LocalStore(prefix=path_prefix)
+        return LocalStore(prefix=path_prefix, **kwargs)
 
 
 def get_file_name_from_url(url: str) -> str:
@@ -139,3 +142,23 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
         # TODO: Make it read more things, not just parquet
         gdf = gpd.read_parquet(buffer, **kwargs)
         return gdf
+
+
+async def get_stac_item_dicts_from_store(
+    store: S3Store, s3_prefix: str | None = None
+) -> list[dict[str, Any]]:
+    list_of_stac_files = []
+
+    for batch in store.list(s3_prefix):
+        for stac_file in batch:
+            if stac_file["path"].endswith(".stac-item.json"):
+                list_of_stac_files.append(stac_file)
+
+    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
+        obj = await store.get_async(stac_file["path"])
+        data = BytesIO(obj.bytes())
+        return json.load(data)
+
+    return await asyncio.gather(
+        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
+    )
