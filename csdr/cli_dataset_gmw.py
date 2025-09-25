@@ -291,7 +291,7 @@ async def run_index_gmw(
             logger.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
-    item_dicts = get_stac_item_dicts_from_store(store, s3_prefix)
+    item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
     # Multiple approaches to suppress rustac verbose logging
     os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
