@@ -185,7 +185,7 @@ def process_geometry(
     geometry_output_id = geometry_id
 
     product_output = {
-        "id": make_uuid(str(random())),
+        "id": make_uuid(f"{product_name}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"),
         "product_id": product_id,
         "geometry_id": geometry_output_id,
         "variables": results,
