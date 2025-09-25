@@ -1,8 +1,6 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
-import logging
-import os
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import urlparse
@@ -21,6 +19,7 @@ from csdr.io import (
     get_prefix,
     get_stac_item_dicts_from_store,
     get_store_for_url,
+    get_url_from_store_filename,
 )
 from csdr.utils import suppress_rust_output
 
@@ -293,26 +292,13 @@ async def run_index_gmw(
     # Find all the the GMW STAC files
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    # Multiple approaches to suppress rustac verbose logging
-    os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging
-    os.environ["RUST_BACKTRACE"] = "0"  # Disable Rust backtraces too
+    result_location = get_url_from_store_filename(dest, out_filename)
 
-    # Suppress any Python loggers that might be involved
-    for logger_name in ["rustac", "arrow", "datafusion", "polars"]:
-        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-
-    logger.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
-    )
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
         await write(out_filename, item_dicts, store=dest)
 
-    logger.info("Parquet write completed.")
-
-    if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
-    else:
-        logger.info(f"Finished writing to {source_location}/{out_filename}")
+    logger.info(f"Parquet write completed, wrote to {result_location}")
 
 
 @gmw_app.command("index")

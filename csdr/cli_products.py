@@ -1,6 +1,5 @@
 import json
 import sys
-from random import random
 from typing import Any
 
 import typer
@@ -186,7 +185,9 @@ def process_geometry(
     geometry_output_id = geometry_id
 
     product_output = {
-        "id": make_uuid(f"{product_name}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"),
+        "id": make_uuid(
+            f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
+        ),
         "product_id": product_id,
         "geometry_id": geometry_output_id,
         "variables": results,
