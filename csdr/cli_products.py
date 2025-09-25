@@ -75,6 +75,9 @@ def list_geometries(
 
 @products_app.command("process-geometry")
 def process_geometry(
+    product_id: str = typer.Option(
+        "example-product", help="ID of the product being generated"
+    ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
@@ -85,9 +88,6 @@ def process_geometry(
         "sum-area-by-value",
         help="Comma-separated list of variables to extract from the dataset",
         parser=lambda s: s.split(","),
-    ),
-    product_name: str = typer.Option(
-        "example-product", help="Name of the product being generated"
     ),
     datetime_string_match: str = typer.Option(
         None,
@@ -172,16 +172,17 @@ def process_geometry(
 
     logger.info(f"Results for geometry {geometry_id}: {results}")
 
+    # TODO: Validate product id, variable name and other things.
+
     # Write results out
     dest = get_store_for_url(target_location)
-    path = f"{product_name}/test-var/{product_name}-{geometry_id}.json"
+    path = f"{product_id}/{variable_name}/{product_id}-{geometry_id}.json"
 
     if type(dest) is S3Store:
         prefix = get_prefix(target_location)
         if prefix is not None:
             path = f"{prefix}/{path}"
 
-    product_id = 123
     geometry_output_id = geometry_id
 
     product_output = {
