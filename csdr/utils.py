@@ -237,8 +237,16 @@ def load_xarray_stacgeoparquet(
     items: ItemCollection,
     bbox: Iterable[float] | None = None,
     geom: Geometry | None = None,
+    datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
+    if datetime_string_match is not None:
+        all_items = items.clone()
+        items = []
+        for item in all_items:
+            if datetime_string_match in item.datetime.isoformat():
+                items.append(item)
+
     data = load(items, bbox=bbox, geom=geom, **load_kwargs)
 
     return data
@@ -308,8 +316,12 @@ def suppress_rust_output() -> Generator[None, None, None]:
 
 
 def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
-    # TODO: Support non-integer IDs and select-by-column
-    geom = gdf.iloc[int(geometry_id)]
+    features = gdf[gdf["csdr-id"] == geometry_id]
+    if len(features) == 0:
+        raise ValueError(f"Geometry ID {geometry_id} not found in GeoDataFrame.")
+    if len(features) > 1:
+        raise ValueError(f"Geometry ID {geometry_id} is not unique in GeoDataFrame.")
+    feature = features.iloc[0]
 
     # Convert to ODC geometry
-    return Geometry(geom.geometry, crs=gdf.crs)
+    return Geometry(feature.geometry, crs=gdf.crs)

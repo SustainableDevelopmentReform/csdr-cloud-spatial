@@ -16,7 +16,12 @@ from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
 
-from csdr.io import exists, get_prefix, get_store_for_url
+from csdr.io import (
+    exists,
+    get_prefix,
+    get_stac_item_dicts_from_store,
+    get_store_for_url,
+)
 from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
@@ -260,12 +265,10 @@ async def run_index_gmw(
 ) -> None:
     store = get_store_for_url(source_location)
     s3_prefix = None
-    dest_s3_prefix = None
     if type(store) is S3Store:
         s3_prefix = get_prefix(source_location)
 
     dest = get_store_for_url(target_location)
-    dest_s3_prefix = None
 
     out_filename = "gmw.parquet"
     dest_s3_prefix = None
@@ -288,22 +291,7 @@ async def run_index_gmw(
             logger.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
-    list_of_stac_files = []
-    for batch in store.list(s3_prefix):
-        for stac_file in batch:
-            if stac_file["path"].endswith(".stac-item.json"):
-                list_of_stac_files.append(stac_file)
-
-    logger.info(f"Found {len(list_of_stac_files)} STAC items to index.")
-
-    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
-        obj = await store.get_async(stac_file["path"])
-        data = BytesIO(obj.bytes())
-        return json.load(data)
-
-    item_dicts = await asyncio.gather(
-        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
-    )
+    item_dicts = get_stac_item_dicts_from_store(store, s3_prefix)
 
     # Multiple approaches to suppress rustac verbose logging
     os.environ["RUST_LOG"] = "off"  # Completely disable Rust logging

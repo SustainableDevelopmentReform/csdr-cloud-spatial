@@ -14,6 +14,7 @@ def get_area_from_dataset_geometry(
     geometry: Geometry,
     variable: str,
     value: float,
+    datetime_string_match: str | None = None,
     load_kwargs: dict = {},
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
@@ -30,9 +31,16 @@ def get_area_from_dataset_geometry(
     # Get the STAC items
     items = open_stacgeoparquet(dataset_url)
 
+    if load_kwargs.get("chunks") is None:
+        load_kwargs["chunks"] = {}
+
     # Load the dataset
     data = load_xarray_stacgeoparquet(
-        items, geom=geometry, chunks={"x": 2048, "y": 2048}, **load_kwargs
+        items,
+        geom=geometry,
+        datetime_string_match=datetime_string_match,
+        measurements=[variable],
+        **load_kwargs,
     )
     logger.info(
         f"Loaded data with shape {data.dims} and variables {list(data.data_vars)}"
@@ -47,6 +55,9 @@ def process_variables_for_geometry(
     geometry: Geometry,
     variables: list[str],
     dataset_provenance_url: str,
+    datetime_string_match: str | None = None,
+    variable_name: str = "asset",
+    variable_value: float | int | None = None,
     load_kwargs: dict = {},
 ) -> dict[str, str | float]:
     results = {}
@@ -55,8 +66,9 @@ def process_variables_for_geometry(
             area_by_value = get_area_from_dataset_geometry(
                 dataset_provenance_url,
                 geometry,
-                variable="mangrove",
-                value=1,
+                datetime_string_match=datetime_string_match,
+                variable=variable_name,
+                value=variable_value,
                 load_kwargs=load_kwargs,
             )
             results["sum-area-by-value"] = area_by_value

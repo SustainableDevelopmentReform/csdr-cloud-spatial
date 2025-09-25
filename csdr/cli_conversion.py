@@ -6,9 +6,11 @@ from fiona.io import ZipMemoryFile
 from loguru import logger
 from obstore.store import S3Store
 
+from csdr.geometries import add_geometry_id_name
 from csdr.io import (
     exists,
     get_dataset_name_from_url,
+    get_file_name_from_url,
     get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
@@ -31,6 +33,14 @@ def convert_zipfile_to_parquet(
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
         default="./cache",
+    ),
+    name_field: str = typer.Option(
+        "SOVEREIGN1", help="The field in the data to use for the 'Name' attribute."
+    ),
+    geometry_id: str | None = typer.Option(
+        None,
+        help="Value to use for the id. Should be kebab-case, no spaces. Defaults to None, which uses the filename.",
+        prompt_required=True,
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing parquet file if it exists."
@@ -84,6 +94,17 @@ def convert_zipfile_to_parquet(
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
 
     logger.info(f"Loaded {len(gdf)} records from the shapefile.")
+
+    # Add ID and Name fields
+    if geometry_id is None:
+        geometry_id = (
+            get_file_name_from_url(source_internal_path_name)
+            .replace(" ", "-")
+            .lower()
+            .split(".")[0]
+        )
+
+    gdf = add_geometry_id_name(gdf, name_field=name_field, geometry_id=geometry_id)
 
     # Write GeoDataFrame to a GeoParquet file in memory
     with BytesIO() as parquet_buffer:

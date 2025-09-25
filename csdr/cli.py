@@ -3,6 +3,7 @@ import typer
 from csdr import get_version
 from csdr.cli_conversion import conversion_app
 from csdr.cli_dataset_gmw import gmw_app
+from csdr.cli_dataset_seagrass import seagrass_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
@@ -25,8 +26,13 @@ app.add_typer(
 )
 app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
+## Datasets
 # GMW
 app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW dataset.")
+# Seagrass, including from DEP
+app.add_typer(
+    seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
+)
 
 # EEZ
 app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")

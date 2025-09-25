@@ -1,5 +1,6 @@
 import json
 import sys
+from random import random
 from typing import Any
 
 import typer
@@ -16,7 +17,7 @@ from csdr.io import (
 )
 from csdr.products import process_variables_for_geometry
 from csdr.provenance import read_provenance
-from csdr.utils import get_geom_from_gdf
+from csdr.utils import get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
 
@@ -62,7 +63,7 @@ def list_geometries(
     gdf = read_geospatial_file(geometry_file_url)
     logger.info(f"Found {len(gdf)} geometries")
 
-    ids_list = gdf.index.to_list()
+    ids_list = gdf["csdr-id"].tolist()
 
     if out_file is not None:
         with open(out_file, "w") as f:
@@ -88,11 +89,21 @@ def process_geometry(
     product_name: str = typer.Option(
         "example-product", help="Name of the product being generated"
     ),
+    datetime_string_match: str = typer.Option(
+        None,
+        help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
+    ),
     target_location: str = typer.Option(
         "cache/products",
         help="Location to write the results to (otherwise print to console)",
     ),
     geometry_id: str = typer.Option(..., help="ID of the geometry to process"),
+    variable_name: str = typer.Option(
+        "asset", help="Name of the variable to use for calculations (if applicable)"
+    ),
+    variable_value: str | None = typer.Option(
+        None, help="Value of the variable to use for calculations (if applicable)"
+    ),
     load_kwargs: dict[str, str] = typer.Option(
         {},
         "--load-kwargs",
@@ -147,7 +158,13 @@ def process_geometry(
         )
 
     results = process_variables_for_geometry(
-        geometry, variables_to_extract, dataset_provenance_url, load_kwargs=load_kwargs
+        geometry,
+        variables_to_extract,
+        dataset_provenance_url,
+        datetime_string_match=datetime_string_match,
+        variable_name=variable_name,
+        variable_value=variable_value,
+        load_kwargs=load_kwargs,
     )
 
     if use_dask:
@@ -164,9 +181,13 @@ def process_geometry(
         if prefix is not None:
             path = f"{prefix}/{path}"
 
+    product_id = 123
+    geometry_output_id = geometry_id
+
     product_output = {
-        "geometry_id": geometry_id,
-        "product_name": product_name,
+        "id": make_uuid(str(random())),
+        "product_id": product_id,
+        "geometry_id": geometry_output_id,
         "variables": results,
         "geometry_provenance_url": geometry_provenance_url,
         "dataset_provenance_url": dataset_provenance_url,
