@@ -7,8 +7,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 import geopandas as gpd
+from loguru import logger
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
+from pyarrow import ArrowInvalid
 
 
 def exists(store: HTTPStore | S3Store | LocalStore, path: str) -> bool:
@@ -139,9 +141,20 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
     path = get_dataset_name_from_url(store, url)
 
     with BytesIO(store.get(path).bytes()) as buffer:
-        # TODO: Make it read more things, not just parquet
-        gdf = gpd.read_parquet(buffer, **kwargs)
-        return gdf
+        try:
+            # TODO: Make it read more things, not just parquet
+            gdf = gpd.read_parquet(buffer, **kwargs)
+            return gdf
+        except ArrowInvalid:
+            # Try loading as generic file
+            buffer.seek(0)
+            try:
+                gdf = gpd.read_file(buffer, **kwargs)
+                return gdf
+            except Exception as e:
+                logger.exception(
+                    f"Failed to read geospatial file from {url} with exception {e}"
+                )
 
 
 async def get_stac_item_dicts_from_store(
