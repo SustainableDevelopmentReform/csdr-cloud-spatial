@@ -25,8 +25,6 @@ def _test_provenance_fields(provenance: dict[str, str | int]) -> None:
         if key == "extraInfo":
             for extra_key, extra_value in value.items():
                 assert provenance[extra_key] == extra_value
-        elif key in ["sourceUrl", "sourceMetadataUrl"]:
-            assert provenance["provenanceJson"][key] == value
         else:
             assert provenance[key] == value
 
