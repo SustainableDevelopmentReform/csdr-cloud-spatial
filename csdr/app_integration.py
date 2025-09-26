@@ -45,7 +45,15 @@ def post_provenance(
 
     url = f"{HOSTNAME}/{path}"
 
-    return _post(url, provenance)
+    # Modify the object a little
+    provenance_copy = provenance.copy()
+    provenance_copy.pop("sourceUrl", None)
+    provenance_copy.pop("sourceMetadataUrl", None)
+    provenance_copy.pop("provenanceUpdated", None)
+
+    provenance_copy["provenanceJson"] = provenance
+
+    return _post(url, provenance_copy)
 
 
 def post_geometry_output_bulk(bulk_geometry_output: dict) -> Response:

@@ -45,9 +45,6 @@ def get_provenance(
     info = get_file_info(store, path)
     image_state = get_image_state()
 
-    # TODO:
-    # - Add dates. Date added/updated/etc.
-
     return {
         "id": id,
         "dataType": data_type,
@@ -57,12 +54,13 @@ def get_provenance(
         "description": description,
         "imageCode": image_state["imageCode"],
         "imageTag": image_state["imageTag"],
-        "provenanceJson": {
-            "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
-            "sourceUrl": source_url,
-            "sourceMetadataUrl": source_metadata_url,
-        },
+        # This should be the URL to this file itself
         "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
+        # These three get removed from the dict if posting to database
+        "sourceUrl": source_url,
+        "sourceMetadataUrl": source_metadata_url,
+        "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
+        # Extra stuffs?!
         **(extra_info_dict or {}),
     }
 

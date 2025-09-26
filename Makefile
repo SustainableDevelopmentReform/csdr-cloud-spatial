@@ -33,7 +33,7 @@ geometry-eez-provenance:
 
 geometry-eez-provenance-db:
 	csdr provenance geometry \
-		--id 65243c8f-355d-4b36-bd96-72de8c6f1bff \
+		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
 		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
