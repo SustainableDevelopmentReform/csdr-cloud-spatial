@@ -9,7 +9,9 @@ from zipfile import ZipFile
 import typer
 from loguru import logger
 from obstore.store import HTTPStore, LocalStore, S3Store
+from obstore.exceptions import BaseError
 from odc.geo.cog import write_cog
+
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
@@ -95,7 +97,7 @@ async def run_cache_gmw(
     # Create tasks for parallel processing
     tasks = [
         cache_single_source(
-            f"{source_base_url}gmw_v3_{year}_gtiff.zip", target_location, target_path, target_zip_name, overwrite, semaphore
+            f"{source_base_url}gmw_v3_{year}_gtiff.zip", target_location, target_path, f"gmw_v3_{year}_gtiff.zip", overwrite, semaphore
         )
         for year in years_list
     ]
