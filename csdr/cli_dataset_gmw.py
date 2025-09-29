@@ -27,6 +27,7 @@ from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
 
+
 async def cache_single_source(
     source_url: str,
     target_location: str,
@@ -70,20 +71,20 @@ async def cache_single_source(
         result = await dest.put_async(target_zip_name, source.get(url.path))
         logger.info(f"File cached successfully, downloaded {result} bytes")
 
+
 async def run_cache_gmw(
-        source_base_url: str,
-        years: str,
-        target_location: str,
-        target_path: str,
-        target_zip_name: str,
-        overwrite: bool,
-        max_concurrent: int
+    source_base_url: str,
+    years: str,
+    target_location: str,
+    target_path: str,
+    target_zip_name: str,
+    overwrite: bool,
+    max_concurrent: int,
 ) -> None:
-        
     """Async function to run the GMW cache with parallel processing."""
     # Get list of years to process
-    if years=="all":
-        years_list = list(range(1996, 2021)) 
+    if years == "all":
+        years_list = list(range(1996, 2021))
     else:
         years_list = years.split(",")
 
@@ -131,7 +132,6 @@ def cache_gmw(
     max_concurrent: int = typer.Option(
         32, help="Maximum number of files to process concurrently."
     ),
-
 ) -> None:
     logger.info("Starting GMW caching process...")
     target_path = ""
@@ -140,7 +140,13 @@ def cache_gmw(
 
     asyncio.run(
         run_cache_gmw(
-            source_base_url, years, target_location, target_path, target_zip_name, overwrite, max_concurrent
+            source_base_url,
+            years,
+            target_location,
+            target_path,
+            target_zip_name,
+            overwrite,
+            max_concurrent,
         )
     )
     logger.info(

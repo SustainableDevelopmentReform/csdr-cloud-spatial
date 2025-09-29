@@ -41,3 +41,16 @@ product-seagrass-eez-fiji:
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=84b8c461-5887-5593-b168-a127e7b25897
+
+
+# Dataset GMW
+cache-gmw-v4:
+	csdr gmw cache \
+		--source-base-url=https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip \
+		--target-location=cache/gmw/v4/
+
+cache-gmw-v3:
+	csdr gmw cache \
+		--source-base-url=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
+		--years=all
