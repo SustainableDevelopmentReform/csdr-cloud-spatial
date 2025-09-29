@@ -25,54 +25,95 @@ from csdr.utils import suppress_rust_output
 
 gmw_app = typer.Typer()
 
-
-async def run_cache_gmw(
+async def cache_single_source(
     source_url: str,
     target_location: str,
     target_path: str,
     target_zip_name: str,
     overwrite: bool,
+    semaphore: asyncio.Semaphore,
 ) -> None:
-    logger.info(f"Caching GMW from {source_url} to {target_location}...")
+    """Process a single file from source."""
+    async with semaphore:
+        logger.info(f"Caching GMW from {source_url} to {target_location}...")
 
-    url = urlparse(source_url)
+        url = urlparse(source_url)
 
-    source = HTTPStore(f"{url.scheme}://{url.netloc}")
-    source_meta = source.head(url.path)
+        source = HTTPStore(f"{url.scheme}://{url.netloc}")
+        source_meta = source.head(url.path)
 
-    size = source_meta.get("size", None)
+        size = source_meta.get("size", None)
 
-    dest = None
+        dest = None
 
-    dest = get_store_for_url(target_location)
-    target_zip_name = f"{target_path}/{target_zip_name}"
+        dest = get_store_for_url(target_location)
+        target_zip_name = f"{target_path}/{target_zip_name}"
 
-    if exists(dest, target_zip_name) and not overwrite:
-        dest_meta = dest.head(target_zip_name)
-        if size is not None and "size" in dest_meta and dest_meta["size"] == size:
-            logger.info(
-                f"File already exists at target location with matching size of {size}. Skipping download."
-            )
-            return
+        if exists(dest, target_zip_name) and not overwrite:
+            dest_meta = dest.head(target_zip_name)
+            if size is not None and "size" in dest_meta and dest_meta["size"] == size:
+                logger.info(
+                    f"File already exists at target location with matching size of {size}. Skipping download."
+                )
+                return
+            else:
+                logger.info(
+                    f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
+                )
+
+        if overwrite:
+            logger.info("Overwrite is enabled, re-downloading file.")
         else:
-            logger.info(
-                f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
-            )
+            logger.info("File does not exist at target location, downloading.")
+        result = await dest.put_async(target_zip_name, source.get(url.path))
+        logger.info(f"File cached successfully, downloaded {result} bytes")
 
-    if overwrite:
-        logger.info("Overwrite is enabled, re-downloading file.")
+async def run_cache_gmw(
+        source_base_url: str,
+        years: str,
+        target_location: str,
+        target_path: str,
+        target_zip_name: str,
+        overwrite: bool,
+        max_concurrent: int
+) -> None:
+        
+    """Async function to run the GMW cache with parallel processing."""
+    # Get list of years to process
+    if years=="all":
+        years_list = list(range(1996, 2021)) 
     else:
-        logger.info("File does not exist at target location, downloading.")
-    result = await dest.put_async(target_zip_name, source.get(url.path))
-    logger.info(f"File cached successfully, downloaded {result} bytes")
+        years_list = years.split(",")
+
+    logger.info(
+        f"Found {len(years_list)} years to process with max {max_concurrent} concurrent operations."
+    )
+
+    # Create semaphore to limit concurrent operations
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    # Create tasks for parallel processing
+    tasks = [
+        cache_single_source(
+            f"{source_base_url}gmw_v3_{year}_gtiff.zip", target_location, target_path, target_zip_name, overwrite, semaphore
+        )
+        for year in years_list
+    ]
+
+    # Execute all tasks concurrently
+    await asyncio.gather(*tasks)
 
 
 @gmw_app.command("cache")
 def cache_gmw(
-    source_url: str = typer.Option(
-        help="URL of the source GMW file to cache.",
+    source_base_url: str = typer.Option(
+        help="URL of the source GMW file/s to cache.",
         # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
-        default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
+        default="https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip",
+    ),
+    years: str = typer.Option(
+        help="Which years of the source GMW file/s to cache.",
+        default="all",
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
@@ -85,6 +126,10 @@ def cache_gmw(
     overwrite: bool = typer.Option(
         False, help="Replace existing files during caching."
     ),
+    max_concurrent: int = typer.Option(
+        32, help="Maximum number of files to process concurrently."
+    ),
+
 ) -> None:
     logger.info("Starting GMW caching process...")
     target_path = ""
@@ -93,7 +138,7 @@ def cache_gmw(
 
     asyncio.run(
         run_cache_gmw(
-            source_url, target_location, target_path, target_zip_name, overwrite
+            source_base_url, years, target_location, target_path, target_zip_name, overwrite, max_concurrent
         )
     )
     logger.info(
