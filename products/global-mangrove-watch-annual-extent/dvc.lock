@@ -18,8 +18,8 @@ stages:
       size: 28619293
     - path: s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
       hash: md5
-      md5: 0cb8651038d9db1ed1bf36a5d25ad500.dir
-      size: 326453
+      md5: 72977c272f004a4fdc66ab16f32f3f54.dir
+      size: 326561
       nfiles: 116
     outs:
     - path: out/gmw_zonal_stats_ste.parquet

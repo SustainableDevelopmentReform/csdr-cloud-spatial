@@ -50,7 +50,7 @@ stages:
     - path: 
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: 7e2a78331b1f3730a5f0f2ecd3cc9413.dir
+      md5: 5212058060149704c741f04685660e14.dir
       size: 74244
       nfiles: 41
   upload_ace:
@@ -68,7 +68,7 @@ stages:
     - path: 
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: 7e2a78331b1f3730a5f0f2ecd3cc9413.dir
+      md5: 5212058060149704c741f04685660e14.dir
       size: 74244
       nfiles: 41
     outs:
@@ -89,6 +89,6 @@ stages:
     - path: 
         out/ga_s2ls_coastalecosystems_cyear_3_2021--P1Y_interim_classification_0-0-2.zarr
       hash: md5
-      md5: 7e2a78331b1f3730a5f0f2ecd3cc9413.dir
+      md5: 5212058060149704c741f04685660e14.dir
       size: 74244
       nfiles: 41
