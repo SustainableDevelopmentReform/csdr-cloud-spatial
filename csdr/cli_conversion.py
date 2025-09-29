@@ -20,6 +20,14 @@ from csdr.io import (
 conversion_app = typer.Typer()
 
 
+def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
+    if geometry_id is None:
+        geometry_id = (
+            get_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
+        )
+    return geometry_id
+
+
 @conversion_app.command("zip-to-parquet")
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
@@ -95,15 +103,11 @@ def convert_zipfile_to_parquet(
     logger.info(f"Loaded {len(gdf)} records from the shapefile.")
 
     # Add ID and Name fields
-    if geometry_id is None:
-        geometry_id = (
-            get_file_name_from_url(source_internal_path_name)
-            .replace(" ", "-")
-            .lower()
-            .split(".")[0]
-        )
-
-    gdf = add_geometry_id_name(gdf, name_field=name_field, geometry_id=geometry_id)
+    gdf = add_geometry_id_name(
+        gdf,
+        name_field=name_field,
+        geometry_id=_get_geometry_id(geometry_id, source_internal_path_name),
+    )
 
     # Write GeoDataFrame to a GeoParquet file in memory
     with BytesIO() as parquet_buffer:
@@ -127,6 +131,9 @@ def convert_geospatial_file_to_parquet(
     target_location: str | None = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
         default=None,
+    ),
+    name_field: str = typer.Option(
+        "name", help="The field in the data to use for the 'Name' attribute."
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing parquet file if it exists."
@@ -168,6 +175,10 @@ def convert_geospatial_file_to_parquet(
 
     # Read the geospatial file into a GeoDataFrame
     gdf = read_geospatial_file(source_location)
+
+    gdf = add_geometry_id_name(
+        gdf, name_field=name_field, geometry_id=_get_geometry_id(None, source_name_path)
+    )
 
     logger.info(f"Opened file with {len(gdf)} features")
 
