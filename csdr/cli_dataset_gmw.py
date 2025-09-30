@@ -9,9 +9,7 @@ from zipfile import ZipFile
 import typer
 from loguru import logger
 from obstore.store import HTTPStore, LocalStore, S3Store
-from obstore.exceptions import BaseError
 from odc.geo.cog import write_cog
-
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
 from rustac import write
@@ -43,6 +41,17 @@ async def cache_single_source(
         url = urlparse(source_url)
 
         source = HTTPStore(f"{url.scheme}://{url.netloc}")
+
+        # Must check this file exists before proceeding
+        source_exists = exists(source, url.path)
+        if not source_exists:
+            logger.error(f"Source file does not exist at {source_url}. Cannot extract.")
+            raise typer.Exit(code=1)
+        else:
+            logger.info(
+                f"Source file found at {source_url}, proceeding with extraction."
+            )
+
         source_meta = source.head(url.path)
 
         size = source_meta.get("size", None)
@@ -65,16 +74,19 @@ async def cache_single_source(
                 )
 
         if overwrite:
-            logger.info("Overwrite is enabled, re-downloading file.")
+            logger.info(f"Overwrite is enabled, re-downloading {target_zip_name} file.")
         else:
-            logger.info("File does not exist at target location, downloading.")
+            logger.info(
+                f"File {target_zip_name} does not exist at target location, downloading."
+            )
         result = await dest.put_async(target_zip_name, source.get(url.path))
         logger.info(f"File cached successfully, downloaded {result} bytes")
 
 
 async def run_cache_gmw(
-    source_base_url: str,
-    years: str,
+    source_location: str,
+    source_zip_name: str,
+    years_list: str,
     target_location: str,
     target_path: str,
     target_zip_name: str,
@@ -82,15 +94,13 @@ async def run_cache_gmw(
     max_concurrent: int,
 ) -> None:
     """Async function to run the GMW cache with parallel processing."""
-    # Get list of years to process
-    if years == "all":
-        years_list = list(range(1996, 2021))
-    else:
-        years_list = years.split(",")
 
     logger.info(
         f"Found {len(years_list)} years to process with max {max_concurrent} concurrent operations."
     )
+
+    # Cleanup...
+    source_location = source_location.rstrip("/")
 
     # Create semaphore to limit concurrent operations
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -98,7 +108,16 @@ async def run_cache_gmw(
     # Create tasks for parallel processing
     tasks = [
         cache_single_source(
-            f"{source_base_url}gmw_v3_{year}_gtiff.zip", target_location, target_path, f"gmw_v3_{year}_gtiff.zip", overwrite, semaphore
+            f"{source_location}/{source_zip_name}"
+            if len(years_list) == 1 and years_list[0] == ""
+            else f"{source_location}/{source_zip_name.replace('{year}', str(year))}",
+            target_location,
+            target_path,
+            target_zip_name
+            if len(years_list) == 1 and years_list[0] == ""
+            else source_zip_name.replace("{year}", str(year)),
+            overwrite,
+            semaphore,
         )
         for year in years_list
     ]
@@ -109,14 +128,18 @@ async def run_cache_gmw(
 
 @gmw_app.command("cache")
 def cache_gmw(
-    source_base_url: str = typer.Option(
-        help="URL of the source GMW file/s to cache.",
+    source_location: str = typer.Option(
+        help="Base location of the source GMW file/s to cache.",
         # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
         default="https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip",
     ),
+    source_zip_name: str = typer.Option(
+        help="Name of the source zip GMW file/s to cache.",
+        default="gmw_mng_2020_v4019_gtiff.zip",
+    ),
     years: str = typer.Option(
         help="Which years of the source GMW file/s to cache.",
-        default="all",
+        default="",
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
@@ -124,13 +147,13 @@ def cache_gmw(
     ),
     target_zip_name: str = typer.Option(
         help="Name of the zip file to save the GMW data as.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
+        default="",
     ),
     overwrite: bool = typer.Option(
         False, help="Replace existing files during caching."
     ),
     max_concurrent: int = typer.Option(
-        32, help="Maximum number of files to process concurrently."
+        8, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
     logger.info("Starting GMW caching process...")
@@ -138,10 +161,25 @@ def cache_gmw(
     if target_location.startswith("s3://"):
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
+    # Get list of years, if any, to process
+    if years == "" or (
+        source_zip_name.find("{") == -1 and source_zip_name.find("}") == -1
+    ):  # hangle single files
+        years_list = [""]
+    elif years == "all":  # handle all years between 1996 and 2020
+        years_list = list(range(1996, 2021))
+    else:
+        years_list = years.split(",")  # handle specified years
+
+    # If target isn't specified, use the source file name
+    if target_zip_name == "":
+        target_zip_name = source_zip_name
+
     asyncio.run(
         run_cache_gmw(
-            source_base_url,
-            years,
+            source_location,
+            source_zip_name,
+            years_list,
             target_location,
             target_path,
             target_zip_name,
@@ -150,7 +188,7 @@ def cache_gmw(
         )
     )
     logger.info(
-        f"GMW caching process completed. Cached to {target_location.rstrip('/')}/{target_zip_name}"
+        f"GMW caching process completed. Cached to {target_location.rstrip('/')}"
     )
 
 
