@@ -46,11 +46,20 @@ product-seagrass-eez-fiji:
 # Dataset GMW
 cache-gmw-v4:
 	csdr gmw cache \
-		--source-base-url=https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=cache/gmw/v4/
 
 cache-gmw-v3:
 	csdr gmw cache \
-		--source-base-url=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_1996_gtiff.zip \
 		--target-location=cache/gmw/v3/ \
 		--years=all
+
+cache-gmw-v3:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_{year}_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
+		--years=1996,2007
