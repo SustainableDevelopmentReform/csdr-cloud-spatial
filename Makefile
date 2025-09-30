@@ -63,3 +63,21 @@ cache-gmw-v3:
 		--source-zip-name gmw_v3_{year}_gtiff.zip \
 		--target-location=cache/gmw/v3/ \
 		--years=1996,2007
+
+# Test GeoJSON
+geometry-geojson-convert:
+	csdr convert geo-to-parquet \
+		--source-location tests/data/single_geometry.geojson \
+		--target-location tests/data \
+		--name-field=name \
+		--overwrite
+
+geometry-geojson-provenance:
+	csdr provenance geometry \
+		--dataset-url=tests/data/single_geometry.parquet \
+		--dataset-type=geoparquet \
+		--id=65243c8f-355d-4b36-bd96-72de8c6f1bff \
+		--source-metadata-url=https://thing.com \
+		--post-to-database \
+		--post-geometry-outputs \
+		--no-post-geometry-in-bulk
