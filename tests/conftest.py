@@ -5,6 +5,7 @@ from pathlib import Path
 import boto3
 import moto
 import pytest
+from geopandas import GeoDataFrame
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
 from odc.geo.geom import polygon
@@ -18,7 +19,7 @@ GEOPARQUET_PATH = DATA_DIR / GEOPARQUET_FILE
 
 
 @pytest.fixture
-def sample_polygon() -> dict:
+def sample_polygon() -> polygon:
     with open(DATA_DIR / "single_geometry.geojson") as f:
         geom = polygon(
             json.load(f)["features"][0]["geometry"]["coordinates"][0], crs="EPSG:4326"
@@ -39,6 +40,12 @@ def local_testdata_obstore() -> LocalStore:
 @pytest.fixture
 def geoparquet_relative() -> Path:
     return str(GEOPARQUET_FILE)
+
+
+@pytest.fixture
+def sample_gdf() -> GeoDataFrame:
+    gdf = GeoDataFrame.from_file(DATA_DIR / "single_geometry.geojson")
+    return gdf
 
 
 @pytest.fixture

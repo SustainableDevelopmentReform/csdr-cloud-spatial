@@ -18,7 +18,8 @@ geometry-eez-cache:
 
 geometry-eez-convert:
 	csdr convert zip-to-parquet \
-		--source-zip-location cache/eez/EEZ_land_union_v4_202410.zip \
+		--name-field UNION \
+		--source-zip-location s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
 		--target-location cache/eez/
 
@@ -29,6 +30,16 @@ geometry-eez-provenance:
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet
+
+geometry-eez-provenance-db:
+	csdr provenance geometry \
+		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
+		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
+		--source-url="https://www.marineregions.org/downloads.php" \
+		--source-metadata-url="https://www.marineregions.org/downloads.php" \
+		--dataset-type geoparquet \
+		--post-to-database \
+		--post-geometry-outputs
 
 # Product Seagrass EEZ
 product-seagrass-eez-fiji:
@@ -41,7 +52,6 @@ product-seagrass-eez-fiji:
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=84b8c461-5887-5593-b168-a127e7b25897
-
 
 # Dataset GMW
 cache-gmw-v4:
