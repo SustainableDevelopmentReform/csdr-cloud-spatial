@@ -95,9 +95,12 @@ async def run_cache_gmw(
 ) -> None:
     """Async function to run the GMW cache with parallel processing."""
 
-    logger.info(
-        f"Found {len(years_list)} years to process with max {max_concurrent} concurrent operations."
-    )
+    if len(years_list) == 0:
+        years_list = [""]
+    else:
+        logger.info(
+            f"Found {len(years_list)} years to process with max {max_concurrent} concurrent operations."
+        )
 
     # Cleanup...
     source_location = source_location.rstrip("/")
@@ -153,7 +156,7 @@ def cache_gmw(
         False, help="Replace existing files during caching."
     ),
     max_concurrent: int = typer.Option(
-        8, help="Maximum number of files to process concurrently."
+        32, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
     logger.info("Starting GMW caching process...")
@@ -165,7 +168,7 @@ def cache_gmw(
     if years is None or (
         source_zip_name.find("{") == -1 and source_zip_name.find("}") == -1
     ):  # hangle single files
-        years_list = [""]
+        years_list = []
     elif years == "all":  # handle all years between 1996 and 2020
         years_list = list(range(1996, 2021))
     else:
