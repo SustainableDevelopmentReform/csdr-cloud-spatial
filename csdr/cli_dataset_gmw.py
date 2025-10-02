@@ -139,7 +139,7 @@ def cache_gmw(
     ),
     years: str = typer.Option(
         help="Which years of the source GMW file/s to cache.",
-        default="",
+        default=None,
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
@@ -147,7 +147,7 @@ def cache_gmw(
     ),
     target_zip_name: str = typer.Option(
         help="Name of the zip file to save the GMW data as.",
-        default="",
+        default=None,
     ),
     overwrite: bool = typer.Option(
         False, help="Replace existing files during caching."
@@ -162,7 +162,7 @@ def cache_gmw(
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
     # Get list of years, if any, to process
-    if years == "" or (
+    if years is None or (
         source_zip_name.find("{") == -1 and source_zip_name.find("}") == -1
     ):  # hangle single files
         years_list = [""]
@@ -172,7 +172,7 @@ def cache_gmw(
         years_list = years.split(",")  # handle specified years
 
     # If target isn't specified, use the source file name
-    if target_zip_name == "":
+    if target_zip_name is None:
         target_zip_name = source_zip_name
 
     asyncio.run(

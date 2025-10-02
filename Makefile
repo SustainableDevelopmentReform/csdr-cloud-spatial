@@ -65,9 +65,15 @@ cache-gmw-v3:
 		--source-location=https://files.auspatious.com/gmwv3/ \
 		--source-zip-name gmw_v3_1996_gtiff.zip \
 		--target-location=cache/gmw/v3/ \
+
+cache-gmw-v3-all-years:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_{year}_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
 		--years=all
 
-cache-gmw-v3:
+cache-gmw-v3-two-years:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmwv3/ \
 		--source-zip-name gmw_v3_{year}_gtiff.zip \
