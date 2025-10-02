@@ -134,7 +134,7 @@ def cache_gmw(
     source_location: str = typer.Option(
         help="Base location of the source GMW file/s to cache.",
         # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
-        default="https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip",
+        default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
     ),
     source_zip_name: str = typer.Option(
         help="Name of the source zip GMW file/s to cache.",
