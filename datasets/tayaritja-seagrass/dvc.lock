@@ -11,8 +11,8 @@ stages:
       size: 1546732
       nfiles: 1
   warp_tsg:
-    cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir
-      "in/resampled-geotiffs" --target-crs "epsg:4326" --target-resolution
+    cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir 
+      "in/resampled-geotiffs" --target-crs "epsg:4326" --target-resolution 
       "0.0004" --resampling-method "nearest"
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -31,8 +31,8 @@ stages:
       size: 0
       nfiles: 0
   raster_to_zarr_tsg:
-    cmd: csdr datasets raster-to-zarr --input-raster
-      in/geotiffs/nesp36_seagrass_baseline.tif --output-zarr
+    cmd: csdr datasets raster-to-zarr --input-raster 
+      in/geotiffs/nesp36_seagrass_baseline.tif --output-zarr 
       out/nesp36_seagrass_baseline.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -50,12 +50,12 @@ stages:
       size: 705037
       nfiles: 52
   upload_tsg:
-    cmd: if [[
-      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr ==
-      s3://* ]]; then aws s3 cp out/nesp36_seagrass_baseline.zarr
-      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-      --recursive; else echo "out_s3_path does not start with s3://, skipping
-      upload" && cp -r out/nesp36_seagrass_baseline.zarr
+    cmd: if [[ 
+      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr == 
+      s3://* ]]; then aws s3 cp out/nesp36_seagrass_baseline.zarr 
+      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr 
+      --recursive; else echo "out_s3_path does not start with s3://, skipping 
+      upload" && cp -r out/nesp36_seagrass_baseline.zarr 
       s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr; fi
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
@@ -70,7 +70,7 @@ stages:
       size: 705037
       nfiles: 52
   validate_tsg:
-    cmd: csdr datasets validate-zarr --input-zarr
+    cmd: csdr datasets validate-zarr --input-zarr 
       out/nesp36_seagrass_baseline.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
