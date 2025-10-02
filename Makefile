@@ -53,6 +53,33 @@ product-seagrass-eez-fiji:
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=84b8c461-5887-5593-b168-a127e7b25897
 
+# Dataset GMW
+cache-gmw-v4:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_mng_2020_v4019_gtiff.zip \
+		--target-location=cache/gmw/v4/
+
+cache-gmw-v3:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_1996_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
+
+cache-gmw-v3-all-years:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_{year}_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
+		--years=all
+
+cache-gmw-v3-two-years:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-zip-name gmw_v3_{year}_gtiff.zip \
+		--target-location=cache/gmw/v3/ \
+		--years=1996,2007
+
 # Test GeoJSON
 geometry-geojson-convert:
 	csdr convert geo-to-parquet \
