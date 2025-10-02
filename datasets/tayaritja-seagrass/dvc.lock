@@ -11,8 +11,8 @@ stages:
       size: 1546732
       nfiles: 1
   warp_tsg:
-    cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir 
-      "in/resampled-geotiffs" --target-crs "epsg:4326" --target-resolution 
+    cmd: csdr datasets warp-raster --input-dir "in/geotiffs" --output-dir
+      "in/resampled-geotiffs" --target-crs "epsg:4326" --target-resolution
       "0.0004" --resampling-method "nearest"
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -31,8 +31,8 @@ stages:
       size: 0
       nfiles: 0
   raster_to_zarr_tsg:
-    cmd: csdr datasets raster-to-zarr --input-raster 
-      in/geotiffs/nesp36_seagrass_baseline.tif --output-zarr 
+    cmd: csdr datasets raster-to-zarr --input-raster
+      in/geotiffs/nesp36_seagrass_baseline.tif --output-zarr
       out/nesp36_seagrass_baseline.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -46,31 +46,31 @@ stages:
     outs:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 3dafb633489e9dd795d9c7987b361295.dir
+      md5: 8c344fe60016626633f47f8881c7b7d1.dir
       size: 705037
       nfiles: 52
   upload_tsg:
-    cmd: if [[ 
-      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr == 
-      s3://* ]]; then aws s3 cp out/nesp36_seagrass_baseline.zarr 
-      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr 
-      --recursive; else echo "out_s3_path does not start with s3://, skipping 
-      upload" && cp -r out/nesp36_seagrass_baseline.zarr 
+    cmd: if [[
+      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr ==
+      s3://* ]]; then aws s3 cp out/nesp36_seagrass_baseline.zarr
+      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
+      --recursive; else echo "out_s3_path does not start with s3://, skipping
+      upload" && cp -r out/nesp36_seagrass_baseline.zarr
       s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr; fi
     deps:
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 3dafb633489e9dd795d9c7987b361295.dir
+      md5: 8c344fe60016626633f47f8881c7b7d1.dir
       size: 705037
       nfiles: 52
     outs:
     - path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 11093f304dc3de4b683615b304275ced.dir
+      md5: 7c77c5ad497a6a1e348fb2b37f304c23.dir
       size: 705037
       nfiles: 52
   validate_tsg:
-    cmd: csdr datasets validate-zarr --input-zarr 
+    cmd: csdr datasets validate-zarr --input-zarr
       out/nesp36_seagrass_baseline.zarr
     deps:
     - path: ../../csdr/cli_datasets.py
@@ -79,6 +79,6 @@ stages:
       size: 6564
     - path: out/nesp36_seagrass_baseline.zarr
       hash: md5
-      md5: 3dafb633489e9dd795d9c7987b361295.dir
+      md5: 8c344fe60016626633f47f8881c7b7d1.dir
       size: 705037
       nfiles: 52
