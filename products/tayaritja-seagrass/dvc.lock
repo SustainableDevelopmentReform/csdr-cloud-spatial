@@ -1,11 +1,11 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr
-      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-      --input-geoparquet
-      s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet --output-path
-      out/tsg_zonal_stats_acsc.parquet --data-variable data_variable --name-dim
+    cmd: csdr vector-cube zonal-stats --input-zarr 
+      s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr 
+      --input-geoparquet 
+      s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet --output-path 
+      out/tsg_zonal_stats_acsc.parquet --data-variable data_variable --name-dim 
       acsc --fill-value None --proj-crs epsg:9473
     deps:
     - path: ../../csdr/cli_vector_cube.py
@@ -48,12 +48,12 @@ stages:
       md5: 3494dc0fb6d9b6838d06930b6916fa2c
       size: 22578199
   upload:
-    cmd: if [[
-      s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet ==
-      s3://* ]]; then aws s3 cp out/tsg_zonal_stats_acsc.parquet
-      s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet; else
-      echo "out_s3_path does not start with s3://, skipping upload" && cp
-      out/tsg_zonal_stats_acsc.parquet
+    cmd: if [[ 
+      s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet == 
+      s3://* ]]; then aws s3 cp out/tsg_zonal_stats_acsc.parquet 
+      s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet; else 
+      echo "out_s3_path does not start with s3://, skipping upload" && cp 
+      out/tsg_zonal_stats_acsc.parquet 
       s3://csdr-dev-env-data-ap-southeast-2/tsg_zonal_stats_acsc.parquet; fi
     deps:
     - path: out/tsg_zonal_stats_acsc.parquet

@@ -1,11 +1,11 @@
 schema: '2.0'
 stages:
   calculate_zonal_stats:
-    cmd: csdr vector-cube zonal-stats --input-zarr
-      s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr
-      --input-geoparquet
-      s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet --output-path
-      out/gmw_zonal_stats_ste.parquet --data-variable data_variable --name-dim
+    cmd: csdr vector-cube zonal-stats --input-zarr 
+      s3://csdr-dev-env-data-ap-southeast-2/gmw-v4019-1km-mollweide.zarr 
+      --input-geoparquet 
+      s3://csdr-dev-env-data-ap-southeast-2/asgs-ste-2021.parquet --output-path 
+      out/gmw_zonal_stats_ste.parquet --data-variable data_variable --name-dim 
       asgs_ste --fill-value 0
     deps:
     - path: ../../csdr/cli_vector_cube.py
@@ -39,12 +39,12 @@ stages:
       md5: f95651f18afed1c94d5d07f60433dd8c
       size: 57773161
   upload_asgs:
-    cmd: if [[
+    cmd: if [[ 
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet
-      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet
+      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet 
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet;
-      else echo "out_s3_path does not start with s3://, skipping upload" && cp
-      out/gmw_zonal_stats_ste.parquet
+      else echo "out_s3_path does not start with s3://, skipping upload" && cp 
+      out/gmw_zonal_stats_ste.parquet 
       /Users/nfs/Documents/Code/2-auspatious/csdr-cloud-spatial/tmp/gmw_zonal_stats_ste.parquet;
       fi
     deps:
@@ -59,10 +59,10 @@ stages:
       size: 57221016
   upload:
     cmd: if [[ s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet
-      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet
-      s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet; else
-      echo "out_s3_path does not start with s3://, skipping upload" && cp
-      out/gmw_zonal_stats_ste.parquet
+      == s3://* ]]; then aws s3 cp out/gmw_zonal_stats_ste.parquet 
+      s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet; else 
+      echo "out_s3_path does not start with s3://, skipping upload" && cp 
+      out/gmw_zonal_stats_ste.parquet 
       s3://csdr-dev-env-data-ap-southeast-2/gmw_zonal_stats_ste.parquet; fi
     deps:
     - path: out/gmw_zonal_stats_ste.parquet
