@@ -3,7 +3,14 @@ import asyncio
 import typer
 from loguru import logger
 
-from csdr.io import exists, get_dataset_name_from_url, get_file_info, get_store_for_url
+from csdr.io import (
+    exists,
+    get_dataset_name_from_url,
+    get_file_info,
+    get_prefix,
+    get_store_for_url,
+    get_url_from_store_filename,
+)
 
 eez_app = typer.Typer()
 
@@ -11,7 +18,6 @@ eez_app = typer.Typer()
 async def run_cache_eez(
     source_url: str,
     target_location: str,
-    keep_path: bool,
     overwrite: bool,
 ) -> None:
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
@@ -22,7 +28,10 @@ async def run_cache_eez(
     size = get_file_info(source, name).get("size", None)
 
     dest = get_store_for_url(target_location)
-    dest_name = get_dataset_name_from_url(source, source_url, keep_path)
+    name = get_dataset_name_from_url(source, source_url, keep_path=False)
+    dest_name = f"{get_prefix(target_location)}/{name}"
+
+    dest_url = get_url_from_store_filename(dest, dest_name)
 
     if exists(dest, dest_name):
         if not overwrite:
@@ -40,12 +49,10 @@ async def run_cache_eez(
                     f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logger.info(
-        f"Downloading {name} from {source_url} to {target_location}/{dest_name}..."
-    )
+    logger.info(f"Downloading {name} from {source_url} to {dest_url}...")
     await dest.put_async(dest_name, source.get(name))
 
-    return f"{target_location}/{dest_name}"
+    return f"{dest_url}"
 
 
 @eez_app.command("cache")
@@ -58,16 +65,11 @@ def cache_eez(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached EEZ file.",
         default="./cache/eez",
     ),
-    keep_path: bool = typer.Option(
-        False, help="Keep the full path from the source URL in the target location."
-    ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
     ),
 ) -> None:
     logger.info("Starting EEZ caching process...")
 
-    result_path = asyncio.run(
-        run_cache_eez(source_url, target_location, keep_path, overwrite)
-    )
+    result_path = asyncio.run(run_cache_eez(source_url, target_location, overwrite))
     logger.info(f"EEZ caching process completed. Cached to {result_path}")

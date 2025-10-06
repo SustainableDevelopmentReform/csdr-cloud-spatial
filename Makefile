@@ -16,6 +16,11 @@ dataset-seagrass-provenance:
 geometry-eez-cache:
 	csdr eez cache
 
+geometry-eez-cache-s3:
+	csdr eez cache \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez/0-0-1 \
+		--overwrite
+
 geometry-eez-convert:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
