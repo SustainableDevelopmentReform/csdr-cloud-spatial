@@ -51,7 +51,7 @@ product-seagrass-eez-fiji:
 		--variable-value=1 \
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=84b8c461-5887-5593-b168-a127e7b25897
+		--geometry-id=e47c6e46-9960-559f-884c-7311b3b0d0e0
 
 # Dataset GMW
 cache-gmw-v4:

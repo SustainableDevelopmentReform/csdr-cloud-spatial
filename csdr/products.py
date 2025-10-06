@@ -19,9 +19,9 @@ def get_area_from_dataset_geometry(
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     logger.info(f"Loading dataset from {dataset_provenance_url}")
-    provenances = read_provenance(dataset_provenance_url)
-    dataset_url = provenances.get("dataset_url")
-    dataset_type = provenances.get("dataset_type")
+    provenance = read_provenance(dataset_provenance_url)
+    dataset_url = provenance.get("dataset_url")
+    dataset_type = provenance.get("dataset_type")
 
     if dataset_type != "stac-geoparquet":
         raise ValueError(
@@ -39,14 +39,20 @@ def get_area_from_dataset_geometry(
         items,
         geom=geometry,
         datetime_string_match=datetime_string_match,
-        measurements=[variable],
+        # measurements=[variable],
         **load_kwargs,
     )
-    logger.info(
-        f"Loaded data with shape {data.dims} and variables {list(data.data_vars)}"
-    )
 
-    total_area = xarray_calculate_area(data, geometry, variable=variable, value=value)
+    logger.info(f"Loaded data with shape {data.dims}")
+
+    if variable not in data.data_vars:
+        raise ValueError(
+            f"Variable {variable} not found in dataset. Available: {list(data.data_vars)}"
+        )
+
+    total_area = xarray_calculate_area(
+        data[variable], geometry, variable=variable, value=value
+    )
 
     return total_area
 
@@ -63,16 +69,22 @@ def process_variables_for_geometry(
     results = {}
     for var in variables:
         if var == "sum-area-by-value":
-            area_by_value = get_area_from_dataset_geometry(
-                dataset_provenance_url,
-                geometry,
-                datetime_string_match=datetime_string_match,
-                variable=variable_name,
-                value=variable_value,
-                load_kwargs=load_kwargs,
-            )
-            results["sum-area-by-value"] = area_by_value
-            logger.info(f"Area by value: {area_by_value}")
+            geoms = [geometry]
+            if geometry.geom_type == "MultiPolygon":
+                geoms = list(geometry.geoms)
+            total_area = 0.0
+            for geom in geoms:
+                area = get_area_from_dataset_geometry(
+                    dataset_provenance_url,
+                    geom,
+                    datetime_string_match=datetime_string_match,
+                    variable=variable_name,
+                    value=variable_value,
+                    load_kwargs=load_kwargs,
+                )
+                total_area += area
+            results["sum-area-by-value"] = total_area
+            logger.info(f"Total area by value: {total_area}")
         else:
             logger.warning(f"Unknown variable requested: {var}")
     return results

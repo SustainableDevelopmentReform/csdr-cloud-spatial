@@ -229,7 +229,18 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
     async def _read_thing() -> ItemCollection:
         return await rustac.read(filepath, store=store)
 
-    item_dict = asyncio.run(_read_thing())
+    # Check if we're already in an event loop (e.g., Jupyter notebook)
+    try:
+        asyncio.get_running_loop()
+        # If we're in an event loop, we need to use nest_asyncio
+        import nest_asyncio
+
+        nest_asyncio.apply()
+        item_dict = asyncio.run(_read_thing())
+    except RuntimeError:
+        # No event loop running, safe to use asyncio.run()
+        item_dict = asyncio.run(_read_thing())
+
     return ItemCollection.from_dict(item_dict)
 
 
@@ -247,7 +258,10 @@ def load_xarray_stacgeoparquet(
             if datetime_string_match in item.datetime.isoformat():
                 items.append(item)
 
-    data = load(items, bbox=bbox, geom=geom, **load_kwargs)
+    if "chunks" not in load_kwargs:
+        load_kwargs["chunks"] = {}
+
+    data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
 
     return data
 
