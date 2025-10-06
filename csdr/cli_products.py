@@ -129,14 +129,10 @@ def process_geometry(
 
     # Load the provenance file
     provenance = read_provenance(geometry_provenance_url)
-    geometry_file_url = provenance.get("dataset_url")
+    geometry_file_url = provenance.get("dataUrl")
     logger.info(f"Reading geometries from {geometry_file_url}")
 
     gdf = read_geospatial_file(geometry_file_url)
-
-    # if geometry_id not in gdf.index:
-    #     logger.error(f"Geometry ID {geometry_id} not found in dataset")
-    #     raise typer.Exit(code=1)
 
     geometry = get_geom_from_gdf(gdf, geometry_id)
 
