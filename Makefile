@@ -31,7 +31,7 @@ geometry-eez-convert:
 geometry-eez-provenance:
 	csdr provenance geometry \
 		--id eez-v4 \
-		--geometry-url=cache/eez/EEZ_land_union_v4_202410.parquet \
+		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet
@@ -61,7 +61,7 @@ product-seagrass-eez-fiji:
 		--variable-value=1 \
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=e47c6e46-9960-559f-884c-7311b3b0d0e0
+		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
 # Dataset GMW
 cache-gmw-v4:

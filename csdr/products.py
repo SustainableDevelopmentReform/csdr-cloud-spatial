@@ -20,8 +20,8 @@ def get_area_from_dataset_geometry(
     """Calculate the area of the dataset within the given geometry."""
     logger.info(f"Loading dataset from {dataset_provenance_url}")
     provenance = read_provenance(dataset_provenance_url)
-    dataset_url = provenance.get("dataset_url")
-    dataset_type = provenance.get("dataset_type")
+    dataset_url = provenance.get("dataUrl")
+    dataset_type = provenance.get("dataType")
 
     if dataset_type != "stac-geoparquet":
         raise ValueError(

@@ -63,7 +63,7 @@ def cache_eez(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached EEZ file.",
-        default="./cache/eez",
+        default="cache/eez",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
