@@ -47,6 +47,11 @@ geometry-eez-provenance-db:
 		--post-geometry-outputs
 
 # Product Seagrass EEZ
+product-list-geometries:
+	csdr products list-geometries \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/1-0-0/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=/tmp/test.json
+
 product-seagrass-eez-fiji:
 	csdr products process-geometry \
 		--dataset-provenance-url=cache/seagrass/dep_s2_seagrass.parquet.provenance.json \

@@ -56,7 +56,7 @@ def list_geometries(
 
     # Load the provenance file
     provenance = read_provenance(geometry_provenance_url)
-    geometry_file_url = provenance.get("dataset_url")
+    geometry_file_url = provenance.get("dataUrl")
 
     logger.info(f"Reading geometries from {geometry_file_url}")
     gdf = read_geospatial_file(geometry_file_url)
