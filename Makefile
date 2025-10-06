@@ -63,10 +63,22 @@ product-seagrass-eez-fiji:
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
+# Product GMW EEZ
+# 148a1289-b2f7-54a2-9ec3-acff2ce24ace - test geom
+product-gmw-eez-test-geom:
+	csdr products process-geometry \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/1-0-0/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--target-location=cache/products/gmw_eez/ \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--geometry-id=148a1289-b2f7-54a2-9ec3-acff2ce24ace
+
 # Dataset GMW
 cache-gmw-v4:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/ \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/ \
 		--source-zip-name gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=cache/gmw/v4/
 

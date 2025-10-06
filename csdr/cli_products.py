@@ -8,6 +8,7 @@ from loguru import logger
 from obstore.store import S3Store
 
 from csdr.io import (
+    exists,
     get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
@@ -118,6 +119,9 @@ def process_geometry(
         help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
         parser=opt_dict_parser,
     ),
+    overwrite: bool = typer.Option(
+        False, help="If true, overwrite existing product file"
+    ),
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
 
@@ -126,6 +130,22 @@ def process_geometry(
             f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
         )
         raise typer.Exit(code=1)
+
+    # Get paths for writing results
+    dest = get_store_for_url(target_location)
+    path = f"{product_id}/{variable_name}/{product_id}-{geometry_id}.json"
+
+    if type(dest) is S3Store:
+        prefix = get_prefix(target_location)
+        if prefix is not None:
+            path = f"{prefix}/{path}"
+
+    dest_url = get_url_from_store_filename(dest, path)
+    logger.info(f"Will write results to {dest_url}")
+
+    if exists(dest, path) and not overwrite:
+        logger.info(f"Product already exists at {dest_url}, skipping processing.")
+        raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
     # Load the provenance file
     provenance = read_provenance(geometry_provenance_url)
@@ -169,23 +189,12 @@ def process_geometry(
 
     # TODO: Validate product id, variable name and other things.
 
-    # Write results out
-    dest = get_store_for_url(target_location)
-    path = f"{product_id}/{variable_name}/{product_id}-{geometry_id}.json"
-
-    if type(dest) is S3Store:
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            path = f"{prefix}/{path}"
-
-    geometry_output_id = geometry_id
-
     product_output = {
         "id": make_uuid(
             f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
         ),
         "product_id": product_id,
-        "geometry_id": geometry_output_id,
+        "geometry_id": geometry_id,
         "variables": results,
         "geometry_provenance_url": geometry_provenance_url,
         "dataset_provenance_url": dataset_provenance_url,
