@@ -243,8 +243,6 @@ def write_product_provenance(
     if post_to_database:
         logger.info("Posting consolidated product data to database")
 
-        # Create a product run entry...
-
         for variable, output in parsed_outputs.items():
             for timePoint in output.keys():
                 outputs = output[timePoint]
@@ -257,9 +255,11 @@ def write_product_provenance(
                 }
 
                 response = post_product_output_bulk(content)
-                if response.status_code != 200:
-                    logger.error(
-                        f"Failed to post product output for variable {variable} timePoint {timePoint}: {response.status_code} {response.text}"
+                try:
+                    response.raise_for_status()
+                except HTTPError:
+                    logger.exception(
+                        f"Failed to post product output to database. Response was \n{dumps(response.json(), indent=2)}"
                     )
                 else:
                     logger.info(

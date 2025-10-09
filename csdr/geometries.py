@@ -28,7 +28,7 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict:
     ], f"Only Polygon and MultiPolygon geometries are supported, not {poly.geom_type}"
 
     geometry_output = {
-        # "id": properties.get("csdr-id"),  # Random generated ID
+        "id": properties.get("csdr-id"),
         "geometry": poly.geojson()["geometry"],
         "name": properties.get("csdr-name"),
         "description": properties.get("description", ""),
