@@ -501,15 +501,21 @@ def consolidate_product(
     logger.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
-    json_files = [f for f in store.list(path)]
-    json_files = [f["path"] for f in json_files[0] if f["path"].endswith(".json")]
+    json_files = []
+    chunks = store.list(path)
+    for chunk in chunks:
+        # Go through the chunks of file a chunk at a time
+        files = [f["path"] for f in chunk if f["path"].endswith(".json")]
+        json_files.extend(files)
 
     logger.info(f"Found {len(json_files)} product files to consolidate")
 
     # Load each file and combine into a pandas DataFrame
     all_data = []
     for file in json_files:
-        logger.info(f"Loading product file {file}")
+        if file.endswith(".provenance.json"):
+            logger.info(f"Skipping provenance file {file}")
+            continue
         product = read_dict(store, file)
         geometry_provenance_url = product.get("metadata", {}).get(
             "geometryProvenanceUrl", None

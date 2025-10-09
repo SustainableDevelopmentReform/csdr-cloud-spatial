@@ -118,7 +118,7 @@ product-gmw-eez-consolidate:
 	csdr products consolidate \
 		--product-id=temp-id-please-ignore \
 		--version=0.0.2 \
-		--location cache/products/gmw_eez/ \
+		--location=cache/products/gmw_eez/ \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--variable-name=mangrove
@@ -131,6 +131,15 @@ product-gmw-eez-provenance-db:
 		--geometries-run-id=9ea66fba-1bcb-4bff-944f-2c29c5de1d78 \
 		--post-to-database \
 		--overwrite
+
+product-gmw-eez-consolidate-s3:
+	csdr products consolidate \
+		--product-id=f7cf7d28-9e39-4e3c-8102-705fc3eb40a0 \
+		--version=0.0.1 \
+		--location s3://csdr-public-dev/products/testing/gmw-eez-100m \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--variable-name=mangrove
 
 # Dataset GMW v4
 cache-gmw-v4:
