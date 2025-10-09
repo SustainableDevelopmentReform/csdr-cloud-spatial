@@ -18,7 +18,7 @@ geometry-eez-cache:
 
 geometry-eez-cache-s3:
 	csdr eez cache \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez/0-0-1 \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez/1-0-0 \
 		--overwrite
 
 geometry-eez-convert:
@@ -49,7 +49,7 @@ geometry-eez-provenance-db:
 # Product Seagrass EEZ
 product-list-geometries:
 	csdr products list-geometries \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/1-0-0/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=/tmp/test.json
 
 product-seagrass-eez-fiji:
@@ -64,7 +64,8 @@ product-seagrass-eez-fiji:
 		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
 # Product GMW EEZ
-# 148a1289-b2f7-54a2-9ec3-acff2ce24ace - test geom
+# 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed
+# 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
 product-gmw-eez-test-geom:
 	csdr products process-geometry \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
@@ -73,15 +74,35 @@ product-gmw-eez-test-geom:
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=148a1289-b2f7-54a2-9ec3-acff2ce24ace
+		--geometry-id=08fa7d0a-c4dc-57f6-b72c-39c2b9c4a05c
 
-# Dataset GMW
+# Dataset GMW v4
 cache-gmw-v4:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmw-v4/raw/ \
 		--source-zip-name gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=cache/gmw/v4/
+		--target-location=cache/gmw/v4/raw
 
+extract-gmw-v4:
+	csdr gmw extract \
+		--source-location=cache/gmw/v4/raw \
+		--target-location=cache/gmw/v4/data
+
+index-gmw-v4:
+	csdr gmw index \
+		--source-location=cache/gmw/v4/data \
+		--target-location=cache/gmw/v4
+
+provenance-gmw-v4:
+	csdr provenance dataset \
+		--id gmw-v4 \
+		--dataset-url=cache/gmw/v4/gmw.parquet \
+		--source-url="https://example.com" \
+		--source-metadata-url="https://example.com" \
+		--dataset-type stac-geoparquet
+
+
+# Dataset GMW v3
 cache-gmw-v3:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmwv3/ \

@@ -193,11 +193,11 @@ def process_geometry(
         "id": make_uuid(
             f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
         ),
-        "product_id": product_id,
-        "geometry_id": geometry_id,
+        "productId": product_id,
+        "geometryId": geometry_id,
         "variables": results,
-        "geometry_provenance_url": geometry_provenance_url,
-        "dataset_provenance_url": dataset_provenance_url,
+        "geometryProvenanceUrl": geometry_provenance_url,
+        "datasetProvenanceUrl": dataset_provenance_url,
     }
 
     write_json(dest, path, product_output)

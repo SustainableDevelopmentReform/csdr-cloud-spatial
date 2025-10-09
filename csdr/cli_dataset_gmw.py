@@ -53,13 +53,14 @@ async def cache_single_source(
             )
 
         source_meta = source.head(url.path)
-
         size = source_meta.get("size", None)
 
         dest = None
-
         dest = get_store_for_url(target_location)
         target_zip_name = f"{target_path}/{target_zip_name}"
+
+        target_url = get_url_from_store_filename(dest, target_zip_name)
+        logger.info(f"Target URL for caching is {target_url}")
 
         if exists(dest, target_zip_name) and not overwrite:
             dest_meta = dest.head(target_zip_name)
@@ -74,13 +75,13 @@ async def cache_single_source(
                 )
 
         if overwrite:
-            logger.info(f"Overwrite is enabled, re-downloading {target_zip_name} file.")
+            logger.info(f"Overwrite is enabled, re-downloading {source_url} file.")
         else:
             logger.info(
                 f"File {target_zip_name} does not exist at target location, downloading."
             )
-        result = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded {result} bytes")
+        _ = await dest.put_async(target_zip_name, source.get(url.path))
+        logger.info(f"File cached successfully, downloaded to {target_url}")
 
 
 async def run_cache_gmw(
