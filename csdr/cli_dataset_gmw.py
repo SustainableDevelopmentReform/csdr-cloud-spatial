@@ -1,6 +1,7 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
+import sys
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import urlparse
@@ -33,7 +34,7 @@ async def cache_single_source(
     target_zip_name: str,
     overwrite: bool,
     semaphore: asyncio.Semaphore,
-) -> None:
+) -> str:
     """Process a single file from source."""
     async with semaphore:
         logger.info(f"Caching GMW from {source_url} to {target_location}...")
@@ -83,6 +84,8 @@ async def cache_single_source(
         _ = await dest.put_async(target_zip_name, source.get(url.path))
         logger.info(f"File cached successfully, downloaded to {target_url}")
 
+        return f"{target_location}{target_zip_name}"
+
 
 async def run_cache_gmw(
     source_location: str,
@@ -93,6 +96,7 @@ async def run_cache_gmw(
     target_zip_name: str,
     overwrite: bool,
     max_concurrent: int,
+    out_file: str,
 ) -> None:
     """Async function to run the GMW cache with parallel processing."""
 
@@ -131,7 +135,14 @@ async def run_cache_gmw(
     ]
 
     # Execute all tasks concurrently
-    await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks)
+
+    if out_file is not None:
+        with open(out_file, "w") as f:
+            json.dump(results, f, indent=4)
+        logger.info(f"Wrote target files to {out_file}")
+    else:
+        sys.stdout.write(json.dumps(results, indent=4))
 
 
 @gmw_app.command("cache")
@@ -163,6 +174,9 @@ def cache_gmw(
     max_concurrent: int = typer.Option(
         32, help="Maximum number of files to process concurrently."
     ),
+    out_file: str = typer.Option(
+        None, help="Tempfile to write list of IDs to (otherwise print to console)"
+    ),
 ) -> None:
     logger.info("Starting GMW caching process...")
     target_path = ""
@@ -193,6 +207,7 @@ def cache_gmw(
             target_zip_name,
             overwrite,
             max_concurrent,
+            out_file,
         )
     )
     logger.info(
