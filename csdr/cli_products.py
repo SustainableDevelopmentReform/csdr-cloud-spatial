@@ -316,6 +316,8 @@ def process_all_geometries(
         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
     )
 
+    variable_value = float(variable_value) if variable_value is not None else None
+
     if set(variables_to_extract) - set(KNOWN_VARIABLES):
         logger.error(
             f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
