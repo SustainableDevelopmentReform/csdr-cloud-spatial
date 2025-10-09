@@ -100,6 +100,20 @@ product-gmw-eez-test-geom:
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
 
+
+product-gmw-eez-all-geom:
+	csdr products process-all-geometries \
+		--product-id=temp-id-please-ignore \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--target-location=cache/products/gmw_eez/ \
+		--version=0.0.2 \
+		--variable-name=mangrove \
+		--variable-value=1 \
+		--datetime=2024 \
+		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--overwrite
+
 product-gmw-eez-consolidate:
 	csdr products consolidate \
 		--product-id=temp-id-please-ignore \

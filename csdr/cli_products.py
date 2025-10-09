@@ -153,6 +153,8 @@ def process_geometry(
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
 
+    variable_value = float(variable_value) if variable_value is not None else None
+
     if set(variables_to_extract) - set(KNOWN_VARIABLES):
         logger.error(
             f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
@@ -225,6 +227,7 @@ def process_geometry(
         variable_value=variable_value,
         load_kwargs=load_kwargs,
     )
+    print(results)
 
     if use_dask:
         client.close()
@@ -250,6 +253,163 @@ def process_geometry(
     write_json(dest, path, product_output)
 
     logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
+
+
+@products_app.command("process-all-geometries")
+def process_all_geometries(
+    product_id: str = typer.Option(
+        "example-product", help="ID of the product being generated"
+    ),
+    version: str = typer.Option(
+        "0.0.0",
+        help="Semver-like version of the product being generated. Todo: workout how to replace with product-run-id",
+    ),
+    geometry_provenance_url: str = typer.Option(
+        ..., help="URL that points to the geometry provenance file"
+    ),
+    dataset_provenance_url: str = typer.Option(
+        None, help="URL that points to the dataset provenance file"
+    ),
+    variables_to_extract: str = typer.Option(
+        "sum-area-by-value",
+        help="Comma-separated list of variables to extract from the dataset",
+        parser=lambda s: s.split(","),
+    ),
+    datetime_string_match: str = typer.Option(
+        None,
+        help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
+    ),
+    datetime: str | None = typer.Option(
+        None,
+        help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
+    ),
+    target_location: str = typer.Option(
+        "cache/products",
+        help="Location to write the results to (otherwise print to console)",
+    ),
+    variable_name: str = typer.Option(
+        "asset", help="Name of the variable to use for calculations (if applicable)"
+    ),
+    variable_value: str | None = typer.Option(
+        None, help="Value of the variable to use for calculations (if applicable)"
+    ),
+    load_kwargs: dict[str, str] = typer.Option(
+        {},
+        "--load-kwargs",
+        help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
+        parser=opt_dict_parser,
+    ),
+    use_dask: bool = typer.Option(
+        False, help="Whether to use Dask distributed for processing"
+    ),
+    dask_client_opts: dict[str, str] = typer.Option(
+        {},
+        "--dask-opts",
+        help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
+        parser=opt_dict_parser,
+    ),
+    overwrite: bool = typer.Option(
+        False, help="If true, overwrite existing product file"
+    ),
+) -> None:
+    logger.info(
+        f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
+    )
+
+    if set(variables_to_extract) - set(KNOWN_VARIABLES):
+        logger.error(
+            f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
+        )
+        raise typer.Exit(code=1)
+
+    if datetime is None:
+        if datetime_string_match is None:
+            logger.error(
+                "Either datetime or datetime_string_match must be set to process a geometry"
+            )
+            raise typer.Exit(code=1)
+        else:
+            datetime = datetime_string_match
+
+    version_clean = version_parser(version)
+
+    # Get paths for writing results
+    dest = get_store_for_url(target_location)
+    base_path = get_product_path(product_id, version_clean, variable_name)
+
+    if type(dest) is S3Store:
+        prefix = get_prefix(target_location)
+        if prefix is not None:
+            base_path = f"{prefix}/{base_path}"
+
+    dest_url = get_url_from_store_filename(dest, base_path)
+    logger.info(f"Will write results to {dest_url}")
+
+    # Load the provenance file
+    provenance = read_provenance(geometry_provenance_url)
+    geometry_file_url = provenance.get("dataUrl")
+    logger.info(f"Reading geometries from {geometry_file_url}")
+
+    gdf = read_geospatial_file(geometry_file_url)
+    logger.info(f"Found {len(gdf)} geometries")
+
+    # Use Dask distributed here
+    if use_dask:
+        logger.info(f"Starting Dask client with options: {dask_client_opts}")
+
+        # Parse the client opts, making them integers if they can be
+        for key, value in dask_client_opts.items():
+            try:
+                dask_client_opts[key] = int(value)
+            except ValueError:
+                pass
+
+        client = Client(**dask_client_opts)
+        logger.info(
+            f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
+        )
+
+    for _, row in gdf.iterrows():
+        geometry_id = row["csdr-id"]
+        geometry = get_geom_from_gdf(gdf, geometry_id)
+
+        path = f"{base_path}/{product_id}-{geometry_id}.json"
+
+        if exists(dest, path) and not overwrite:
+            logger.info(
+                f"Product already exists at {get_url_from_store_filename(dest, path)}, skipping processing for geometry {geometry_id}."
+            )
+            continue  # Nothing to do
+        logger.info(f"Processing geometry {geometry_id}")
+        results = process_variables_for_geometry(
+            geometry,
+            variables_to_extract,
+            dataset_provenance_url,
+            datetime_string_match=datetime_string_match,
+            variable_name=variable_name,
+            variable_value=variable_value,
+            load_kwargs=load_kwargs,
+        )
+        logger.info(f"Results for geometry {geometry_id}: {results}")
+
+        product_output = {
+            "id": make_uuid(
+                f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
+            ),
+            "productId": product_id,
+            "geometryOutputId": geometry_id,
+            "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
+            "variables": results,
+            "metadata": {
+                "geometryProvenanceUrl": geometry_provenance_url,
+                "datasetProvenanceUrl": dataset_provenance_url,
+            },
+        }
+        write_json(dest, path, product_output)
+    if use_dask:
+        client.close()
+
+    logger.info(f"Wrote results to {dest_url}")
 
 
 @products_app.command("consolidate")
