@@ -112,14 +112,18 @@ async def run_cache_gmw(
     # Create tasks for parallel processing
     tasks = [
         cache_single_source(
-            f"{source_location}/{source_zip_name}"
-            if len(years_list) == 1 and years_list[0] == ""
-            else f"{source_location}/{source_zip_name.format(year=str(year))}",
+            (
+                f"{source_location}/{source_zip_name}"
+                if len(years_list) == 1 and years_list[0] == ""
+                else f"{source_location}/{source_zip_name.format(year=str(year))}"
+            ),
             target_location,
             target_path,
-            target_zip_name
-            if len(years_list) == 1 and years_list[0] == ""
-            else source_zip_name.replace("{year}", str(year)),
+            (
+                target_zip_name
+                if len(years_list) == 1 and years_list[0] == ""
+                else source_zip_name.replace("{year}", str(year))
+            ),
             overwrite,
             semaphore,
         )

@@ -4,8 +4,6 @@ from csdr.geometries import convert_gdf_row_to_geometry_output
 
 
 def test_convert_gdf_row_to_geometry_output(sample_gdf: GeoDataFrame) -> None:
-    print(sample_gdf)
-
     assert len(sample_gdf) == 1
 
     geometry_output = convert_gdf_row_to_geometry_output(

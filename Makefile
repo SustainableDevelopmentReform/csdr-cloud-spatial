@@ -47,6 +47,25 @@ geometry-eez-provenance-db:
 		--post-to-database \
 		--post-geometry-outputs
 
+
+geometry-eez-convert-s3:
+	csdr convert zip-to-parquet \
+		--name-field UNION \
+		--source-zip-location s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.zip \
+		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
+		--target-location s3://files.auspatious.com/csdr/geometries/
+
+geometry-eez-provenance-s3-db:
+	csdr provenance geometry \
+		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
+		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=cache/eez/EEZ_land_union_v4_202410.pmtiles \
+		--source-url="https://www.marineregions.org/downloads.php" \
+		--source-metadata-url="https://www.marineregions.org/downloads.php" \
+		--dataset-type geoparquet \
+		--post-to-database \
+		--post-geometry-outputs
+
 # Product Seagrass EEZ
 product-list-geometries:
 	csdr products list-geometries \
@@ -69,13 +88,35 @@ product-seagrass-eez-fiji:
 # 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
 product-gmw-eez-test-geom:
 	csdr products process-geometry \
+		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/1-0-0/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/gmw_eez/ \
+		--version=0.0.0 \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=08fa7d0a-c4dc-57f6-b72c-39c2b9c4a05c
+		--geometry-id=08fa7d0a-c4dc-57f6-b72c-39c2b9c4a05c \
+		--overwrite
+
+product-gmw-eez-consolidate:
+	csdr products consolidate \
+		--product-id=temp-id-please-ignore \
+		--version=0.0.0 \
+		--location cache/products/gmw_eez/ \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/1-0-0/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--variable-name=mangrove
+
+product-gmw-eez-provenance:
+	csdr provenance product \
+		--product-id de0e7d09-d238-470f-ad12-112fe70f1c2a \
+		--product-url=cache/products/gmw_eez/temp-id-please-ignore/mangrove/0-0-0/temp-id-please-ignore-0-0-0.parquet \
+		--dataset-run-id=1ad46e15-9999-49da-b02a-e44d47140a31 \
+		--geometries-run-id=9d973c55-aa67-4a6d-ad27-6d68cbe4e166 \
+		--post-to-database \
+		--overwrite
 
 # Dataset GMW v4
 cache-gmw-v4:

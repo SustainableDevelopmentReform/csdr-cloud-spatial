@@ -6,6 +6,8 @@ from requests import Response
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)
 
+ALLOWED_TYPES = ["dataset", "geometry", "product"]
+
 
 def _check_api_key() -> None:
     if API_KEY is None:
@@ -31,8 +33,8 @@ def post_provenance(
     # Check for API key
     _check_api_key()
 
-    if type not in ("dataset", "geometry"):
-        raise ValueError("Type must be 'dataset' or 'geometry'")
+    if type not in ALLOWED_TYPES:
+        raise ValueError(f"Type must be one of {ALLOWED_TYPES}")
 
     if type == "geometry":
         path = "api/v0/geometries-run"
@@ -42,6 +44,10 @@ def post_provenance(
         path = "api/v0/dataset-run"
         # Change id to datasetId
         provenance["datasetId"] = provenance.pop("id")
+    else:  # product
+        path = "api/v0/product-run"
+        # Change id to productId
+        provenance["productId"] = provenance.pop("id")
 
     url = f"{HOSTNAME}/{path}"
 
@@ -72,3 +78,12 @@ def post_geometry_output(geometry_output: dict) -> Response:
     url = f"{HOSTNAME}/api/v0/geometry-output"
 
     return _post(url, geometry_output)
+
+
+def post_product_output_bulk(bulk_product_output: dict) -> Response:
+    # Check for API key
+    _check_api_key()
+
+    url = f"{HOSTNAME}/api/v0/product-output/bulk"
+
+    return _post(url, bulk_product_output)

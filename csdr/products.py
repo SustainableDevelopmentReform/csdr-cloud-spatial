@@ -1,3 +1,4 @@
+import pandas as pd
 from loguru import logger
 from odc.geo.geom import Geometry
 
@@ -31,6 +32,7 @@ def get_area_from_dataset_geometry(
     # Get the STAC items
     items = open_stacgeoparquet(dataset_url)
 
+    # Force the use of Dask
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
 
@@ -88,3 +90,21 @@ def process_variables_for_geometry(
         else:
             logger.warning(f"Unknown variable requested: {var}")
     return results
+
+
+def parse_outputs(df: pd.DataFrame) -> dict:
+    outputs = {}
+
+    for _, row in df.iterrows():
+        timePoint = row["timePoint"]
+        for variable, value in row["variables"].items():
+            if variable not in outputs:
+                outputs[variable] = {}
+            output = {"geometryOutputId": row["geometryOutputId"], "value": value}
+
+            if timePoint not in outputs[variable]:
+                outputs[variable][timePoint] = []
+
+            outputs[variable][timePoint].append(output)
+
+    return outputs

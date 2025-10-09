@@ -2,6 +2,8 @@ import json
 import sys
 from typing import Any
 
+import dateutil
+import pandas as pd
 import typer
 from dask.distributed import Client
 from loguru import logger
@@ -12,7 +14,9 @@ from csdr.io import (
     get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
+    read_dict,
     read_geospatial_file,
+    write_gdf_to_parquet,
     write_json,
 )
 from csdr.products import process_variables_for_geometry
@@ -42,6 +46,22 @@ def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
                 pass
 
     return result
+
+
+def version_parser(s: str) -> str:
+    return s.lstrip("v").replace(".", "-")
+
+
+def get_product_path(
+    product_id: str,
+    version: str,
+    variable_name: str,
+    geometry_id: str | None = None,
+) -> str:
+    path = f"{product_id}/{variable_name}/{version}"
+    if geometry_id is not None:
+        path = f"{path}/{product_id}-{geometry_id}.json"
+    return path
 
 
 @products_app.command("list-geometries")
@@ -78,6 +98,10 @@ def process_geometry(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being generated"
     ),
+    version: str = typer.Option(
+        "0.0.0",
+        help="Semver-like version of the product being generated. Todo: workout how to replace with product-run-id",
+    ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
@@ -92,6 +116,10 @@ def process_geometry(
     datetime_string_match: str = typer.Option(
         None,
         help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
+    ),
+    datetime: str | None = typer.Option(
+        None,
+        help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
     ),
     target_location: str = typer.Option(
         "cache/products",
@@ -131,9 +159,25 @@ def process_geometry(
         )
         raise typer.Exit(code=1)
 
+    if datetime is None:
+        if datetime_string_match is None:
+            logger.error(
+                "Either datetime or datetime_string_match must be set to process a geometry"
+            )
+            raise typer.Exit(code=1)
+        else:
+            datetime = datetime_string_match
+
+    version_clean = version_parser(version)
+
     # Get paths for writing results
     dest = get_store_for_url(target_location)
-    path = f"{product_id}/{variable_name}/{product_id}-{geometry_id}.json"
+    path = get_product_path(
+        product_id,
+        version_clean,
+        variable_name,
+        geometry_id=geometry_id,
+    )
 
     if type(dest) is S3Store:
         prefix = get_prefix(target_location)
@@ -194,12 +238,101 @@ def process_geometry(
             f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
         ),
         "productId": product_id,
-        "geometryId": geometry_id,
+        "geometryOutputId": geometry_id,
+        "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
         "variables": results,
-        "geometryProvenanceUrl": geometry_provenance_url,
-        "datasetProvenanceUrl": dataset_provenance_url,
+        "metadata": {
+            "geometryProvenanceUrl": geometry_provenance_url,
+            "datasetProvenanceUrl": dataset_provenance_url,
+        },
     }
 
     write_json(dest, path, product_output)
 
     logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
+
+
+@products_app.command("consolidate")
+def consolidate_product(
+    product_id: str = typer.Option(
+        "example-product", help="ID of the product being consolidated"
+    ),
+    version: str = typer.Option(
+        "0.0.0",
+        help="Semver-like version of the product being consolidated. Todo: workout how to replace with product-run-id",
+    ),
+    location: str = typer.Option(
+        "cache/products", help="Location to read the product files from"
+    ),
+    geometry_provenance_url: str = typer.Option(
+        ..., help="URL that points to the geometry provenance file"
+    ),
+    dataset_provenance_url: str = typer.Option(
+        None, help="URL that points to the dataset provenance file"
+    ),
+    variable_name: str = typer.Option(
+        "asset", help="Name of the variable to use for calculations (if applicable)"
+    ),
+) -> None:
+    logger.info(f"Consolidating product {product_id} from {location}")
+
+    store = get_store_for_url(location)
+
+    version_clean = version_parser(version)
+    path = get_product_path(product_id, version_clean, variable_name)
+
+    if type(store) is S3Store:
+        prefix = get_prefix(location)
+        if prefix is not None:
+            path = f"{prefix}/{path}"
+
+    url = get_url_from_store_filename(store, path)
+    logger.info(f"Looking for product files in {url}")
+
+    # Get a list of all the json files in the product directory
+    json_files = [f for f in store.list(path)]
+    json_files = [f["path"] for f in json_files[0] if f["path"].endswith(".json")]
+
+    logger.info(f"Found {len(json_files)} product files to consolidate")
+
+    # Load each file and combine into a pandas DataFrame
+    all_data = []
+    for file in json_files:
+        logger.info(f"Loading product file {file}")
+        product = read_dict(store, file)
+        geometry_provenance_url = product.get("metadata", {}).get(
+            "geometryProvenanceUrl", None
+        )
+        dataset_provenance_url = product.get("metadata", {}).get(
+            "datasetProvenanceUrl", None
+        )
+
+        # Do some quality checks
+        if dataset_provenance_url != dataset_provenance_url:
+            raise ValueError(
+                f"Dataset provenance URL mismatch in {file}: {dataset_provenance_url} != {dataset_provenance_url}"
+            )
+        if product_id != product.get("productId", None):
+            raise ValueError(
+                f"Product ID mismatch in {file}: {product_id} != {product.get('productId', None)}"
+            )
+        if geometry_provenance_url != geometry_provenance_url:
+            raise ValueError(
+                f"Geometry provenance URL mismatch in {file}: {geometry_provenance_url} != {geometry_provenance_url}"
+            )
+
+        all_data.append(product)
+
+    if not all_data:
+        logger.error(f"No valid product data found in {url}")
+        raise typer.Exit(code=1)
+
+    df = pd.DataFrame(all_data)
+    logger.info(f"Consolidated product data from {url}: {df.shape[0]} rows")
+
+    # Write the consolidated DataFrame to a new parquet
+    output_file = f"{path}/{product_id}-{version_clean}.parquet"
+    write_gdf_to_parquet(df, store, output_file)
+
+    out_url = get_url_from_store_filename(store, output_file)
+    logger.info(f"Wrote consolidated product data to {out_url}")
