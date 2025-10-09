@@ -33,6 +33,7 @@ def _meta_provenance(
     dataset_type: str,
     overwrite: bool,
     post_to_database: bool,
+    extra_info_dict: dict | None = None,
 ) -> None | str:
     """
     Get and write provenance information for a dataset or geometry.
@@ -67,6 +68,7 @@ def _meta_provenance(
         data_type=dataset_type,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
+        extra_info_dict=extra_info_dict,
     )
 
     # Write next to the dataset
@@ -140,6 +142,9 @@ def write_dataset_provenance(
 def write_geometry_provenance(
     id: str = typer.Option(..., help="ID of the dataset"),
     dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
+    pmtiles_url: str | None = typer.Option(
+        None, help="URL that points to the PMTiles file for the geometry"
+    ),
     dataset_type: str = typer.Option(
         "not-set",
         help="Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
@@ -176,6 +181,9 @@ def write_geometry_provenance(
         dataset_type=dataset_type,
         overwrite=overwrite,
         post_to_database=post_to_database,
+        extra_info_dict={"dataPmtilesUrl": pmtiles_url}
+        if pmtiles_url is not None
+        else None,
     )
     logger.info(f"Wrote provenance for geometry: {dataset_url}")
 
