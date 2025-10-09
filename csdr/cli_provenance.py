@@ -174,6 +174,9 @@ def write_geometry_provenance(
     post_geometry_in_bulk: bool = typer.Option(
         True, help="If true, post the geometry outputs in bulk"
     ),
+    batch_size: int = typer.Option(
+        50, help="Batch size for posting geometry outputs in bulk"
+    ),
 ) -> None:
     logger.info(f"Getting provenance for geometry: {dataset_url}")
 
@@ -197,7 +200,9 @@ def write_geometry_provenance(
     if post_geometry_outputs:
         if post_geometry_in_bulk:
             logger.info("Posting geometry outputs to database in bulk...")
-            post_bulk_geometry_outputs_to_database(dataset_url, run_id=geometry_run_id)
+            post_bulk_geometry_outputs_to_database(
+                dataset_url, run_id=geometry_run_id, batch_size=batch_size
+            )
         else:
             logger.info("Posting geometry outputs to database one at a time...")
             post_geometry_outputs_to_database(dataset_url, run_id=geometry_run_id)

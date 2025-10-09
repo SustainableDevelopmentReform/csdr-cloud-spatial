@@ -80,30 +80,44 @@ def add_geometry_id_name(
     return gdf
 
 
-def post_bulk_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
+def post_bulk_geometry_outputs_to_database(
+    geometry_url: str, run_id: str, batch_size: int | None = None
+) -> None:
     gpd = read_geospatial_file(geometry_url)
 
-    bulk_output = {"geometriesRunId": run_id, "outputs": []}
+    outputs = []
 
     for _, row in gpd.iterrows():
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
-        bulk_output["outputs"].append(geometry_output)
+        outputs.append(geometry_output)
 
-    response = post_geometry_output_bulk(bulk_output)
+    if batch_size is None or batch_size <= 0:
+        batch_size = len(outputs)
 
-    try:
-        response.raise_for_status()
-    except HTTPError:
+    for i in range(0, len(outputs), batch_size):
+        bulk_output = {
+            "geometriesRunId": run_id,
+            "outputs": outputs[i : i + batch_size],
+        }
         logger.info(
-            f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}"
-        )
-        logger.exception(
-            f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
+            f"Posting batch {i // batch_size + 1} with {len(bulk_output['outputs'])} geometry outputs to database in bulk..."
         )
 
-    logger.info(
-        f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
-    )
+        response = post_geometry_output_bulk(bulk_output)
+
+        try:
+            response.raise_for_status()
+        except HTTPError:
+            logger.info(
+                f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}"
+            )
+            logger.exception(
+                f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
+            )
+
+        logger.info(
+            f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
+        )
 
 
 def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
