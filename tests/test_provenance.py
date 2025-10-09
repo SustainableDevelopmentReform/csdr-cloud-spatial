@@ -7,8 +7,8 @@ from csdr.io import write_json
 from csdr.provenance import get_image_state, get_provenance
 
 PROVENANCE_DETAILS = {
-    "source_url": "https://example.com/source",
-    "source_metadata_url": "https://example.com/source/metadata",
+    # "source_url": "https://example.com/source",
+    # "source_metadata_url": "https://example.com/source/metadata",
     "data_url": "s3://example.com/file",
     "data_type": "stac-geoparquet",
 }
