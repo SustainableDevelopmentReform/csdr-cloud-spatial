@@ -7,6 +7,7 @@ from toolz import get_in
 from typer import Typer
 
 from csdr.app_integration import (
+    post_product_output_bulk,
     post_provenance,
 )
 from csdr.geometries import (
@@ -17,22 +18,26 @@ from csdr.io import (
     exists,
     get_dataset_name_from_url,
     get_store_for_url,
+    read_geospatial_file,
     write_json,
 )
+from csdr.products import parse_outputs
 from csdr.provenance import get_provenance
 
 provenance_app = Typer()
+
+ALLOWED_PROVENANCE_TYPES = ["dataset", "geometry", "product"]
 
 
 def _meta_provenance(
     id: str,
     type: str,
     dataset_url: str,
-    source_url: str | None,
-    source_metadata_url: str,
     dataset_type: str,
     overwrite: bool,
     post_to_database: bool,
+    source_url: str | None = None,
+    source_metadata_url: str | None = None,
     extra_info_dict: dict | None = None,
 ) -> None | str:
     """
@@ -57,8 +62,8 @@ def _meta_provenance(
     if source_url is None:
         source_url = dataset_url
 
-    if type not in ["geometry", "dataset"]:
-        raise ValueError("Type must be 'geometry' or 'dataset'")
+    if type not in ALLOWED_PROVENANCE_TYPES:
+        raise ValueError(f"Type must be one of {ALLOWED_PROVENANCE_TYPES}")
 
     provenance = get_provenance(
         id=id,
@@ -94,8 +99,8 @@ def _meta_provenance(
             f"Wrote provenance to database \n {dumps(response.json(), indent=2)}"
         )
 
-        geometry_run_id = get_in(["data", "id"], response.json(), no_default=True)
-        return geometry_run_id
+        run_id = get_in(["data", "id"], response.json(), no_default=True)
+        return run_id
 
     return None
 
@@ -181,9 +186,9 @@ def write_geometry_provenance(
         dataset_type=dataset_type,
         overwrite=overwrite,
         post_to_database=post_to_database,
-        extra_info_dict={"dataPmtilesUrl": pmtiles_url}
-        if pmtiles_url is not None
-        else None,
+        extra_info_dict=(
+            {"dataPmtilesUrl": pmtiles_url} if pmtiles_url is not None else None
+        ),
     )
     logger.info(f"Wrote provenance for geometry: {dataset_url}")
 
@@ -196,3 +201,67 @@ def write_geometry_provenance(
         else:
             logger.info("Posting geometry outputs to database one at a time...")
             post_geometry_outputs_to_database(dataset_url, run_id=geometry_run_id)
+
+
+@provenance_app.command("product")
+def write_product_provenance(
+    product_url: str = typer.Option(..., help="URL that points to the product parquet"),
+    product_id: str = typer.Option(..., help="Product ID"),
+    dataset_run_id: str = typer.Option(
+        ...,
+        help="Dataset run ID",
+    ),
+    geometries_run_id: str = typer.Option(
+        ...,
+        help="Geometry run ID",
+    ),
+    post_to_database: bool = typer.Option(
+        False, help="If true, post the provenance to the database"
+    ),
+    overwrite: bool = typer.Option(
+        False, help="If true, overwrite existing provenance file"
+    ),
+) -> None:
+    logger.info(f"Getting provenance for product: {product_url}")
+    df = read_geospatial_file(product_url)
+    parsed_outputs = parse_outputs(df)
+
+    product_run_id = _meta_provenance(
+        id=product_id,
+        type="product",
+        dataset_url=product_url,
+        dataset_type="parquet",
+        overwrite=overwrite,
+        post_to_database=post_to_database,
+        extra_info_dict={
+            "datasetRunId": dataset_run_id,
+            "geometriesRunId": geometries_run_id,
+        },
+    )
+
+    # Write to DB
+    if post_to_database:
+        logger.info("Posting consolidated product data to database")
+
+        for variable, output in parsed_outputs.items():
+            for timePoint in output.keys():
+                outputs = output[timePoint]
+                logger.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
+                content = {
+                    "productRunId": product_run_id,
+                    "timePoint": timePoint,
+                    "variableId": variable,
+                    "outputs": outputs,
+                }
+
+                response = post_product_output_bulk(content)
+                try:
+                    response.raise_for_status()
+                except HTTPError:
+                    logger.exception(
+                        f"Failed to post product output to database. Response was \n{dumps(response.json(), indent=2)}"
+                    )
+                else:
+                    logger.info(
+                        f"Posted product output for variable {variable} timePoint {timePoint}: {response.status_code}"
+                    )

@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import geopandas as gpd
+import pandas as pd
 from loguru import logger
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
@@ -136,6 +137,15 @@ def get_url_from_store_filename(
         raise ValueError(f"Unsupported store type: {type(store)}")
 
 
+def read_dict(store: S3Store | LocalStore, path: str) -> dict[str, Any]:
+    with BytesIO(store.get(path).bytes()) as buffer:
+        try:
+            json_dict = json.load(buffer)
+            return json_dict
+        except Exception as e:
+            logger.exception(f"Failed to read dict from {path} with exception {e}")
+
+
 def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
     store = get_store_for_url(url)
     path = get_dataset_name_from_url(store, url)
@@ -145,6 +155,10 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
             # TODO: Make it read more things, not just parquet
             gdf = gpd.read_parquet(buffer, **kwargs)
             return gdf
+        except ValueError:
+            # Try loading as a regular parquet file
+            buffer.seek(0)
+            return pd.read_parquet(buffer, **kwargs)
         except ArrowInvalid:
             # Try loading as generic file
             buffer.seek(0)
@@ -175,3 +189,15 @@ async def get_stac_item_dicts_from_store(
     return await asyncio.gather(
         *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
     )
+
+
+def write_gdf_to_parquet(
+    gdf: gpd.GeoDataFrame, store: S3Store | LocalStore, filename: str
+) -> None:
+    # Write GeoDataFrame to a GeoParquet file in memory
+    with BytesIO() as parquet_buffer:
+        gdf.to_parquet(parquet_buffer, engine="pyarrow")
+        parquet_buffer.seek(0)
+
+        # Write the parquet bytes to the target store using obstore
+        store.put(filename, parquet_buffer.getvalue())

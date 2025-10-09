@@ -12,10 +12,7 @@ from csdr.io import (
     get_url_from_store_filename,
 )
 
-SUPPORTED_DATA_FORMATS = [
-    "stac-geoparquet",
-    "geoparquet",
-]
+SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
 
 
 def get_image_state() -> dict[str, str]:
@@ -30,11 +27,11 @@ def get_provenance(
     id: str,
     store: HTTPStore | S3Store | LocalStore,
     path: str,
-    source_url: str,
-    source_metadata_url: str,
     data_url: str,
     data_type: str,
     description: str = "",
+    source_url: str | None = None,
+    source_metadata_url: str | None = None,
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
     if data_type not in SUPPORTED_DATA_FORMATS:
@@ -45,7 +42,7 @@ def get_provenance(
     info = get_file_info(store, path)
     image_state = get_image_state()
 
-    return {
+    provenance = {
         "id": id,
         "dataType": data_type,
         "dataEtag": info["e_tag"].strip('"'),
@@ -57,12 +54,17 @@ def get_provenance(
         # This should be the URL to this file itself
         "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
-        "sourceUrl": source_url,
-        "sourceMetadataUrl": source_metadata_url,
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
         # Extra stuffs?!
         **(extra_info_dict or {}),
     }
+
+    if source_url is None:
+        provenance["sourceUrl"] = data_url
+    if source_metadata_url is not None:
+        provenance["sourceMetadataUrl"] = source_metadata_url
+
+    return provenance
 
 
 def read_provenance(url: str) -> dict[str, str | int]:

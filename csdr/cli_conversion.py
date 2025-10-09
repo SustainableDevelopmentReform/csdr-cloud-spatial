@@ -18,6 +18,7 @@ from csdr.io import (
     get_store_for_url,
     get_url_from_store_filename,
     read_geospatial_file,
+    write_gdf_to_parquet,
 )
 
 conversion_app = typer.Typer()
@@ -115,13 +116,7 @@ def convert_zipfile_to_parquet(
         geometry_id=_get_geometry_id(geometry_id, source_internal_path_name),
     )
 
-    # Write GeoDataFrame to a GeoParquet file in memory
-    with BytesIO() as parquet_buffer:
-        gdf.to_parquet(parquet_buffer, engine="pyarrow")
-        parquet_buffer.seek(0)
-
-        # Write the parquet bytes to the target store using obstore
-        target_store.put(target_filename, parquet_buffer.getvalue())
+    write_gdf_to_parquet(gdf, target_store, target_filename)
 
     # !tippecanoe --force -z 10 --no-simplification-of-shared-nodes
     # --simplification 10 --drop-densest-as-needed
