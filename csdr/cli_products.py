@@ -7,7 +7,8 @@ import pandas as pd
 import typer
 from dask.distributed import Client
 from loguru import logger
-from obstore.store import S3Store
+from obstore.store import HTTPStore, LocalStore, S3Store
+from odc.geo.geom import Geometry
 
 from csdr.io import (
     exists,
@@ -27,6 +28,133 @@ products_app = typer.Typer()
 
 
 KNOWN_VARIABLES = ["sum-area-by-value"]
+
+
+def _validate_parameters(
+    variables_to_extract: list[str],
+    datetime: str | None,
+    datetime_string_match: str | None,
+) -> str:
+    """Validate parameters and return the datetime to use."""
+    if set(variables_to_extract) - set(KNOWN_VARIABLES):
+        logger.error(
+            f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
+        )
+        raise typer.Exit(code=1)
+
+    if datetime is None:
+        if datetime_string_match is None:
+            logger.error(
+                "Either datetime or datetime_string_match must be set to process a geometry"
+            )
+            raise typer.Exit(code=1)
+        else:
+            datetime = datetime_string_match
+
+    return datetime
+
+
+def _setup_dask_client(
+    use_dask: bool, dask_client_opts: dict[str, Any]
+) -> Client | None:
+    """Set up Dask client if requested."""
+    if not use_dask:
+        return None
+
+    logger.info(f"Starting Dask client with options: {dask_client_opts}")
+
+    # Parse the client opts, making them integers if they can be
+    for key, value in dask_client_opts.items():
+        try:
+            dask_client_opts[key] = int(value)
+        except ValueError:
+            pass
+
+    client = Client(**dask_client_opts)
+    logger.info(
+        f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
+    )
+    return client
+
+
+def _load_geometry_data(geometry_provenance_url: str) -> tuple[Any, str]:
+    """Load geometry provenance and return gdf and geometry_file_url."""
+    provenance = read_provenance(geometry_provenance_url)
+    geometry_file_url = provenance.get("dataUrl")
+    logger.info(f"Reading geometries from {geometry_file_url}")
+    gdf = read_geospatial_file(geometry_file_url)
+    return gdf, geometry_file_url
+
+
+def _create_product_output(
+    product_id: str,
+    geometry_id: str,
+    geometry_provenance_url: str,
+    dataset_provenance_url: str,
+    datetime: str,
+    results: dict[str, Any],
+) -> dict[str, Any]:
+    """Create the product output dictionary."""
+    return {
+        "id": make_uuid(
+            f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
+        ),
+        "productId": product_id,
+        "geometryOutputId": geometry_id,
+        "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
+        "variables": results,
+        "metadata": {
+            "geometryProvenanceUrl": geometry_provenance_url,
+            "datasetProvenanceUrl": dataset_provenance_url,
+        },
+    }
+
+
+def _process_single_geometry(
+    geometry_id: str,
+    geometry: Geometry,
+    variables_to_extract: list[str],
+    dataset_provenance_url: str,
+    datetime_string_match: str | None,
+    variable_name: str,
+    variable_value: float | None,
+    load_kwargs: dict[str, Any],
+    product_id: str,
+    geometry_provenance_url: str,
+    datetime: str,
+    dest: HTTPStore | LocalStore | S3Store,
+    path: str,
+    overwrite: bool,
+) -> bool:
+    """Process a single geometry and return True if processed, False if skipped."""
+    if exists(dest, path) and not overwrite:
+        logger.info(
+            f"Product already exists at {get_url_from_store_filename(dest, path)}, skipping processing for geometry {geometry_id}."
+        )
+        return False
+
+    logger.info(f"Processing geometry {geometry_id}")
+    results = process_variables_for_geometry(
+        geometry,
+        variables_to_extract,
+        dataset_provenance_url,
+        datetime_string_match=datetime_string_match,
+        variable_name=variable_name,
+        variable_value=variable_value,
+        load_kwargs=load_kwargs,
+    )
+    logger.info(f"Results for geometry {geometry_id}: {results}")
+
+    product_output = _create_product_output(
+        product_id,
+        geometry_id,
+        geometry_provenance_url,
+        dataset_provenance_url,
+        datetime,
+        results,
+    )
+    write_json(dest, path, product_output)
+    return True
 
 
 def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
@@ -153,23 +281,10 @@ def process_geometry(
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
 
-    variable_value = float(variable_value) if variable_value is not None else None
-
-    if set(variables_to_extract) - set(KNOWN_VARIABLES):
-        logger.error(
-            f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
-        )
-        raise typer.Exit(code=1)
-
-    if datetime is None:
-        if datetime_string_match is None:
-            logger.error(
-                "Either datetime or datetime_string_match must be set to process a geometry"
-            )
-            raise typer.Exit(code=1)
-        else:
-            datetime = datetime_string_match
-
+    variable_value_float = float(variable_value) if variable_value is not None else None
+    datetime = _validate_parameters(
+        variables_to_extract, datetime, datetime_string_match
+    )
     version_clean = version_parser(version)
 
     # Get paths for writing results
@@ -193,66 +308,44 @@ def process_geometry(
         logger.info(f"Product already exists at {dest_url}, skipping processing.")
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
-    # Load the provenance file
-    provenance = read_provenance(geometry_provenance_url)
-    geometry_file_url = provenance.get("dataUrl")
-    logger.info(f"Reading geometries from {geometry_file_url}")
-
-    gdf = read_geospatial_file(geometry_file_url)
-
+    # Load geometry data
+    gdf, _ = _load_geometry_data(geometry_provenance_url)
     geometry = get_geom_from_gdf(gdf, geometry_id)
 
-    # Use Dask distributed here
-    if use_dask:
-        logger.info(f"Starting Dask client with options: {dask_client_opts}")
+    # Set up Dask client
+    client = _setup_dask_client(use_dask, dask_client_opts)
 
-        # Parse the client opts, making them integers if they can be
-        for key, value in dask_client_opts.items():
-            try:
-                dask_client_opts[key] = int(value)
-            except ValueError:
-                pass
+    try:
+        results = process_variables_for_geometry(
+            geometry,
+            variables_to_extract,
+            dataset_provenance_url,
+            datetime_string_match=datetime_string_match,
+            variable_name=variable_name,
+            variable_value=variable_value_float,
+            load_kwargs=load_kwargs,
+        )
+        print(results)
 
-        client = Client(**dask_client_opts)
-        logger.info(
-            f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
+        logger.info(f"Results for geometry {geometry_id}: {results}")
+
+        # TODO: Validate product id, variable name and other things.
+
+        product_output = _create_product_output(
+            product_id,
+            geometry_id,
+            geometry_provenance_url,
+            dataset_provenance_url,
+            datetime,
+            results,
         )
 
-    results = process_variables_for_geometry(
-        geometry,
-        variables_to_extract,
-        dataset_provenance_url,
-        datetime_string_match=datetime_string_match,
-        variable_name=variable_name,
-        variable_value=variable_value,
-        load_kwargs=load_kwargs,
-    )
-    print(results)
+        write_json(dest, path, product_output)
+        logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
 
-    if use_dask:
-        client.close()
-
-    logger.info(f"Results for geometry {geometry_id}: {results}")
-
-    # TODO: Validate product id, variable name and other things.
-
-    product_output = {
-        "id": make_uuid(
-            f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
-        ),
-        "productId": product_id,
-        "geometryOutputId": geometry_id,
-        "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
-        "variables": results,
-        "metadata": {
-            "geometryProvenanceUrl": geometry_provenance_url,
-            "datasetProvenanceUrl": dataset_provenance_url,
-        },
-    }
-
-    write_json(dest, path, product_output)
-
-    logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
+    finally:
+        if client is not None:
+            client.close()
 
 
 @products_app.command("process-all-geometries")
@@ -316,23 +409,10 @@ def process_all_geometries(
         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
     )
 
-    variable_value = float(variable_value) if variable_value is not None else None
-
-    if set(variables_to_extract) - set(KNOWN_VARIABLES):
-        logger.error(
-            f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
-        )
-        raise typer.Exit(code=1)
-
-    if datetime is None:
-        if datetime_string_match is None:
-            logger.error(
-                "Either datetime or datetime_string_match must be set to process a geometry"
-            )
-            raise typer.Exit(code=1)
-        else:
-            datetime = datetime_string_match
-
+    variable_value_float = float(variable_value) if variable_value is not None else None
+    datetime = _validate_parameters(
+        variables_to_extract, datetime, datetime_string_match
+    )
     version_clean = version_parser(version)
 
     # Get paths for writing results
@@ -347,69 +427,38 @@ def process_all_geometries(
     dest_url = get_url_from_store_filename(dest, base_path)
     logger.info(f"Will write results to {dest_url}")
 
-    # Load the provenance file
-    provenance = read_provenance(geometry_provenance_url)
-    geometry_file_url = provenance.get("dataUrl")
-    logger.info(f"Reading geometries from {geometry_file_url}")
-
-    gdf = read_geospatial_file(geometry_file_url)
+    # Load geometry data
+    gdf, _ = _load_geometry_data(geometry_provenance_url)
     logger.info(f"Found {len(gdf)} geometries")
 
-    # Use Dask distributed here
-    if use_dask:
-        logger.info(f"Starting Dask client with options: {dask_client_opts}")
+    # Set up Dask client
+    client = _setup_dask_client(use_dask, dask_client_opts)
 
-        # Parse the client opts, making them integers if they can be
-        for key, value in dask_client_opts.items():
-            try:
-                dask_client_opts[key] = int(value)
-            except ValueError:
-                pass
+    try:
+        for _, row in gdf.iterrows():
+            geometry_id = row["csdr-id"]
+            geometry = get_geom_from_gdf(gdf, geometry_id)
+            path = f"{base_path}/{product_id}-{geometry_id}.json"
 
-        client = Client(**dask_client_opts)
-        logger.info(
-            f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
-        )
-
-    for _, row in gdf.iterrows():
-        geometry_id = row["csdr-id"]
-        geometry = get_geom_from_gdf(gdf, geometry_id)
-
-        path = f"{base_path}/{product_id}-{geometry_id}.json"
-
-        if exists(dest, path) and not overwrite:
-            logger.info(
-                f"Product already exists at {get_url_from_store_filename(dest, path)}, skipping processing for geometry {geometry_id}."
+            _process_single_geometry(
+                geometry_id=geometry_id,
+                geometry=geometry,
+                variables_to_extract=variables_to_extract,
+                dataset_provenance_url=dataset_provenance_url,
+                datetime_string_match=datetime_string_match,
+                variable_name=variable_name,
+                variable_value=variable_value_float,
+                load_kwargs=load_kwargs,
+                product_id=product_id,
+                geometry_provenance_url=geometry_provenance_url,
+                datetime=datetime,
+                dest=dest,
+                path=path,
+                overwrite=overwrite,
             )
-            continue  # Nothing to do
-        logger.info(f"Processing geometry {geometry_id}")
-        results = process_variables_for_geometry(
-            geometry,
-            variables_to_extract,
-            dataset_provenance_url,
-            datetime_string_match=datetime_string_match,
-            variable_name=variable_name,
-            variable_value=variable_value,
-            load_kwargs=load_kwargs,
-        )
-        logger.info(f"Results for geometry {geometry_id}: {results}")
-
-        product_output = {
-            "id": make_uuid(
-                f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
-            ),
-            "productId": product_id,
-            "geometryOutputId": geometry_id,
-            "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
-            "variables": results,
-            "metadata": {
-                "geometryProvenanceUrl": geometry_provenance_url,
-                "datasetProvenanceUrl": dataset_provenance_url,
-            },
-        }
-        write_json(dest, path, product_output)
-    if use_dask:
-        client.close()
+    finally:
+        if client is not None:
+            client.close()
 
     logger.info(f"Wrote results to {dest_url}")
 
