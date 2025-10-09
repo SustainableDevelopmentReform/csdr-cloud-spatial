@@ -1,5 +1,4 @@
-# Example of an optimized version - you don't need to use this, just showing possibilities
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3 AS base
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3
 
 # Build args include DOCKER_IMAGE and COMMIT
 ARG DOCKER_IMAGE=unknown
@@ -20,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     build-essential \
     jq \
+    libsqlite3-dev \
     && apt-get autoclean \
     && apt-get autoremove \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
@@ -30,6 +30,13 @@ RUN cd /tmp && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws
+
+# Install tippecanoe
+RUN git clone https://github.com/mapbox/tippecanoe.git \
+    && cd tippecanoe \
+    && make -j \
+    && make install \
+    && cd .. && rm -rf tippecanoe
 
 # Install UV (this layer rarely changes)
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
