@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from zipfile import ZipFile
 
 import typer
+import xarray as xr
 from loguru import logger
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.cog import write_cog
@@ -252,26 +253,31 @@ async def process_single_file(
         # Get the data from memory into a rasterio dataset
         data = open_rasterio(zip_file.open(name))
 
-        # Write it as a COG
-        cog_data = write_cog(data, ":mem:")
-        await target_store.put_async(out_key, cog_data)
+        if type(data) is not xr.DataArray:  # skip
+            logger.info(
+                f"Skipping file {name}. Expecting xarray.DataArray but got {type(data)} instead."
+            )
+        else:
+            # Write it as a COG
+            cog_data = write_cog(data, ":mem:")
+            await target_store.put_async(out_key, cog_data)
 
-        # Create the STAC doc and write it
-        stac_doc = create_stac_item(
-            target_uri,
-            input_datetime=datetime(2024, 1, 1),
-            collection="gmw",
-            id=name,
-            asset_name="mangrove",
-            with_proj=True,
-            with_raster=True,
-        )
+            # Create the STAC doc and write it
+            stac_doc = create_stac_item(
+                target_uri,
+                input_datetime=datetime(2024, 1, 1),
+                collection="gmw",
+                id=name,
+                asset_name="mangrove",
+                with_proj=True,
+                with_raster=True,
+            )
 
-        # Write STAC doc
-        stac_data = json.dumps(stac_doc.to_dict()).encode()
-        await target_store.put_async(out_stac, stac_data)
+            # Write STAC doc
+            stac_data = json.dumps(stac_doc.to_dict()).encode()
+            await target_store.put_async(out_stac, stac_data)
 
-        logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
+            logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
 
 async def run_extract_gmw(
