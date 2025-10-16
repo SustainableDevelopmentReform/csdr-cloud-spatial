@@ -48,7 +48,7 @@ async def cache_single_source(
         source_exists = exists(source, url.path)
         if not source_exists:
             logger.error(f"Source file does not exist at {source_url}. Cannot extract.")
-            raise typer.Exit(code=1)
+            return
         else:
             logger.info(
                 f"Source file found at {source_url}, proceeding with extraction."
@@ -59,7 +59,11 @@ async def cache_single_source(
 
         dest = None
         dest = get_store_for_url(target_location)
-        target_zip_name = f"{target_path}/{target_zip_name}"
+        target_zip_name = (
+            f"{target_path}/{target_zip_name}"
+            if target_path is not None
+            else target_zip_name
+        )
 
         target_url = get_url_from_store_filename(dest, target_zip_name)
         logger.info(f"Target URL for caching is {target_url}")
@@ -70,7 +74,7 @@ async def cache_single_source(
                 logger.info(
                     f"File already exists at target location with matching size of {size}. Skipping download."
                 )
-                return
+                return f"{target_location}{target_zip_name}"
             else:
                 logger.info(
                     f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
@@ -89,27 +93,14 @@ async def cache_single_source(
 
 
 async def run_cache_gmw(
-    source_location: str,
-    source_zip_name: str,
-    years_list: str,
+    source_locations: list[str],
     target_location: str,
     target_path: str,
-    target_zip_name: str,
     overwrite: bool,
     max_concurrent: int,
     out_file: str,
 ) -> None:
     """Async function to run the GMW cache with parallel processing."""
-
-    if len(years_list) == 0:
-        years_list = [""]
-    else:
-        logger.info(
-            f"Found {len(years_list)} years to process with max {max_concurrent} concurrent operations."
-        )
-
-    # Cleanup...
-    source_location = source_location.rstrip("/")
 
     # Create semaphore to limit concurrent operations
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -117,26 +108,21 @@ async def run_cache_gmw(
     # Create tasks for parallel processing
     tasks = [
         cache_single_source(
-            (
-                f"{source_location}/{source_zip_name}"
-                if len(years_list) == 1 and years_list[0] == ""
-                else f"{source_location}/{source_zip_name.format(year=str(year))}"
-            ),
+            source_location,
             target_location,
             target_path,
-            (
-                target_zip_name
-                if len(years_list) == 1 and years_list[0] == ""
-                else source_zip_name.replace("{year}", str(year))
-            ),
+            (source_location.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
             overwrite,
             semaphore,
         )
-        for year in years_list
+        for source_location in source_locations
     ]
 
     # Execute all tasks concurrently
     results = await asyncio.gather(*tasks)
+
+    # Strip out nulls if source file was not found
+    results = [file for file in results if file is not None]
 
     if out_file is not None:
         with open(out_file, "w") as f:
@@ -149,63 +135,38 @@ async def run_cache_gmw(
 @gmw_app.command("cache")
 def cache_gmw(
     source_location: str = typer.Option(
-        help="Base location of the source GMW file/s to cache.",
+        help="Location of the source GMW file/s to cache.",
         # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
-        default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
-    ),
-    source_zip_name: str = typer.Option(
-        help="Name of the source zip GMW file/s to cache.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
-    ),
-    years: str = typer.Option(
-        help="Which years of the source GMW file/s to cache.",
-        default=None,
+        # default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
     ),
     target_location: str = typer.Option(
         help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
         default="./cache/gmw",
     ),
-    target_zip_name: str = typer.Option(
-        help="Name of the zip file to save the GMW data as.",
-        default=None,
-    ),
     overwrite: bool = typer.Option(
         False, help="Replace existing files during caching."
     ),
     max_concurrent: int = typer.Option(
-        32, help="Maximum number of files to process concurrently."
+        32, help="Maximum number of source files to process concurrently."
     ),
     out_file: str = typer.Option(
-        None, help="Tempfile to write list of IDs to (otherwise print to console)"
+        None,
+        help="Tempfile to write list of target locations (otherwise print to console)",
     ),
 ) -> None:
     logger.info("Starting GMW caching process...")
-    target_path = ""
+    target_path = None
     if target_location.startswith("s3://"):
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
-    # Get list of years, if any, to process
-    if years is None or (
-        source_zip_name.find("{") == -1 and source_zip_name.find("}") == -1
-    ):  # hangle single files
-        years_list = []
-    elif years == "all":  # handle all years between 1996 and 2020
-        years_list = list(range(1996, 2021))
-    else:
-        years_list = years.split(",")  # handle specified years
-
-    # If target isn't specified, use the source file name
-    if target_zip_name is None:
-        target_zip_name = source_zip_name
+    # Get list of source_locations
+    source_locations = source_location.split(",")
 
     asyncio.run(
         run_cache_gmw(
-            source_location,
-            source_zip_name,
-            years_list,
+            source_locations,
             target_location,
             target_path,
-            target_zip_name,
             overwrite,
             max_concurrent,
             out_file,
