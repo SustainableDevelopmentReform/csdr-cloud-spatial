@@ -144,8 +144,7 @@ product-gmw-eez-consolidate-s3:
 # Dataset GMW v4
 cache-gmw-v4:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmw-v4/raw/ \
-		--source-zip-name gmw_mng_2020_v4019_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=cache/gmw/v4/raw
 
 extract-gmw-v4:
@@ -168,25 +167,15 @@ provenance-gmw-v4:
 
 
 # Dataset GMW v3
-cache-gmw-v3:
+cache-gmw-v3-single-file:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/ \
-		--source-zip-name gmw_v3_1996_gtiff.zip \
-		--target-location=cache/gmw/v3/ \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--target-location=cache/gmw/v3/
 
-cache-gmw-v3-all-years:
+cache-gmw-v3-multiple-files:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/ \
-		--source-zip-name gmw_v3_{year}_gtiff.zip \
-		--target-location=cache/gmw/v3/ \
-		--years=all
-
-cache-gmw-v3-two-years:
-	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/ \
-		--source-zip-name gmw_v3_{year}_gtiff.zip \
-		--target-location=cache/gmw/v3/ \
-		--years=1996,2007
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--target-location=cache/gmw/v3/
 
 # Test GeoJSON
 geometry-geojson-convert:
