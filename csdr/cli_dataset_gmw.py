@@ -224,9 +224,17 @@ async def process_single_file(
             await target_store.put_async(out_key, cog_data)
 
             # Create the STAC doc and write it
+            # Let's see which version of GMW we have
+            if "_v3" in name:
+                dt = datetime(int(name[-11:-7]), 1, 1)
+            elif "_v4" in name:
+                dt = datetime(2020, 1, 1)
+            else:
+                dt = datetime.now()
+
             stac_doc = create_stac_item(
                 target_uri,
-                input_datetime=datetime(2024, 1, 1),
+                input_datetime=dt,
                 collection="gmw",
                 id=name,
                 asset_name="mangrove",
