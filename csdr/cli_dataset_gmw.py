@@ -2,7 +2,7 @@
 import asyncio
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from urllib.parse import urlparse
 from zipfile import ZipFile
@@ -226,16 +226,26 @@ async def process_single_file(
             # Create the STAC doc and write it
             # Let's see which version of GMW we have
             if "_v3" in name:
-                dt = datetime(int(name[-11:-7]), 1, 1)
+                start_datetime = datetime(int(name[-11:-7]), 1, 1).strftime("%Y-%m-%d")
+                mid_datetime = datetime(int(name[-11:-7]), 7, 2)
+                end_datetime = datetime(int(name[-11:-7]), 12, 31).strftime("%Y-%m-%d")
             elif "_v4" in name:
-                dt = datetime(2020, 1, 1)
+                start_datetime = datetime(2020, 1, 1).strftime("%Y-%m-%d")
+                mid_datetime = datetime(2020, 7, 2)
+                end_datetime = datetime(2020, 12, 31).strftime("%Y-%m-%d")
             else:
-                dt = datetime.now()
+                start_datetime = datetime.now().strftime("%Y-%m-%d")
+                mid_datetime = datetime.now(UTC)
+                end_datetime = datetime.now().strftime("%Y-%m-%d")
 
             stac_doc = create_stac_item(
                 target_uri,
-                input_datetime=dt,
+                input_datetime=mid_datetime,
                 collection="gmw",
+                properties={
+                    "start_datetime": start_datetime,
+                    "end_datetime": end_datetime,
+                },
                 id=name,
                 asset_name="mangrove",
                 with_proj=True,
