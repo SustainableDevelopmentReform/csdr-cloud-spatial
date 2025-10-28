@@ -288,7 +288,7 @@ def process_geometry(
     version_clean = version_parser(version)
 
     # Get paths for writing results
-    dest = get_store_for_url(target_location)
+    dest = get_store_for_url(f"{target_location}/{datetime}")
     path = get_product_path(
         product_id,
         version_clean,
