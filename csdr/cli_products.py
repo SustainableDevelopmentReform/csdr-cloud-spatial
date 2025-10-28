@@ -184,11 +184,15 @@ def get_product_path(
     product_id: str,
     version: str,
     variable_name: str,
+    datetime: str | None = None,
     geometry_id: str | None = None,
 ) -> str:
     path = f"{product_id}/{variable_name}/{version}"
+    if datetime is not None:
+        path = f"{path}/{datetime}"
     if geometry_id is not None:
         path = f"{path}/{product_id}-{geometry_id}.json"
+
     return path
 
 
@@ -288,12 +292,13 @@ def process_geometry(
     version_clean = version_parser(version)
 
     # Get paths for writing results
-    dest = get_store_for_url(f"{target_location}/{datetime}")
+    dest = get_store_for_url(target_location)
     path = get_product_path(
         product_id,
         version_clean,
         variable_name,
         geometry_id=geometry_id,
+        datetime=datetime,
     )
 
     if type(dest) is S3Store:

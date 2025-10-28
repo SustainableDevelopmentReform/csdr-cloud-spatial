@@ -86,16 +86,30 @@ product-seagrass-eez-fiji:
 # Product GMW EEZ
 # 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed
 # 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
-product-gmw-eez-test-geom:
+product-gmw-v4-eez-test-geom:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--target-location=cache/products/gmw_eez/ \
+		--target-location=cache/products/gmw_v4_eez/ \
 		--version=0.0.2 \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
+		--overwrite
+
+product-gmw-v3-eez-test-geom:
+	csdr products process-geometry \
+		--product-id=temp-id-please-ignore \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--target-location=cache/products/gmw_v3_eez/ \
+		--version=0.0.2 \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime-string-match=2000 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
