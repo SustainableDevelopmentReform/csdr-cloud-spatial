@@ -109,7 +109,7 @@ product-gmw-v3-eez-test-geom:
 		--version=0.0.2 \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
-		--datetime-string-match=2000 \
+		--datetime-string-match=1996 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
