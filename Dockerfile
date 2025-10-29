@@ -32,7 +32,7 @@ RUN cd /tmp && \
     rm -rf awscliv2.zip aws
 
 # Install tippecanoe
-RUN git clone https://github.com/mapbox/tippecanoe.git \
+RUN git clone https://github.com/felt/tippecanoe.git \
     && cd tippecanoe \
     && make -j \
     && make install \
