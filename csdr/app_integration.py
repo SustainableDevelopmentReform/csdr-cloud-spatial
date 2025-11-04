@@ -40,6 +40,9 @@ def post_provenance(
         path = "api/v0/geometries-run"
         # Change id to geometryId
         provenance["geometriesId"] = provenance.pop("id")
+        # Change runId to id if it exists
+        if "runId" in provenance:
+            provenance["id"] = provenance.pop("runId")
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId

@@ -146,6 +146,10 @@ def write_dataset_provenance(
 @provenance_app.command("geometry")
 def write_geometry_provenance(
     id: str = typer.Option(..., help="ID of the dataset"),
+    run_id: str | None = typer.Option(
+        None,
+        help="Run ID to associate geometry outputs with",
+    ),
     dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry"
@@ -180,6 +184,14 @@ def write_geometry_provenance(
 ) -> None:
     logger.info(f"Getting provenance for geometry: {dataset_url}")
 
+    extra_info_dict = {}
+
+    if run_id is not None:
+        extra_info_dict["runId"] = run_id
+
+    if pmtiles_url is not None:
+        extra_info_dict["dataPmtilesUrl"] = pmtiles_url
+
     geometry_run_id = _meta_provenance(
         id=id,
         type="geometry",
@@ -189,9 +201,7 @@ def write_geometry_provenance(
         dataset_type=dataset_type,
         overwrite=overwrite,
         post_to_database=post_to_database,
-        extra_info_dict=(
-            {"dataPmtilesUrl": pmtiles_url} if pmtiles_url is not None else None
-        ),
+        extra_info_dict=extra_info_dict,
     )
     logger.info(f"Wrote provenance for geometry: {dataset_url}")
 
