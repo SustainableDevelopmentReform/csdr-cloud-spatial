@@ -31,21 +31,25 @@ geometry-eez-convert:
 geometry-eez-provenance:
 	csdr provenance geometry \
 		--id eez-v4 \
+		--run-id=fancy-long-uuid-thing \
 		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-		--dataset-type geoparquet
+		--dataset-type geoparquet \
+		--overwrite
 
 geometry-eez-provenance-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
+		--run-id=fancy-long-uuid-thing \
 		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
 		--pmtiles-url=cache/eez/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--post-to-database \
-		--post-geometry-outputs
+		--post-geometry-outputs \
+		--overwrite
 
 
 geometry-eez-convert-s3:

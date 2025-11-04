@@ -32,7 +32,7 @@ def get_provenance(
     description: str = "",
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    extra_info_dict: dict[str, str | int] | None = None,
+    extra_info_dict: dict[str, str | int] = {},
 ) -> dict[str, str | int]:
     if data_type not in SUPPORTED_DATA_FORMATS:
         raise ValueError(
@@ -55,8 +55,8 @@ def get_provenance(
         "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
-        # Extra stuffs?!
-        **(extra_info_dict or {}),
+        # Extra stuff!
+        **extra_info_dict,
     }
 
     if source_url is None:
