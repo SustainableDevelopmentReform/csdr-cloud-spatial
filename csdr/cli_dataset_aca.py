@@ -25,7 +25,7 @@ from csdr.io import (
 )
 from csdr.utils import suppress_rust_output
 
-gmw_app = typer.Typer()
+aca_app = typer.Typer()
 
 
 """
@@ -39,7 +39,7 @@ async def cache_single_source(
 ) -> str:
     # Process a single file from source.
     async with semaphore:
-        logger.info(f"Caching GMW from {source_url} to {target_location}...")
+        logger.info(f"Caching ACA from {source_url} to {target_location}...")
 
         url = urlparse(source_url)
 
@@ -94,7 +94,7 @@ async def cache_single_source(
 
 
 
-async def run_cache_gmw(
+async def run_cache_aca(
     source_locations: list[str],
     target_location: str,
     target_path: str,
@@ -102,7 +102,7 @@ async def run_cache_gmw(
     max_concurrent: int,
     out_file: str,
 ) -> None:
-    # Async function to run the GMW cache with parallel processing.
+    # Async function to run the ACA cache with parallel processing.
 
     # Create semaphore to limit concurrent operations
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -132,51 +132,6 @@ async def run_cache_gmw(
         logger.info(f"Wrote target files to {out_file}")
     else:
         sys.stdout.write(json.dumps(results, indent=4))
-
-
-@gmw_app.command("cache")
-def cache_gmw(
-    source_location: str = typer.Option(
-        help="Location of the source GMW file/s to cache.",
-        # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
-        # default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
-    ),
-    target_location: str = typer.Option(
-        help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
-        default="./cache/gmw",
-    ),
-    overwrite: bool = typer.Option(
-        False, help="Replace existing files during caching."
-    ),
-    max_concurrent: int = typer.Option(
-        32, help="Maximum number of source files to process concurrently."
-    ),
-    out_file: str = typer.Option(
-        None,
-        help="Tempfile to write list of target locations (otherwise print to console)",
-    ),
-) -> None:
-    logger.info("Starting GMW caching process...")
-    target_path = None
-    if target_location.startswith("s3://"):
-        target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
-
-    # Get list of source_locations
-    source_locations = source_location.split(",")
-
-    asyncio.run(
-        run_cache_gmw(
-            source_locations,
-            target_location,
-            target_path,
-            overwrite,
-            max_concurrent,
-            out_file,
-        )
-    )
-    logger.info(
-        f"GMW caching process completed. Cached to {target_location.rstrip('/')}"
-    )
 
 
 async def process_single_file(
@@ -226,7 +181,7 @@ async def process_single_file(
             await target_store.put_async(out_key, cog_data)
 
             # Create the STAC doc and write it
-            # Let's see which version of GMW we have
+            # Let's see which version of ACA we have
             if "_v3" in name:
                 start_datetime = datetime(int(name[-11:-7]), 1, 1).strftime(
                     "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -247,7 +202,7 @@ async def process_single_file(
             stac_doc = create_stac_item(
                 target_uri,
                 input_datetime=mid_datetime,
-                collection="gmw",
+                collection="aca",
                 properties={
                     "start_datetime": start_datetime,
                     "end_datetime": end_datetime,
@@ -265,14 +220,14 @@ async def process_single_file(
             logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
 
-async def run_extract_gmw(
+async def run_extract_aca(
     source_location: str,
     source_zip_name: str,
     target_location: str,
     overwrite: bool,
     max_concurrent: int,
 ) -> None:
-    # Async function to run the GMW extraction with parallel processing.
+    # Async function to run the ACA extraction with parallel processing.
     store = None
     s3_prefix = None
 
@@ -332,22 +287,22 @@ async def run_extract_gmw(
         # Execute all tasks concurrently
         await asyncio.gather(*tasks)
 
-    logger.info("GMW extraction process completed.")
+    logger.info("ACA extraction process completed.")
 
 
-@gmw_app.command("extract")
-def extract_gmw(
+@aca_app.command("extract")
+def extract_aca(
     source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/gmw",
+        help="Local or remote path (file:// or s3://) to store the extracted ACA files.",
+        default="./cache/aca",
     ),
     source_zip_name: str = typer.Option(
-        help="Name of the zip file to extract the GMW data from.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
+        help="Name of the zip file to extract the ACA data from.",
+        default="s3://csdr-public-dev/datasets/aca/0-0-1/cache/*.zip",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/gmw",
+        help="Local or remote path (file:// or s3://) to store the extracted ACA files.",
+        default="./cache/aca",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
@@ -356,74 +311,15 @@ def extract_gmw(
         32, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
-    logger.info("Starting GMW extraction process...")
+    logger.info("Starting ACA extraction process...")
     asyncio.run(
-        run_extract_gmw(
+        run_extract_aca(
             source_location, source_zip_name, target_location, overwrite, max_concurrent
         )
     )
 
 
-async def run_index_gmw(
-    source_location: str, target_location: str, overwrite: bool = True
-) -> None:
-    store = get_store_for_url(source_location)
-    s3_prefix = None
-    if type(store) is S3Store:
-        s3_prefix = get_prefix(source_location)
-
-    dest = get_store_for_url(target_location)
-
-    out_filename = "gmw.parquet"
-    dest_s3_prefix = None
-
-    if type(dest) is S3Store:
-        dest_s3_prefix = get_prefix(target_location)
-        if dest_s3_prefix is not None:
-            out_filename = f"{dest_s3_prefix}/{out_filename}"
-
-    # Check for existing geoparquet file
-    if exists(dest, out_filename) and not overwrite:
-        logger.info(
-            f"Parquet file already exists at {out_filename}, skipping indexing."
-        )
-        return
-    else:
-        if overwrite:
-            logger.info("Overwrite is enabled, re-indexing GMW.")
-        else:
-            logger.info("Parquet file does not exist, proceeding with indexing.")
-
-    # Find all the the GMW STAC files
-    item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
-
-    result_location = get_url_from_store_filename(dest, out_filename)
-
-    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
-    with suppress_rust_output():
-        await write(out_filename, item_dicts, store=dest)
-
-    logger.info(f"Parquet write completed, wrote to {result_location}")
-
-
-@gmw_app.command("index")
-def index_gmw(
-    source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to the GMW files.",
-        default="./cache/gmw",
-    ),
-    target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
-        default="./cache/gmw",
-    ),
-    overwrite: bool = typer.Option(True, help="Replace existing index file"),
-) -> None:
-    logger.info("Starting GMW indexing process...")
-    asyncio.run(run_index_gmw(source_location, target_location, overwrite))
-    logger.info("GMW indexing process completed.")
-"""
-
-async def run_merge_aca(
+async def run_index_aca(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
     store = get_store_for_url(source_location)
@@ -449,12 +345,87 @@ async def run_merge_aca(
         return
     else:
         if overwrite:
-            logger.info("Overwrite is enabled, re-merging ACA.")
+            logger.info("Overwrite is enabled, re-indexing ACA.")
         else:
             logger.info("Parquet file does not exist, proceeding with indexing.")
 
-    # now do the merging
-    logger.info("merging")
+    # Find all the the ACA STAC files
+    item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
+
+    result_location = get_url_from_store_filename(dest, out_filename)
+
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
+    with suppress_rust_output():
+        await write(out_filename, item_dicts, store=dest)
+
+    logger.info(f"Parquet write completed, wrote to {result_location}")
+
+
+@aca_app.command("index")
+def index_aca(
+    source_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to the ACA files.",
+        default="./cache/aca",
+    ),
+    target_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the indexed ACA parquet file.",
+        default="./cache/aca",
+    ),
+    overwrite: bool = typer.Option(True, help="Replace existing index file"),
+) -> None:
+    logger.info("Starting ACA indexing process...")
+    asyncio.run(run_index_aca(source_location, target_location, overwrite))
+    logger.info("ACA indexing process completed.")
+"""
+
+@aca_app.command("unzip")
+def unzip_aca(
+    source_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to the ACA files.",
+        default="./cache/aca",
+    ),
+    target_location: str = typer.Option(
+        help="Local or remote path (file:// or s3://) to store the merged ACA parquet file.",
+        default="./cache/aca",
+    ),
+    overwrite: bool = typer.Option(True, help="Replace existing index file"),
+) -> None:
+    logger.info("Starting ACA unzipping process...")
+    asyncio.run(run_unzip_aca(source_location, target_location, overwrite))
+    logger.info("ACA unzipping process completed.")
+
+async def run_unzip_aca(
+    source_location: str, target_location: str, overwrite: bool = True
+) -> None:
+    store = get_store_for_url(source_location)
+    s3_prefix = None
+    if type(store) is S3Store:
+        s3_prefix = get_prefix(source_location)
+
+    dest = get_store_for_url(target_location)
+
+    dest_s3_prefix = None
+
+    if type(dest) is S3Store:
+        dest_s3_prefix = get_prefix(target_location)
+        if dest_s3_prefix is not None:
+            out_filename = f"{dest_s3_prefix}/{out_filename}"
+
+    """
+    # Check for existing unzipped reef extent gpkg files
+    if exists(dest, out_filename) and not overwrite: # update this to check for unzipped reef extent gpkg files instead of parquet
+        logger.info(
+            f"unzipped reef extent gpkg files already exist at {out_filename}, skipping indexing."
+        )
+        return
+    else:
+        if overwrite:
+            logger.info("Overwrite is enabled, re-unzipping ACA.")
+        else:
+            logger.info("Unzipped reef extent gpkg files do not exist, proceeding with unzipping.")
+    """
+    # do the unzipping here
+    logger.info("Unzipping")
 
 
 @aca_app.command("merge")
@@ -473,3 +444,7 @@ def merge_aca(
     asyncio.run(run_merge_aca(source_location, target_location, overwrite))
     logger.info("ACA merging process completed.")
 
+# need to do:
+#     extract: unzip all region zip files
+#     merge: merge all reef extent gpkg into one geoparquet
+#     clean: clean up the unzipped files? keep the zips
