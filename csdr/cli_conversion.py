@@ -122,40 +122,45 @@ def convert_zipfile_to_parquet(
     # --simplification 10 --drop-densest-as-needed
     # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
 
-    # Create a PMTiles files with tippecanoe
-    pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
+    if create_pmtiles:
+        logger.info("Creating PMTiles file alongside the parquet...")
+        # Create a PMTiles files with tippecanoe
+        pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
 
-    # Do the work in a local temp directory
-    with TemporaryDirectory() as tmpdirname:
-        local_geojson = os.path.join(tmpdirname, "data.geojson")
-        local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
+        # Do the work in a local temp directory
+        with TemporaryDirectory() as tmpdirname:
+            local_geojson = os.path.join(tmpdirname, "data.geojson")
+            local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
 
-        # Keep only the id and name fields, plus geometry
-        gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
-        gdf.to_file(local_geojson, driver="GeoJSON")
+            # Keep only the id and name fields, plus geometry
+            gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
+            gdf.to_file(local_geojson, driver="GeoJSON")
 
-        # Create PMTiles file with tippecanoe
-        subprocess.run(
-            [
-                "tippecanoe",
-                "--force",
-                "-z",
-                "10",
-                "--no-simplification-of-shared-nodes",
-                "--simplification",
-                "10",
-                "--drop-densest-as-needed",
-                "--layer",
-                "data",
-                "--output",
-                local_pmtiles,
-                local_geojson,
-            ],
-            check=True,
-        )
+            # Create PMTiles file with tippecanoe
+            subprocess.run(
+                [
+                    "tippecanoe",
+                    "--force",
+                    "-z",
+                    "10",
+                    "--no-simplification-of-shared-nodes",
+                    "--simplification",
+                    "10",
+                    "--drop-densest-as-needed",
+                    "--layer",
+                    "data",
+                    "--output",
+                    local_pmtiles,
+                    local_geojson,
+                ],
+                check=True,
+            )
 
-        # Upload the PMTiles file to the target store
-        target_store.put(pmtiles_file, local_pmtiles)
+            # Upload the PMTiles file to the target store
+            target_store.put(pmtiles_file, local_pmtiles)
+        logger.info(f"Created PMTiles file at {pmtiles_file}")
+    else:
+        logger.info("Skipping PMTiles creation.")
 
     logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
 
