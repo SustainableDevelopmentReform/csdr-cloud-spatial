@@ -28,8 +28,8 @@ from csdr.utils import suppress_rust_output
 aca_app = typer.Typer()
 
 
-"""
-async def cache_single_source(
+
+async def unzip_single_region(
     source_url: str,
     target_location: str,
     target_path: str,
@@ -37,9 +37,9 @@ async def cache_single_source(
     overwrite: bool,
     semaphore: asyncio.Semaphore,
 ) -> str:
-    # Process a single file from source.
+    # Unzip a single region file in S3
     async with semaphore:
-        logger.info(f"Caching ACA from {source_url} to {target_location}...")
+        logger.info(f"Unzipping ACA region from {source_url} to {target_location}...")
 
         url = urlparse(source_url)
 
@@ -66,158 +66,6 @@ async def cache_single_source(
             else target_zip_name
         )
 
-        target_url = get_url_from_store_filename(dest, target_zip_name)
-        logger.info(f"Target URL for caching is {target_url}")
-
-        if exists(dest, target_zip_name) and not overwrite:
-            dest_meta = dest.head(target_zip_name)
-            if size is not None and "size" in dest_meta and dest_meta["size"] == size:
-                logger.info(
-                    f"File already exists at target location with matching size of {size}. Skipping download."
-                )
-                return f"{target_location}{target_zip_name}"
-            else:
-                logger.info(
-                    f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
-                )
-
-        if overwrite:
-            logger.info(f"Overwrite is enabled, re-downloading {source_url} file.")
-        else:
-            logger.info(
-                f"File {target_zip_name} does not exist at target location, downloading."
-            )
-        _ = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded to {target_url}")
-
-        return f"{target_location}{target_zip_name}"
-
-
-
-async def run_cache_aca(
-    source_locations: list[str],
-    target_location: str,
-    target_path: str,
-    overwrite: bool,
-    max_concurrent: int,
-    out_file: str,
-) -> None:
-    # Async function to run the ACA cache with parallel processing.
-
-    # Create semaphore to limit concurrent operations
-    semaphore = asyncio.Semaphore(max_concurrent)
-
-    # Create tasks for parallel processing
-    tasks = [
-        cache_single_source(
-            source_location,
-            target_location,
-            target_path,
-            (source_location.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
-            overwrite,
-            semaphore,
-        )
-        for source_location in source_locations
-    ]
-
-    # Execute all tasks concurrently
-    results = await asyncio.gather(*tasks)
-
-    # Strip out nulls if source file was not found
-    results = [file for file in results if file is not None]
-
-    if out_file is not None:
-        with open(out_file, "w") as f:
-            json.dump(results, f, indent=4)
-        logger.info(f"Wrote target files to {out_file}")
-    else:
-        sys.stdout.write(json.dumps(results, indent=4))
-
-
-async def process_single_file(
-    name: str,
-    zip_file: ZipFile,
-    target_location: str,
-    target_store: S3Store | LocalStore,
-    overwrite: bool,
-    semaphore: asyncio.Semaphore,
-) -> None:
-    # Process a single file from the zip archive.
-    async with semaphore:
-        # logger.info(f"Working on {name}...")
-        out_key = name
-        out_stac = name.replace(".tif", ".stac-item.json")
-
-        # If S3, we need a S3 URI, otherwise, just a local path
-        if type(target_store) is S3Store:
-            s3_prefix = get_prefix(target_location)
-            if s3_prefix is not None:
-                out_key = f"{s3_prefix}/{out_key}"
-                out_stac = f"{s3_prefix}/{out_stac}"
-            target_uri = f"s3://{target_store.config['bucket']}/{out_key}"
-        else:
-            target_uri = f"{target_location}/{out_key}"
-
-        stac_uri = target_uri.replace(".tif", ".stac-item.json")
-        if exists(target_store, out_stac) and not overwrite:
-            logger.info(f"STAC doc already exists for {stac_uri}, skipping.")
-            return
-        else:
-            if overwrite:
-                logger.info(f"Overwrite is enabled, re-processing {stac_uri}.")
-            else:
-                logger.info(f"STAC does not exist for {stac_uri}, processing.")
-
-        # Get the data from memory into a rasterio dataset
-        data = open_rasterio(zip_file.open(name))
-
-        if type(data) is not xr.DataArray:  # skip
-            logger.info(
-                f"Skipping file {name}. Expecting xarray.DataArray but got {type(data)} instead."
-            )
-        else:
-            # Write it as a COG
-            cog_data = write_cog(data, ":mem:")
-            await target_store.put_async(out_key, cog_data)
-
-            # Create the STAC doc and write it
-            # Let's see which version of ACA we have
-            if "_v3" in name:
-                start_datetime = datetime(int(name[-11:-7]), 1, 1).strftime(
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
-                mid_datetime = datetime(int(name[-11:-7]), 7, 2)
-                end_datetime = datetime(int(name[-11:-7]), 12, 31).strftime(
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
-            elif "_v4" in name:
-                start_datetime = datetime(2020, 1, 1).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                mid_datetime = datetime(2020, 7, 2)
-                end_datetime = datetime(2020, 12, 31).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-            else:
-                start_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                mid_datetime = datetime.now(UTC)
-                end_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-            stac_doc = create_stac_item(
-                target_uri,
-                input_datetime=mid_datetime,
-                collection="aca",
-                properties={
-                    "start_datetime": start_datetime,
-                    "end_datetime": end_datetime,
-                },
-                id=name,
-                asset_name="mangrove",
-                with_proj=True,
-                with_raster=True,
-            )
-
-            # Write STAC doc
-            stac_data = json.dumps(stac_doc.to_dict()).encode()
-            await target_store.put_async(out_stac, stac_data)
-
-            logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
 
 async def run_extract_aca(
@@ -376,7 +224,7 @@ def index_aca(
     logger.info("Starting ACA indexing process...")
     asyncio.run(run_index_aca(source_location, target_location, overwrite))
     logger.info("ACA indexing process completed.")
-"""
+
 
 @aca_app.command("unzip")
 def unzip_aca(
