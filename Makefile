@@ -13,12 +13,17 @@ dataset-seagrass-provenance:
 		--dataset-type stac-geoparquet
 
 # Geometry EEZ
-geometry-eez-cache:
+geometry-eez-cache-local:
 	csdr eez cache
 
 geometry-eez-cache-s3:
 	csdr eez cache \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez/1-0-0 \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez/1-0-0/raw \
+		--overwrite
+
+geometry-eez-cache-s3-public-dev:
+	csdr eez cache \
+		--target-location s3://csdr-public-dev/geometries/eez/1-0-0/raw \
 		--overwrite
 
 geometry-eez-convert:
