@@ -54,6 +54,7 @@ def write_json(
 def get_store_for_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> HTTPStore | S3Store | LocalStore:
+    # This function allows the code to work seamlessly with local files, S3 buckets, or HTTP endpoints by abstracting the storage backend.
     if url.startswith("s3://"):
         s3_url = urlparse(url)
         bucket = s3_url.netloc
