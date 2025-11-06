@@ -42,7 +42,7 @@ def convert_zipfile_to_parquet(
         help="The internal path within the zip file to the data to extract.",
         default="EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp", # EEZ is just an example
     ),
-    # need to update logic for target_location. I think it should have the run_id already built in. then you don't need the run_id param.
+    # run_id is already built into target_location
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
         default="./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing",
@@ -65,8 +65,6 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    # TODO: insert the run id into the path. or do this in the yaml workflow before calling this command
-    # run id path needs to be just before the file name so it is actually easy to insert
     store = get_store_for_url(source_zip_location)
     source_zip_name_path = get_dataset_name_from_url(store, source_zip_location)
 
@@ -92,7 +90,7 @@ def convert_zipfile_to_parquet(
         # S3Store needs the full path including prefix
         path = get_prefix(target_location)
         if path is not None:
-            target_filename = f"{path}/{target_filename}" # could easily insert run id here
+            target_filename = f"{path}/{target_filename}"
     target_url = get_url_from_store_filename(target_store, target_filename)
 
     # Check if target file already exists

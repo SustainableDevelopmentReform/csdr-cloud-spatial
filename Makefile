@@ -15,9 +15,9 @@ dataset-seagrass-provenance:
 # Geometry EEZ
 ### EEZ cache
 geometry-eez-cache-local:
-	csdr eez cache
-	--target-location ./cache/eez-v4/0-0-1
-	--overwrite
+	csdr eez cache \
+		--target-location ./cache/eez-v4/0-0-1/raw \
+		--overwrite
 
 geometry-eez-cache-s3:
 	csdr eez cache \
@@ -40,11 +40,18 @@ geometry-eez-convert-local:
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
-		--run-id= \
 		--name-field UNION \
 		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
 		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing \
+		--create-pmtiles
+
+geometry-eez-convert-s3-public-dev:
+	csdr convert zip-to-parquet \
+		--name-field UNION \
+		--source-zip-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
+		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
+		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing \
 		--create-pmtiles
 
 ### EEZ provenance
