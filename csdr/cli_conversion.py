@@ -45,7 +45,7 @@ def convert_zipfile_to_parquet(
     # need to update logic for target_location. I think it should have the run_id already built in. then you don't need the run_id param.
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
-        default="./cache/eez-v4/0-0-1/fancy-long-uuid-thing",
+        default="./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing",
     ),
     name_field: str = typer.Option(
         "SOVEREIGN1", help="The field in the data to use for the 'Name' attribute."

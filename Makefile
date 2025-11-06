@@ -35,7 +35,7 @@ geometry-eez-convert-local:
 		--name-field UNION \
 		--source-zip-location ./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location ./cache/eez-v4/0-0-1/fancy-long-uuid-thing \
+		--target-location ./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing \
 		--create-pmtiles
 
 geometry-eez-convert-s3:
@@ -44,7 +44,7 @@ geometry-eez-convert-s3:
 		--name-field UNION \
 		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing \
 		--create-pmtiles
 
 ### EEZ provenance
@@ -53,7 +53,7 @@ geometry-eez-provenance:
 	csdr provenance geometry \
 		--id eez-v4 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
+		--dataset-url=cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -64,8 +64,8 @@ geometry-eez-provenance-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.pmtiles \
+		--dataset-url=cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -77,8 +77,8 @@ geometry-eez-provenance-db:
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
-		--dataset-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.pmtiles \
+		--dataset-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -90,13 +90,13 @@ geometry-eez-provenance-s3-db:
 # should the json have .parquet.provenance.json? It seems like it should just be EEZ_land_union_v4_202410_provenance.json? Maybe the . is important?
 product-list-geometries:
 	csdr products list-geometries \
-		--geometry-provenance-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=/tmp/test.json
 
 product-seagrass-eez-fiji:
 	csdr products process-geometry \
 		--dataset-provenance-url=cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
-		--geometry-provenance-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/seagrass_eez/ \
 		--variable-name=seagrass \
 		--variable-value=1 \
@@ -112,7 +112,7 @@ product-gmw-v4-eez-test-geom:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/gmw_v4_eez/ \
 		--version=0.0.2 \
 		--variable-name=mangrove \
@@ -126,7 +126,7 @@ product-gmw-v3-eez-test-geom:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/gmw_v3_eez/ \
 		--version=0.0.2 \
 		--variable-name=mangrove \
@@ -141,7 +141,7 @@ product-gmw-eez-all-geom:
 	csdr products process-all-geometries \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/gmw_eez/ \
 		--version=0.0.2 \
 		--variable-name=mangrove \
@@ -157,7 +157,7 @@ product-gmw-eez-consolidate:
 		--version=0.0.2 \
 		--location=cache/products/gmw_eez/ \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--variable-name=mangrove
 
 product-gmw-eez-provenance-db:
@@ -175,7 +175,7 @@ product-gmw-eez-consolidate-s3:
 		--version=0.0.1 \
 		--location s3://csdr-public-dev/products/testing/gmw-eez-100m \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--variable-name=mangrove
 
 # Dataset GMW v4
