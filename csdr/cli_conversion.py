@@ -36,15 +36,15 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the zip file containing the geospatial data.",
-        default="./cache/example.zip",
+        default="./cache/eez-v4/EEZ_land_union_v4_202410.zip", # EEZ is just an example
     ),
     source_internal_path_name: str = typer.Option(
         help="The internal path within the zip file to the data to extract.",
-        default="example/example.shp",
+        default="EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp", # EEZ is just an example
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
-        default="./cache",
+        default="./cache/eez-v4",
     ),
     name_field: str = typer.Option(
         "SOVEREIGN1", help="The field in the data to use for the 'Name' attribute."
@@ -160,7 +160,7 @@ def convert_zipfile_to_parquet(
             target_store.put(pmtiles_file, local_pmtiles)
         logger.info(f"Created PMTiles file at {pmtiles_file}")
     else:
-        logger.info("Skipping PMTiles creation.")
+        logger.info("Skipping PMTiles creation because flag is set to false.")
 
     logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
 

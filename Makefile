@@ -13,8 +13,11 @@ dataset-seagrass-provenance:
 		--dataset-type stac-geoparquet
 
 # Geometry EEZ
+### EEZ cache
 geometry-eez-cache-local:
 	csdr eez cache
+	--target-location ./cache/eez-v4
+	--overwrite
 
 geometry-eez-cache-s3:
 	csdr eez cache \
@@ -25,19 +28,31 @@ geometry-eez-cache-s3-public-dev:
 	csdr eez cache \
 		--target-location s3://csdr-public-dev/geometries/eez/1-0-0/raw \
 		--overwrite
-
-geometry-eez-convert:
+		
+### EEZ convert
+geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.zip \
+		--source-zip-location ./cache/eez-v4/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location cache/eez/
+		--target-location ./cache/eez-v4 \
+		--create-pmtiles
 
+geometry-eez-convert-s3:
+	csdr convert zip-to-parquet \
+		--name-field UNION \
+		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/1-0-0/raw/EEZ_land_union_v4_202410.zip \
+		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
+		--target-location s3://files.auspatious.com/csdr/geometries/ \
+		--create-pmtiles
+
+### EEZ provenance
+# is this one local/local as opposed to S3/DB?
 geometry-eez-provenance:
 	csdr provenance geometry \
 		--id eez-v4 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
+		--dataset-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -47,22 +62,14 @@ geometry-eez-provenance-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=cache/eez/EEZ_land_union_v4_202410.pmtiles \
+		--dataset-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=cache/eez-v4/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
 		--overwrite
-
-
-geometry-eez-convert-s3:
-	csdr convert zip-to-parquet \
-		--name-field UNION \
-		--source-zip-location s3://files.auspatious.com/csdr/geometries/EEZ_land_union_v4_202410.zip \
-		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://files.auspatious.com/csdr/geometries/
 
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
@@ -75,16 +82,17 @@ geometry-eez-provenance-s3-db:
 		--post-to-database \
 		--post-geometry-outputs
 
+
 # Product Seagrass EEZ
 product-list-geometries:
 	csdr products list-geometries \
-		--geometry-provenance-url=cache/eez/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=/tmp/test.json
 
 product-seagrass-eez-fiji:
 	csdr products process-geometry \
 		--dataset-provenance-url=cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
-		--geometry-provenance-url=cache/eez/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/seagrass_eez/ \
 		--variable-name=seagrass \
 		--variable-value=1 \
