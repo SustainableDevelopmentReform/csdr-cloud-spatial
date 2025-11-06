@@ -40,6 +40,7 @@ def _meta_provenance(
     source_metadata_url: str | None = None,
     extra_info_dict: dict | None = None,
 ) -> None | str:
+    # does this write the json next to where it read from? e.g. local to local, and s3 to s3.
     """
     Get and write provenance information for a dataset or geometry.
 
@@ -77,7 +78,7 @@ def _meta_provenance(
     )
 
     # Write next to the dataset
-    target_file = f"{dataset_name}.provenance.json"
+    target_file = f"{dataset_name}.provenance.json" # should this include the .parquet file?
 
     if exists(store, target_file) and not overwrite:
         logger.warning(f"Provenance file already exists: {target_file}")

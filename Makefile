@@ -16,32 +16,32 @@ dataset-seagrass-provenance:
 ### EEZ cache
 geometry-eez-cache-local:
 	csdr eez cache
-	--target-location ./cache/eez-v4
+	--target-location ./cache/eez-v4/0-0-1
 	--overwrite
 
 geometry-eez-cache-s3:
 	csdr eez cache \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez/1-0-0/raw \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 
 geometry-eez-cache-s3-public-dev:
 	csdr eez cache \
-		--target-location s3://csdr-public-dev/geometries/eez/1-0-0/raw \
+		--target-location s3://csdr-public-dev/geometries/eez-v4/1-0-0/raw \
 		--overwrite
 		
 ### EEZ convert
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location ./cache/eez-v4/EEZ_land_union_v4_202410.zip \
+		--source-zip-location ./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location ./cache/eez-v4 \
+		--target-location ./cache/eez-v4/0-0-1 \
 		--create-pmtiles
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/1-0-0/raw/EEZ_land_union_v4_202410.zip \
+		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
 		--target-location s3://files.auspatious.com/csdr/geometries/ \
 		--create-pmtiles
@@ -52,18 +52,19 @@ geometry-eez-provenance:
 	csdr provenance geometry \
 		--id eez-v4 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet \
+		--dataset-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--overwrite
 
+# this reads from local but writes to the db as well as to... local or s3??
 geometry-eez-provenance-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
 		--run-id=fancy-long-uuid-thing \
-		--dataset-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=cache/eez-v4/EEZ_land_union_v4_202410.pmtiles \
+		--dataset-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -71,6 +72,7 @@ geometry-eez-provenance-db:
 		--post-geometry-outputs \
 		--overwrite
 
+# TODO: figure if this writes to s3 too. I think it writes to where it reads from
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
@@ -84,15 +86,16 @@ geometry-eez-provenance-s3-db:
 
 
 # Product Seagrass EEZ
+# should the json have .parquet.provenance.json? It seems like it should just be EEZ_land_union_v4_202410_provenance.json? Maybe the . is important?
 product-list-geometries:
 	csdr products list-geometries \
-		--geometry-provenance-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=/tmp/test.json
 
 product-seagrass-eez-fiji:
 	csdr products process-geometry \
 		--dataset-provenance-url=cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
-		--geometry-provenance-url=cache/eez-v4/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=cache/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--target-location=cache/products/seagrass_eez/ \
 		--variable-name=seagrass \
 		--variable-value=1 \
@@ -103,6 +106,7 @@ product-seagrass-eez-fiji:
 # Product GMW EEZ
 # 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed
 # 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
+# test this locally first
 product-gmw-v4-eez-test-geom:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
@@ -145,6 +149,7 @@ product-gmw-eez-all-geom:
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite
 
+# what does consolidate do?
 product-gmw-eez-consolidate:
 	csdr products consolidate \
 		--product-id=temp-id-please-ignore \

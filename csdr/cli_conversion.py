@@ -36,7 +36,7 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the zip file containing the geospatial data.",
-        default="./cache/eez-v4/EEZ_land_union_v4_202410.zip", # EEZ is just an example
+        default="./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip", # EEZ is just an example
     ),
     source_internal_path_name: str = typer.Option(
         help="The internal path within the zip file to the data to extract.",
@@ -44,7 +44,7 @@ def convert_zipfile_to_parquet(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
-        default="./cache/eez-v4",
+        default="./cache/eez-v4/0-0-1",
     ),
     name_field: str = typer.Option(
         "SOVEREIGN1", help="The field in the data to use for the 'Name' attribute."
