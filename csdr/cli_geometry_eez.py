@@ -69,8 +69,8 @@ def cache_eez(
         default="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (like './cache/eez-v4/0-0-1' or s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1) to store the cached EEZ file.",
-        default="./cache/eez-v4/0-0-1",
+        help="Local or remote path (like './cache/eez-v4/0-0-1/raw' or s3://files.auspatious.com/csdr/eez-v4/0-0-1/raw) to store the cached EEZ file.",
+        default="./cache/eez-v4/0-0-1/raw",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
