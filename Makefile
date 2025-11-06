@@ -32,6 +32,7 @@ geometry-eez-cache-s3-public-dev:
 ### EEZ convert
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
+		--run-id=fancy-long-uuid-thing \
 		--name-field UNION \
 		--source-zip-location ./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
@@ -40,6 +41,7 @@ geometry-eez-convert-local:
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
+		--run-id=fancy-long-uuid-thing \
 		--name-field UNION \
 		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \

@@ -40,7 +40,8 @@ def _meta_provenance(
     source_metadata_url: str | None = None,
     extra_info_dict: dict | None = None,
 ) -> None | str:
-    # does this write the json next to where it read from? e.g. local to local, and s3 to s3.
+    # Does this write the json next to where it read from? e.g. local to local, and s3 to s3.
+    # What is extra_info_dict? What can I expect?
     """
     Get and write provenance information for a dataset or geometry.
 
@@ -150,7 +151,7 @@ def write_geometry_provenance(
     run_id: str | None = typer.Option(
         None,
         help="Run ID to associate geometry outputs with",
-    ),
+    ), # why is run id nullable? It seems to me that it should be required
     dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry"
