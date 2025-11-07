@@ -55,19 +55,19 @@ geometry-eez-convert-s3-public-dev:
 		--create-pmtiles
 
 ### EEZ provenance
-# is this one local/local as opposed to S3/DB?
-geometry-eez-provenance:
+geometry-eez-provenance-local:
 	csdr provenance geometry \
 		--id eez-v4 \
 		--run-id=fancy-long-uuid-thing \
 		--dataset-url=./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--overwrite
 
-# this reads from local but writes to the db as well as to... local or s3??
-geometry-eez-provenance-db:
+# json is local. how to write to local db too? configure host setting when running container and run local app server
+geometry-eez-provenance-local-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
 		--run-id=fancy-long-uuid-thing \
@@ -80,7 +80,6 @@ geometry-eez-provenance-db:
 		--post-geometry-outputs \
 		--overwrite
 
-# TODO: figure if this writes to s3 too. I think it writes to where it reads from
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
 		--id c3592590-d42b-4e5c-8369-180fa7f1fcd7 \
@@ -90,7 +89,8 @@ geometry-eez-provenance-s3-db:
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--post-to-database \
-		--post-geometry-outputs
+		--post-geometry-outputs \
+		--overwrite
 
 
 # Product Seagrass EEZ
