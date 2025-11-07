@@ -108,13 +108,26 @@ def post_bulk_geometry_outputs_to_database(
         try:
             response.raise_for_status()
         except HTTPError:
+            # import pdb; pdb.set_trace()
             logger.info(
-                f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}"
+                "Failed to post geometry outputs"
+                # f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}" # comment for debugging
             )
             logger.exception(
                 f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
             )
+            # Write bulk_output to cache/temp/data.json
+            with open("./cache/temp/data.json", "w") as f:
+                f.write(json.dumps(bulk_output, indent=2))
+            # Write error details to cache/temp/error.json
+            error_details = {
+                "error": str(response),
+                "response_json": response.json()
+            }
+            with open("./cache/temp/error.json", "w") as f:
+                f.write(json.dumps(error_details, indent=2))
 
+        # this logs a success message even if there was an error posting some of the data. could be worth checking if any errors occurred before logging success
         logger.info(
             f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
         )

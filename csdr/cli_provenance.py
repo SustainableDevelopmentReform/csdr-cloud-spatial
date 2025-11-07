@@ -91,9 +91,12 @@ def _meta_provenance(
             f"Wrote provenance for {dataset_name} to: {dataset_url}.provenance.json"
         )
 
+    # import pdb; pdb.set_trace()
+
     if post_to_database:
         # should the DB write respect the overwrite flag? Currently I am not sure what would happen if something was rerun. Duplicate entries or error?
         response = post_provenance(provenance, type=type)
+        # import pdb; pdb.set_trace()
         try:
             response.raise_for_status()
         except HTTPError:
@@ -206,6 +209,7 @@ def write_geometry_provenance(
     )
     logger.info(f"Wrote provenance for geometry: {dataset_url}")
 
+    # import pdb; pdb.set_trace()
     if post_geometry_outputs:
         if post_geometry_in_bulk:
             logger.info("Posting geometry outputs to database in bulk...")

@@ -1,9 +1,11 @@
+import json
 import os
 
 import requests
 from requests import Response
 
 from typing import Literal
+from loguru import logger
 
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)
@@ -45,8 +47,9 @@ def post_provenance(
         # Change id to geometryId
         provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
-        extra_info_dict = provenance.pop("extra_info_dict")
-        geometryRunId = extra_info_dict.pop("geometryRunId", None)
+        geometryRunId = provenance.pop("geometryRunId", None)
+        logger.info(f"geometryRunId: {geometryRunId}")
+        # import pdb; pdb.set_trace()
         if geometryRunId:
             provenance["id"] = geometryRunId
     elif type == "dataset":
@@ -60,13 +63,26 @@ def post_provenance(
         provenance["productId"] = provenance.pop("id")
 
     url = f"{HOSTNAME}/{path}"
+    if "localhost" in HOSTNAME:
+        logger.info(f"Posting to LOCAL API at {url}")
+    else:
+        logger.info(f"Posting to REMOTE API at {url}")
 
     # Restructure the object and remove unneeded fields
     provenance_copy = provenance.copy()
     provenance_copy.pop("sourceUrl", None)
     provenance_copy.pop("sourceMetadataUrl", None)
     provenance_copy.pop("provenanceUpdated", None)
+    # provenance_copy.pop("geometriesRunId", None)
     provenance_copy["provenanceJson"] = provenance
+    
+    # logger.info(json.dumps(provenance_copy, indent=2))
+    # Write provenance_copy to ./cache/temp/provenance.json for debugging
+    os.makedirs("./cache/temp", exist_ok=True)
+    with open("./cache/temp/provenance.json", "w") as f:
+        f.write(json.dumps(provenance_copy, indent=2))
+
+    # error: Key (geometries_run_id)=(fancy-long-uuid-thing) is not present in table \"geometries_run\".",
 
     return _post(url, provenance_copy)
 
