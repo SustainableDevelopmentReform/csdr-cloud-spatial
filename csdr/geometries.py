@@ -96,7 +96,7 @@ def post_bulk_geometry_outputs_to_database(
 
     for i in range(0, len(outputs), batch_size):
         bulk_output = {
-            "geometriesRunId": run_id,
+            "geometriesRunId": run_id, # need to check this in the db. plural geometriesRunId vs geometryRunId
             "outputs": outputs[i : i + batch_size],
         }
         logger.info(
@@ -126,7 +126,7 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
     successes = 0
     for _, row in gpd.iterrows():
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
-        geometry_output["geometriesRunId"] = run_id
+        geometry_output["geometriesRunId"] = run_id # need to check this in the db. plural geometriesRunId vs geometryRunId
         response = post_geometry_output(geometry_output)
         try:
             response.raise_for_status()

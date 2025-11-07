@@ -3,6 +3,8 @@ import os
 import requests
 from requests import Response
 
+from typing import Literal
+
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)
 
@@ -28,7 +30,7 @@ def _post(url: str, json: dict) -> Response:
 
 
 def post_provenance(
-    provenance: dict[str, str | int], type: str = "dataset"
+    provenance: dict[str, str | int | dict[str, str | int]], type: Literal["dataset", "geometry", "product"] 
 ) -> Response:
     # Check for API key
     _check_api_key()
@@ -36,16 +38,21 @@ def post_provenance(
     if type not in ALLOWED_TYPES:
         raise ValueError(f"Type must be one of {ALLOWED_TYPES}")
 
+    # here the ids are reassigned based on type so that the primary/foreign keys are correct for the database
     if type == "geometry":
         path = "api/v0/geometries-run"
+        # here the ids are reassigned because we are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
         # Change id to geometryId
-        provenance["geometriesId"] = provenance.pop("id")
+        provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
-        if "runId" in provenance:
-            provenance["id"] = provenance.pop("runId")
+        extra_info_dict = provenance.pop("extra_info_dict")
+        geometryRunId = extra_info_dict.pop("geometryRunId", None)
+        if geometryRunId:
+            provenance["id"] = geometryRunId
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId
+        # Should this restructuring happen before posting to database? Currently the DB version is different to the json file.
         provenance["datasetId"] = provenance.pop("id")
     else:  # product
         path = "api/v0/product-run"
@@ -54,12 +61,11 @@ def post_provenance(
 
     url = f"{HOSTNAME}/{path}"
 
-    # Modify the object a little
+    # Restructure the object and remove unneeded fields
     provenance_copy = provenance.copy()
     provenance_copy.pop("sourceUrl", None)
     provenance_copy.pop("sourceMetadataUrl", None)
     provenance_copy.pop("provenanceUpdated", None)
-
     provenance_copy["provenanceJson"] = provenance
 
     return _post(url, provenance_copy)
