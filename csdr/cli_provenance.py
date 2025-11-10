@@ -155,7 +155,8 @@ def write_geometry_provenance(
     id: str = typer.Option(..., help="ID of the geometry"),
     # run_id is always passed from the workflow. It is however optional because when running this CLI command seperately from the workflow, we can leave it blank and then the run_id gets created when writing to the X_run table in the DB and passed back to _meta_provenance
     run_id: str | None = typer.Option(
-        None, "Run ID to associate geometry outputs with",
+        None,
+        help="Run ID to associate geometry outputs with",
     ),
     dataset_url: str = typer.Option(..., help="URL that points to the geometry"), # this is actually the geometry source, but calling it dataset could be good for standardisation between geometry/dataset/product. on the other hand calling it the geometry source is clearer.
     pmtiles_url: str | None = typer.Option(
