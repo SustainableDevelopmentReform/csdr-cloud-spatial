@@ -5,12 +5,15 @@
 See below section "How to develop locally" for how to run cli commands. Run app so you can do manual steps.
 
 1. manual: create geometry (writes to db.geometry table). Do this here: http://localhost:3000/console/geometries. Leave blank to be autogen'ed. Name is only needed field for testing.
-2. manual: navigate to http://localhost:3000/console/geometries/<your-geometry-id>/runs, click add geometry run. Leave ID empty, and copy the autogen'ed one the app creates for the next step. (writes to db.geometries_run table). How do the provenance fields get filled? We haven't run provenance yet. Should provenance even be an option at this step in the app? Same with the PMTiles, they are not made yet.
-3. cli: run cache command (writes zip to s3). make geometry-eez-cache-s3-public-dev
-4. cli: convert command (writes parquet/pmtiles to s3). Use run ID. make geometry-eez-convert-s3-public-dev (but replace fancy-long-uuid-thing with run ID).
-5. cli: provenance. (writes json to s3 and to db.geometries_run table). make geometry-eez-provenance-s3-db (but replace fancy-long-uuid-thing with run ID). Also replace geometry ID.
-6. manual: on the geometry run page, make this run the main run. (could be good if the first run defaults to main).
-7. missing: pmtiles, provenance link in geometries_run table. These fields are not editable in the app. Can't run provenance first because you need to make the run so that provenance can write to tables.
+2. cli: run cache command (writes zip to s3). make geometry-eez-cache-s3-public-dev
+3. cli: convert command (writes parquet/pmtiles to s3). Use run ID. make geometry-eez-convert-s3-public-dev (but replace fancy-long-uuid-thing with run ID).
+4. cli: provenance. (writes json to s3 and to db.geometries_run table). make geometry-eez-provenance-s3-db (but replace fancy-long-uuid-thing with run ID). Also replace geometry ID. This writes to the geometries_run table and returns the geometry run id.
+
+TODO: check 5 and 6 are still valid after new workflow info.
+```
+5. manual: on the geometry run page, make this run the main run. (could be good if the first run defaults to main).
+6. missing: pmtiles, provenance link in geometries_run table. These fields are not editable in the app. Can't run provenance first because you need to make the run so that provenance can write to tables.
+```
 
 ## Outputs:
 

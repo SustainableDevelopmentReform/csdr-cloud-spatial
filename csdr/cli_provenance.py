@@ -3,6 +3,7 @@ from json import dumps
 import typer
 from loguru import logger
 from requests.exceptions import HTTPError
+from toolz import get_in
 from typer import Typer
 from typing import Literal
 
@@ -38,8 +39,8 @@ def _meta_provenance(
     post_to_database: bool,
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    extra_info_dict: dict | None = None, # this can include runId for geometries
-) -> None:
+    extra_info_dict: dict | None = None, # this likely includes geometryRunId for geometries
+) -> str | None:
     # the json is written next to where it read from. e.g. local to local, and s3 to s3.
     """
     Get and write provenance information for a dataset or geometry.
@@ -56,7 +57,7 @@ def _meta_provenance(
         extra_info_dict (dict | None): Additional information to include in the provenance, such as runId for geometries.
 
     Returns:
-        None
+        None or str: If posting to database, returns the run ID.
     """
     store = get_store_for_url(dataset_url)
     dataset_name = get_dataset_name_from_url(store, dataset_url)
@@ -104,6 +105,9 @@ def _meta_provenance(
             f"Wrote provenance to database \n {dumps(response.json(), indent=2)}"
         )
 
+        run_id = get_in(["data", "id"], response.json(), no_default=True)
+        return run_id
+
     return None
 
 
@@ -132,7 +136,8 @@ def write_dataset_provenance(
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
-    _meta_provenance(
+    # TODO: create dataset_run_id in the dataset workflow like we do in the EEZ geometry workflow
+    dataset_run_id =_meta_provenance(
         id=id,
         type="dataset",
         dataset_url=dataset_url,
@@ -148,10 +153,10 @@ def write_dataset_provenance(
 @provenance_app.command("geometry")
 def write_geometry_provenance(
     id: str = typer.Option(..., help="ID of the geometry"),
-    run_id: str = typer.Option(
-        ...,
-        help="Run ID to associate geometry outputs with",
-    ), # I made run_id required instead of nullable. It can be made optional again. Alex said that it could be good for the app to define this. Not sure when this would occur yet. As I see it the whole workflow will run with one workflow-generated run id. He said "we may not want to provide the run-id, and allow it to be assigned by the app.". That still sounds like there will be a run id so I will leave it required for now.
+    # run_id is always passed from the workflow. It is however optional because when running this CLI command seperately from the workflow, we can leave it blank and then the run_id gets created when writing to the X_run table in the DB and passed back to _meta_provenance
+    run_id: str | None = typer.Option(
+        None, "Run ID to associate geometry outputs with",
+    ),
     dataset_url: str = typer.Option(..., help="URL that points to the geometry"), # this is actually the geometry source, but calling it dataset could be good for standardisation between geometry/dataset/product. on the other hand calling it the geometry source is clearer.
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry (optional)"
@@ -186,6 +191,11 @@ def write_geometry_provenance(
 ) -> None:
     logger.info(f"Getting provenance for geometry: {dataset_url}")
 
+    if run_id is not None:
+        logger.info(f"Run ID '{run_id}' was provided.")
+    else:
+        logger.info("No Run ID provided, one will be created.")
+
     extra_info_dict = {}
     extra_info_dict["geometriesRunId"] = run_id
     logger.info(f"Geometry run ID is {run_id}")
@@ -193,7 +203,8 @@ def write_geometry_provenance(
     if pmtiles_url is not None: # this is optional because geometries can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url # need to check how these are written to the db. They could be nullable fields there instead of a loose json.
 
-    _meta_provenance(
+    # should run_id be passed as a prop instead of nested in extra_info_dict?
+    run_id_created = _meta_provenance(
         id=id,
         type="geometry",
         dataset_url=dataset_url,
@@ -206,15 +217,18 @@ def write_geometry_provenance(
     )
     logger.info(f"Wrote provenance for geometry: {dataset_url}")
 
+    consolidated_run_id = run_id if run_id is not None else run_id_created
+
+    logger.info(f"Consolidated run id: {consolidated_run_id}")
     if post_geometry_outputs:
         if post_geometry_in_bulk:
             logger.info("Posting geometry outputs to database in bulk...")
             post_bulk_geometry_outputs_to_database(
-                dataset_url, run_id=run_id, batch_size=batch_size
+                dataset_url, run_id=consolidated_run_id, batch_size=batch_size
             )
         else:
             logger.info("Posting geometry outputs to database one at a time...")
-            post_geometry_outputs_to_database(dataset_url, run_id=run_id)
+            post_geometry_outputs_to_database(dataset_url, run_id=consolidated_run_id)
 
 
 @provenance_app.command("product")
@@ -240,9 +254,8 @@ def write_product_provenance(
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
 
-    product_run_id = "fancy-long-uuid-thing" # TODO: create this in the product workflow like we do in the geometry workflow
-    # product run id be generated earlier like the geometry one?
-    _meta_provenance(
+    # TODO: create product_run_id in the product workflow like we do in the EEZ geometry workflow
+    product_run_id = _meta_provenance(
         id=product_id,
         type="product",
         dataset_url=product_url,

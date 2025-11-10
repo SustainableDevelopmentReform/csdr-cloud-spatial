@@ -48,18 +48,20 @@ def post_provenance(
         provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
         geometriesRunId = provenance.pop("geometriesRunId", None)
-        logger.info(f"geometriesRunId: {geometriesRunId}")
         if geometriesRunId:
             provenance["id"] = geometriesRunId
+        # else id is empty and will be assigned by the database
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId
         # Should this restructuring happen before posting to database? Currently the DB version is different to the json file.
         provenance["datasetId"] = provenance.pop("id")
+        # TODO: handle datasetRunId
     else:  # product
         path = "api/v0/product-run"
         # Change id to productId
         provenance["productId"] = provenance.pop("id")
+        # TODO: handle productRunId
 
     url = f"{HOSTNAME}/{path}"
 
