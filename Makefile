@@ -95,7 +95,6 @@ geometry-eez-provenance-s3-db:
 
 
 # Product Seagrass EEZ
-# should the json have .parquet.provenance.json? It seems like it should just be EEZ_land_union_v4_202410_provenance.json? Maybe the . is important?
 product-list-geometries:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
