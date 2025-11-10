@@ -150,18 +150,18 @@ def write_dataset_provenance(
 
 @provenance_app.command("geometry")
 def write_geometry_provenance(
-    id: str = typer.Option(..., help="ID of the dataset"),
+    id: str = typer.Option(..., help="ID of the geometry"),
     run_id: str = typer.Option(
         ...,
         help="Run ID to associate geometry outputs with",
     ), # I made run_id required instead of nullable. It can be made optional again. Alex said that it could be good for the app to define this. Not sure when this would occur yet. As I see it the whole workflow will run with one workflow-generated run id. He said "we may not want to provide the run-id, and allow it to be assigned by the app.". That still sounds like there will be a run id so I will leave it required for now.
-    dataset_url: str = typer.Option(..., help="URL that points to the dataset"),
+    dataset_url: str = typer.Option(..., help="URL that points to the geometry"), # this is actually the geometry source, but calling it dataset could be good for standardisation between geometry/dataset/product. on the other hand calling it the geometry source is clearer.
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry (optional)"
     ),
     dataset_type: str = typer.Option(
         "not-set",
-        help="Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
+        help="Type of geometry, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
     ),
     source_metadata_url: str = typer.Option(
         ...,
@@ -190,11 +190,11 @@ def write_geometry_provenance(
     logger.info(f"Getting provenance for geometry: {dataset_url}")
 
     extra_info_dict = {}
-    extra_info_dict["geometryRunId"] = run_id
+    extra_info_dict["geometriesRunId"] = run_id
     logger.info(f"Geometry run ID is {run_id}")
 
     if pmtiles_url is not None: # this is optional because geometries can optionally have PMTiles
-        extra_info_dict["dataPmtilesUrl"] = pmtiles_url # need to check how these are written to the db. They could be nullable fields there.
+        extra_info_dict["dataPmtilesUrl"] = pmtiles_url # need to check how these are written to the db. They could be nullable fields there instead of a loose json.
 
     _meta_provenance(
         id=id,
@@ -231,7 +231,7 @@ def write_product_provenance(
     ),
     geometries_run_id: str = typer.Option(
         ...,
-        help="Geometry run ID",
+        help="Geometries run ID",
     ),
     post_to_database: bool = typer.Option(
         False, help="If true, post the provenance to the database"

@@ -47,11 +47,11 @@ def post_provenance(
         # Change id to geometryId
         provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
-        geometryRunId = provenance.pop("geometryRunId", None)
-        logger.info(f"geometryRunId: {geometryRunId}")
+        geometriesRunId = provenance.pop("geometriesRunId", None)
+        logger.info(f"geometriesRunId: {geometriesRunId}")
         # import pdb; pdb.set_trace()
-        if geometryRunId:
-            provenance["id"] = geometryRunId
+        if geometriesRunId:
+            provenance["id"] = geometriesRunId
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId
@@ -81,8 +81,6 @@ def post_provenance(
     os.makedirs("./cache/temp", exist_ok=True)
     with open("./cache/temp/provenance.json", "w") as f:
         f.write(json.dumps(provenance_copy, indent=2))
-
-    # error: Key (geometries_run_id)=(fancy-long-uuid-thing) is not present in table \"geometries_run\".",
 
     return _post(url, provenance_copy)
 

@@ -96,7 +96,7 @@ def post_bulk_geometry_outputs_to_database(
 
     for i in range(0, len(outputs), batch_size):
         bulk_output = {
-            "geometriesRunId": run_id, # need to check this in the db. plural geometriesRunId vs geometryRunId
+            "geometriesRunId": run_id, # need to check this in the db. this is plural but will be made singular in future refactor
             "outputs": outputs[i : i + batch_size],
         }
         logger.info(
