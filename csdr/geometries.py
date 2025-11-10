@@ -109,7 +109,7 @@ def post_bulk_geometry_outputs_to_database(
             response.raise_for_status()
         except HTTPError:
             logger.info(
-                f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}" # comment for debugging
+                f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}"
             )
             logger.exception(
                 f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
