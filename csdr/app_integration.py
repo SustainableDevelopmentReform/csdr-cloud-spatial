@@ -1,11 +1,9 @@
-import json
 import os
+from typing import Literal
 
 import requests
-from requests import Response
-
-from typing import Literal
 from loguru import logger
+from requests import Response
 
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)

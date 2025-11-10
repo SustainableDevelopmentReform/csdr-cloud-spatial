@@ -1,11 +1,11 @@
 from json import dumps
+from typing import Literal
 
 import typer
 from loguru import logger
 from requests.exceptions import HTTPError
 from toolz import get_in
 from typer import Typer
-from typing import Literal
 
 from csdr.app_integration import (
     post_product_output_bulk,
@@ -147,6 +147,7 @@ def write_dataset_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
     )
+    logger.info(f"dataset_run_id: {dataset_run_id}")
     logger.info(f"Wrote provenance for dataset: {dataset_url}")
 
 
