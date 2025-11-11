@@ -1,6 +1,8 @@
 import os
+from typing import Literal
 
 import requests
+from loguru import logger
 from requests import Response
 
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
@@ -28,7 +30,7 @@ def _post(url: str, json: dict) -> Response:
 
 
 def post_provenance(
-    provenance: dict[str, str | int], type: str = "dataset"
+    provenance: dict[str, str | int | dict[str, str | int]], type: Literal["dataset", "geometry", "product"] 
 ) -> Response:
     # Check for API key
     _check_api_key()
@@ -36,30 +38,36 @@ def post_provenance(
     if type not in ALLOWED_TYPES:
         raise ValueError(f"Type must be one of {ALLOWED_TYPES}")
 
+    # IDs are reassigned based on type so that the primary/foreign keys are correct for the database
     if type == "geometry":
         path = "api/v0/geometries-run"
+        # We are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
         # Change id to geometryId
-        provenance["geometriesId"] = provenance.pop("id")
+        provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
-        if "runId" in provenance:
-            provenance["id"] = provenance.pop("runId")
+        geometriesRunId = provenance.pop("geometriesRunId", None)
+        if geometriesRunId:
+            provenance["id"] = geometriesRunId
+        # Else if no geometriesRunId, then one will be assigned by the database
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId
+        # Should this restructuring happen before posting to database? Currently the DB version is different to the json file.
         provenance["datasetId"] = provenance.pop("id")
-    else:  # product
+        # TODO: Handle datasetRunId
+    else:  # Product
         path = "api/v0/product-run"
         # Change id to productId
         provenance["productId"] = provenance.pop("id")
+        # TODO: Handle productRunId
 
     url = f"{HOSTNAME}/{path}"
 
-    # Modify the object a little
+    # Restructure the object and remove unneeded fields
     provenance_copy = provenance.copy()
     provenance_copy.pop("sourceUrl", None)
     provenance_copy.pop("sourceMetadataUrl", None)
     provenance_copy.pop("provenanceUpdated", None)
-
     provenance_copy["provenanceJson"] = provenance
 
     return _post(url, provenance_copy)

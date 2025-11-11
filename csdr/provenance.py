@@ -34,6 +34,11 @@ def get_provenance(
     source_metadata_url: str | None = None,
     extra_info_dict: dict[str, str | int] = {},
 ) -> dict[str, str | int]:
+    """
+    This function builds a provenance dictionary for a dataset, geometry, or product.
+    It gathers metadata (like file size, etag, URLs, etc.) from the file at the given path (using the provided store), and returns a dictionary with all provenance info.
+    It does not read from a database.
+    """
     if data_type not in SUPPORTED_DATA_FORMATS:
         raise ValueError(
             f"Unsupported dataset type: {data_type}. Supported types are: {SUPPORTED_DATA_FORMATS}"
@@ -55,7 +60,7 @@ def get_provenance(
         "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
-        # Extra stuff!
+        # Extra stuff! e.g. runId for the geometry run. To be expanded to dataset and product runId too I assume.
         **extra_info_dict,
     }
 
@@ -68,6 +73,10 @@ def get_provenance(
 
 
 def read_provenance(url: str) -> dict[str, str | int]:
+    """
+    This function reads a provenance JSON file from the given URL (which can be local, S3, or HTTP). It uses the appropriate store to fetch the file, loads the JSON content, and returns it as a Python dictionary.
+    It does not read from a database, just from a file.
+    """
     store = get_store_for_url(url)
     path = get_dataset_name_from_url(store, url)
     document = BytesIO(store.get(path).bytes())

@@ -36,15 +36,16 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to the zip file containing the geospatial data.",
-        default="./cache/example.zip",
+        default="./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip", # EEZ is just an example
     ),
     source_internal_path_name: str = typer.Option(
         help="The internal path within the zip file to the data to extract.",
-        default="example/example.shp",
+        default="EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp", # EEZ is just an example
     ),
+    # run_id is already built into target_location
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the converted file.",
-        default="./cache",
+        default="./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing",
     ),
     name_field: str = typer.Option(
         "SOVEREIGN1", help="The field in the data to use for the 'Name' attribute."
@@ -84,6 +85,7 @@ def convert_zipfile_to_parquet(
     target_filename = source_internal_path_name.split("/")[-1].replace(
         ".shp", ".parquet"
     )
+    
     if type(target_store) is S3Store:
         # S3Store needs the full path including prefix
         path = get_prefix(target_location)
@@ -122,40 +124,45 @@ def convert_zipfile_to_parquet(
     # --simplification 10 --drop-densest-as-needed
     # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
 
-    # Create a PMTiles files with tippecanoe
-    pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
+    if create_pmtiles:
+        logger.info("Creating PMTiles file alongside the parquet...")
+        # Create a PMTiles files with tippecanoe
+        pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
 
-    # Do the work in a local temp directory
-    with TemporaryDirectory() as tmpdirname:
-        local_geojson = os.path.join(tmpdirname, "data.geojson")
-        local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
+        # Do the work in a local temp directory
+        with TemporaryDirectory() as tmpdirname:
+            local_geojson = os.path.join(tmpdirname, "data.geojson")
+            local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
 
-        # Keep only the id and name fields, plus geometry
-        gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
-        gdf.to_file(local_geojson, driver="GeoJSON")
+            # Keep only the id and name fields, plus geometry
+            gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
+            gdf.to_file(local_geojson, driver="GeoJSON")
 
-        # Create PMTiles file with tippecanoe
-        subprocess.run(
-            [
-                "tippecanoe",
-                "--force",
-                "-z",
-                "10",
-                "--no-simplification-of-shared-nodes",
-                "--simplification",
-                "10",
-                "--drop-densest-as-needed",
-                "--layer",
-                "data",
-                "--output",
-                local_pmtiles,
-                local_geojson,
-            ],
-            check=True,
-        )
+            # Create PMTiles file with tippecanoe
+            subprocess.run(
+                [
+                    "tippecanoe",
+                    "--force",
+                    "-z",
+                    "10",
+                    "--no-simplification-of-shared-nodes",
+                    "--simplification",
+                    "10",
+                    "--drop-densest-as-needed",
+                    "--layer",
+                    "data",
+                    "--output",
+                    local_pmtiles,
+                    local_geojson,
+                ],
+                check=True,
+            )
 
-        # Upload the PMTiles file to the target store
-        target_store.put(pmtiles_file, local_pmtiles)
+            # Upload the PMTiles file to the target store
+            target_store.put(pmtiles_file, local_pmtiles)
+        logger.info(f"Created PMTiles file at {pmtiles_file}")
+    else:
+        logger.info("Skipping PMTiles creation because flag is set to false.")
 
     logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
 
