@@ -93,24 +93,7 @@ geometry-eez-provenance-s3-db:
 		--post-geometry-outputs \
 		--overwrite
 
-
-# Products - general
-product-list-geometries-local:
-	csdr products list-geometries \
-		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/products/geometries_list.json
-
-# Product Seagrass EEZ v4
-product-seagrass-eez-fiji:
-	csdr products process-geometry \
-		--dataset-provenance-url=./cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
-		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--target-location=./cache/products/seagrass_eez/ \
-		--variable-name=seagrass \
-		--variable-value=1 \
-		--datetime-string-match="2024" \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
+# Products - First step for all products is to list geometries from a geometry run provenance
 
 # Product GMW EEZ V4.
 # Steps:
@@ -119,15 +102,22 @@ product-seagrass-eez-fiji:
 # 3. Consolidate - consolidates the processed geometries.
 # 4. Provenance - generates provenance information for the product.
 
-product-gmw-eez-list-geometries:
+# Product GMW EEZ V4 List Geometries
+product-gmw-v4-eez-list-geometries-local:
+	csdr products list-geometries \
+		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/products/geometries_list.json
+
+product-gmw-v4-eez-list-geometries-s3:
 	csdr products list-geometries \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/products/gmw_eez/geometry_list.json
 
+# Product GMW EEZ V4 Process Geometries
 # 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed
 # 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
 # test this locally first
-product-gmw-v4-eez-test-geom:
+product-gmw-v4-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
@@ -141,7 +131,7 @@ product-gmw-v4-eez-test-geom:
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
 
-product-gmw-v3-eez-test-geom:
+product-gmw-v3-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
@@ -155,8 +145,7 @@ product-gmw-v3-eez-test-geom:
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
 
-
-product-gmw-eez-all-geom:
+product-gmw-eez-all-geometry-s3:
 	csdr products process-all-geometries \
 		--product-id=temp-id-please-ignore \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
@@ -169,8 +158,8 @@ product-gmw-eez-all-geom:
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite
 
-# what does consolidate do?
-product-gmw-eez-consolidate:
+# Product GMW EEZ V4 Consolidate
+product-gmw-eez-consolidate-s3:
 	csdr products consolidate \
 		--product-id=temp-id-please-ignore \
 		--version=0.0.2 \
@@ -178,15 +167,6 @@ product-gmw-eez-consolidate:
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--variable-name=mangrove
-
-product-gmw-eez-provenance-db:
-	csdr provenance product \
-		--product-id de0e7d09-d238-470f-ad12-112fe70f1c2a \
-		--product-url=./cache/products/gmw_eez/temp-id-please-ignore/mangrove/0-0-2/temp-id-please-ignore-0-0-2.parquet \
-		--dataset-run-id=1ad46e15-9999-49da-b02a-e44d47140a31 \
-		--geometries-run-id=9ea66fba-1bcb-4bff-944f-2c29c5de1d78 \
-		--post-to-database \
-		--overwrite
 
 product-gmw-eez-consolidate-s3:
 	csdr products consolidate \
@@ -196,6 +176,28 @@ product-gmw-eez-consolidate-s3:
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--variable-name=mangrove
+
+# Product GMW EEZ V4 Provenance
+product-gmw-eez-provenance-db-local:
+	csdr provenance product \
+		--product-id de0e7d09-d238-470f-ad12-112fe70f1c2a \
+		--product-url=./cache/products/gmw_eez/temp-id-please-ignore/mangrove/0-0-2/temp-id-please-ignore-0-0-2.parquet \
+		--dataset-run-id=1ad46e15-9999-49da-b02a-e44d47140a31 \
+		--geometries-run-id=9ea66fba-1bcb-4bff-944f-2c29c5de1d78 \
+		--post-to-database \
+		--overwrite
+
+# Product Seagrass EEZ v4
+product-seagrass-eez-fiji:
+	csdr products process-geometry \
+		--dataset-provenance-url=./cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
+		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--target-location=./cache/products/seagrass_eez/ \
+		--variable-name=seagrass \
+		--variable-value=1 \
+		--datetime-string-match="2024" \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
 # Dataset GMW v4
 cache-gmw-v4:
@@ -220,7 +222,6 @@ provenance-gmw-v4:
 		--source-url="https://example.com" \
 		--source-metadata-url="https://example.com" \
 		--dataset-type stac-geoparquet
-
 
 # Dataset GMW v3
 cache-gmw-v3-single-file:
