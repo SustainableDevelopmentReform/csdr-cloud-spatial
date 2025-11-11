@@ -1,3 +1,4 @@
+import os
 import json
 import sys
 from typing import Any
@@ -201,6 +202,7 @@ def list_geometries(
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
+    # Should out_file be optional? Should it then default to printing to console?
     out_file: str = typer.Option(
         None, help="Tempfile to write list of IDs to (otherwise print to console)"
     ),
@@ -218,6 +220,7 @@ def list_geometries(
     ids_list = gdf["csdr-id"].tolist()
 
     if out_file is not None:
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
         with open(out_file, "w") as f:
             json.dump(ids_list, f, indent=4)
         logger.info(f"Wrote geometry ids to {out_file}")

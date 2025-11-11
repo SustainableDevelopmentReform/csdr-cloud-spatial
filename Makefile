@@ -94,12 +94,13 @@ geometry-eez-provenance-s3-db:
 		--overwrite
 
 
-# Product Seagrass EEZ
-product-list-geometries:
+# Products - general
+product-list-geometries-local:
 	csdr products list-geometries \
-		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=/tmp/test.json
+		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/products/geometries_list.json
 
+# Product Seagrass EEZ v4
 product-seagrass-eez-fiji:
 	csdr products process-geometry \
 		--dataset-provenance-url=./cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
@@ -111,7 +112,18 @@ product-seagrass-eez-fiji:
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
-# Product GMW EEZ
+# Product GMW EEZ V4.
+# Steps:
+# 1. List geometries - writes a list of geometries to a file from a geometry run provenance.
+# 2. Process - processes the geometries for the product. I think this is a heavy step that can be killed by Out of Memory errors.
+# 3. Consolidate - consolidates the processed geometries.
+# 4. Provenance - generates provenance information for the product.
+
+product-gmw-eez-list-geometries:
+	csdr products list-geometries \
+		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/products/gmw_eez/geometry_list.json
+
 # 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed
 # 3fca613b-7749-5e11-b371-3a977fb57804 - oom killed
 # test this locally first
