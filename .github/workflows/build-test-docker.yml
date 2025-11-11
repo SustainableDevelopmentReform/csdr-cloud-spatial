@@ -1,3 +1,7 @@
+##
+# GitHub Actions Workflow: Lint, Test, Build, and Push Docker Image
+#
+# This workflow automatically lints the codebase with Ruff, runs all tests, builds the Docker image, and pushes it to AWS ECR and GitHub Container Registry (GHCR) on push, PR, or release events. It ensures code quality and up-to-date images for deployment.
 name : Lint, Test and Build Docker Image
 
 env:
