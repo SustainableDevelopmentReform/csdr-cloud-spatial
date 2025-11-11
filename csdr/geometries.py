@@ -96,7 +96,7 @@ def post_bulk_geometry_outputs_to_database(
 
     for i in range(0, len(outputs), batch_size):
         bulk_output = {
-            "geometriesRunId": run_id, # need to check this in the db. this is plural but will be made singular in future refactor
+            "geometriesRunId": run_id, # This is plural but will be made singular in future DB refactor
             "outputs": outputs[i : i + batch_size],
         }
         logger.info(
@@ -115,7 +115,7 @@ def post_bulk_geometry_outputs_to_database(
                 f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
             )
 
-        # this logs a success message even if there was an error posting some of the data. could be worth checking if any errors occurred before logging success
+        # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
         logger.info(
             f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
         )

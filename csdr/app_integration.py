@@ -38,28 +38,28 @@ def post_provenance(
     if type not in ALLOWED_TYPES:
         raise ValueError(f"Type must be one of {ALLOWED_TYPES}")
 
-    # here the ids are reassigned based on type so that the primary/foreign keys are correct for the database
+    # IDs are reassigned based on type so that the primary/foreign keys are correct for the database
     if type == "geometry":
         path = "api/v0/geometries-run"
-        # here the ids are reassigned because we are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
+        # We are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
         # Change id to geometryId
         provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
         # Change runId to id if it exists
         geometriesRunId = provenance.pop("geometriesRunId", None)
         if geometriesRunId:
             provenance["id"] = geometriesRunId
-        # else id is empty and will be assigned by the database
+        # Else if no geometriesRunId, then one will be assigned by the database
     elif type == "dataset":
         path = "api/v0/dataset-run"
         # Change id to datasetId
         # Should this restructuring happen before posting to database? Currently the DB version is different to the json file.
         provenance["datasetId"] = provenance.pop("id")
-        # TODO: handle datasetRunId
-    else:  # product
+        # TODO: Handle datasetRunId
+    else:  # Product
         path = "api/v0/product-run"
         # Change id to productId
         provenance["productId"] = provenance.pop("id")
-        # TODO: handle productRunId
+        # TODO: Handle productRunId
 
     url = f"{HOSTNAME}/{path}"
 

@@ -21,9 +21,9 @@ async def run_cache_eez(
     target_location: str,
     overwrite: bool,
 ) -> None:
-    # downloads the EEZ zip file from source_url and stores it at target_location
-    # source url can be s3://, http://, or local file path
-    # target location can be s3:// or local file path
+    # Downloads the EEZ zip file from source_url and stores it at target_location
+    # Source url can be s3://, http://, or local file path
+    # Target location can be s3:// or local file path
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
     target_location = target_location.rstrip("/")
     store = get_store_for_url(source_url)
