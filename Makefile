@@ -1,4 +1,41 @@
-# This makefile holds a bunch of test commands for working with dataset, geometries and products
+# This makefile holds a bunch of test commands for working with datasets, geometries and products
+
+### DATASETS ###
+
+# Dataset GMW v4
+cache-gmw-v4-local:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v4/raw
+
+extract-gmw-v4-local:
+	csdr gmw extract \
+		--source-location=./cache/datasets/gmw-v4/raw \
+		--target-location=./cache/datasets/gmw-v4/0-0-1/data
+
+index-gmw-v4-local:
+	csdr gmw index \
+		--source-location=./cache/datasets/gmw-v4/0-0-1/data \
+		--target-location=./cache/datasets/gmw-v4/0-0-1
+
+provenance-gmw-v4-local:
+	csdr provenance dataset \
+		--id 97e943d9-4f37-4466-b0ef-162ed5e49368 \
+		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
+		--source-url="https://example.com" \
+		--source-metadata-url="https://example.com" \
+		--dataset-type stac-geoparquet
+
+# Dataset GMW v3
+cache-gmw-v3-single-file:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v3/0-0-1
+
+cache-gmw-v3-multiple-files:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v3/0-0-1
 
 # Dataset Seagrass
 dataset-seagrass-index:
@@ -11,6 +48,11 @@ dataset-seagrass-provenance:
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://example.com" \
 		--dataset-type stac-geoparquet
+
+
+
+
+### GEOMETRIES ###
 
 # Geometry EEZ
 ### EEZ cache
@@ -93,7 +135,12 @@ geometry-eez-provenance-s3-db:
 		--post-geometry-outputs \
 		--overwrite
 
-# Products - First step for all products is to list geometries from a geometry run provenance
+
+
+
+
+
+### PRODUCTS ###
 
 # Product GMW EEZ V4.
 # Steps:
@@ -121,6 +168,11 @@ product-gmw-v4-eez-list-geometries-s3:
 # This is not using Dask (the default). Should it?
 # geometry-id is Burundi's EEZ. 691f98c9-f9da-5987-b994-023afefc6563 # This is a good test to exit quickly because there won't be mangroves there.
 # geometry-id is Fiji's EEZ. 50a3e198-6cc8-54c8-b2af-0585b8efbdd1 # This is a good test for mangroves.
+# Countries with lots of mangroves to test memory use:
+# 157af02d-fd8c-566d-a73e-24cba6d5b119 Australia - worked locally
+# 1333bb28-0af0-528b-a802-6cefa61ac13a Indonesia - to test
+# 11f92a8a-8343-5721-82ab-902a56eaa53e Brazil - to test
+# 29ac8bce-fb58-5049-aa30-39eefd64c17d Mexico - to test
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=test-product-id \
@@ -132,7 +184,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=753afd2b-dabd-5286-9e82-79fa519f2578 \
+		--geometry-id=157af02d-fd8c-566d-a73e-24cba6d5b119 \
 		--overwrite
 
 product-gmw-v3-eez-process-geometry-s3:
@@ -197,14 +249,14 @@ product-gmw-v4-eez-consolidate-s3:
 		--variable-name=mangrove \
 		--datetime=2024-01-01
 
+# Do I need to make a Product in the app before running provenance? Yes because: stack': 'Error: Failed query: insert into "product_run" ("id", "name", "description", "me'+29
 # Product GMW v4 EEZ Provenance
 product-gmw-v4-eez-provenance-db-local:
 	csdr provenance product \
-		--product-id de0e7d09-d238-470f-ad12-112fe70f1c2a \
-		--run-id=test-run-id \
-		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/mangrove/2024-01-01/test-product-id.parquet
-		--dataset-run-id=1ad46e15-9999-49da-b02a-e44d47140a31 \
-		--geometries-run-id=9ea66fba-1bcb-4bff-944f-2c29c5de1d78 \
+		--product-id test-product-id \
+		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/mangrove/2024-01-01/test-product-id.parquet \
+		--dataset-run-id=test-dataset-run-id \
+		--geometries-run-id=test-geometries-run-id \
 		--post-to-database \
 		--overwrite
 
@@ -221,40 +273,10 @@ product-seagrass-eez-fiji:
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
 
-# Dataset GMW v4
-cache-gmw-v4:
-	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=./cache/gmw/v4/raw
 
-extract-gmw-v4:
-	csdr gmw extract \
-		--source-location=./cache/gmw/v4/raw \
-		--target-location=./cache/gmw/v4/data
 
-index-gmw-v4:
-	csdr gmw index \
-		--source-location=./cache/gmw/v4/data \
-		--target-location=./cache/gmw/v4
 
-provenance-gmw-v4:
-	csdr provenance dataset \
-		--id gmw-v4 \
-		--dataset-url=./cache/gmw/v4/gmw.parquet \
-		--source-url="https://example.com" \
-		--source-metadata-url="https://example.com" \
-		--dataset-type stac-geoparquet
-
-# Dataset GMW v3
-cache-gmw-v3-single-file:
-	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
-		--target-location=./cache/gmw/v3/
-
-cache-gmw-v3-multiple-files:
-	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=./cache/gmw/v3/
+### OTHER ###
 
 # Test GeoJSON
 geometry-geojson-convert:
