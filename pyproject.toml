@@ -26,6 +26,7 @@ dependencies = [
     "hatch-vcs",
     "loguru",
     "matplotlib",
+    "nest_asyncio",
     "obstore",
     "odc-loader",
     "odc-stac",
