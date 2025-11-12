@@ -106,12 +106,12 @@ geometry-eez-provenance-s3-db:
 product-gmw-v4-eez-list-geometries-local:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/products/gmw-v4-eez/0-0-1/geometries_list.json # Should this be ./cache/products/gmw-v4-eez/0-0-1/runs/<run_id>/geometries_list.json
+		--out-file=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/geometries_list.json
 
 product-gmw-v4-eez-list-geometries-s3:
 	csdr products list-geometries \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/<geometry_run_id>/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/geometries_list.json # Should this be ./cache/products/gmw-v4-eez/0-0-1/runs/<run_id>/geometries_list.json
+		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-run-id/geometries_list.json
 
 # Product GMW EEZ V4 Process Geometries
 # 4cb61e58-9575-5d6b-ae0e-bae108b68634 - oom killed

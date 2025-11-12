@@ -19,6 +19,10 @@ def get_area_from_dataset_geometry(
     load_kwargs: dict = {},
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
+
+    # TODO: Add in a performance optimisation to exit quickly if no spatial intersection between geometry and dataset. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
+    # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC bboxes.
+    # 3. If no intersect, return 0.0 area immediately (fast!). Else do the actual calculation (because there is potential overlap).
     logger.info(f"Loading dataset from {dataset_provenance_url}")
     provenance = read_provenance(dataset_provenance_url)
     dataset_url = provenance.get("dataUrl")

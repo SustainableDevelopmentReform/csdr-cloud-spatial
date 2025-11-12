@@ -10,6 +10,7 @@ from dask.distributed import Client
 from loguru import logger
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
+import asyncio
 
 from csdr.io import (
     exists,
@@ -26,7 +27,6 @@ from csdr.provenance import read_provenance
 from csdr.utils import get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
-
 
 KNOWN_VARIABLES = ["sum-area-by-value"]
 
@@ -60,6 +60,7 @@ def _setup_dask_client(
 ) -> Client | None:
     """Set up Dask client if requested."""
     if not use_dask:
+        logger.info("Use Dask parameter is False. Not starting Dask client.")
         return None
 
     logger.info(f"Starting Dask client with options: {dask_client_opts}")
@@ -94,10 +95,12 @@ def _create_product_output(
     dataset_provenance_url: str,
     datetime: str,
     results: dict[str, Any],
+    run_id: str | None
 ) -> dict[str, Any]:
     """Create the product output dictionary."""
     return {
-        "id": make_uuid(
+        # Product run ID can be passed to this function, or it will be created here.
+        "id": run_id if run_id is not None else make_uuid(
             f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
         ),
         "productId": product_id,
@@ -110,7 +113,8 @@ def _create_product_output(
         },
     }
 
-
+# Is _process_single_geometry the planned way to do it? While process_geometry is for debugging?
+# Uses external Dask client passed from process_all_geometries I think.
 def _process_single_geometry(
     geometry_id: str,
     geometry: Geometry,
@@ -153,10 +157,13 @@ def _process_single_geometry(
         dataset_provenance_url,
         datetime,
         results,
+        run_id,
     )
     write_json(dest, path, product_output)
     return True
 
+def parse_csv_list(value: str) -> list[str]:
+    return value.split(",") if value else []
 
 def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
     if type(s) is dict:
@@ -183,17 +190,17 @@ def version_parser(s: str) -> str:
 
 def get_product_path(
     product_id: str,
-    version: str,
     variable_name: str,
-    datetime: str | None = None,
+    run_id: str,
+    datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
-    path = f"{product_id}/{variable_name}/{version}"
+    path = f"runs/{run_id}/{variable_name}"
     if datetime is not None:
         path = f"{path}/{datetime}"
+    # geometry id is just for the processing of single geometries
     if geometry_id is not None:
         path = f"{path}/{product_id}-{geometry_id}.json"
-
     return path
 
 
@@ -227,28 +234,28 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
-
+# Is process_geometry for debugging? While _process_single_geometry is the planned way to do it?
+# Process a single geometry. Makes variables using variables_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
-def process_geometry(
-    product_id: str = typer.Option(
-        "example-product", help="ID of the product being generated"
+def process_geometry_sync(product_id: str = typer.Option(
+        "example-product", help="ID of the product being generated (UUID)"
     ),
-    version: str = typer.Option(
-        "0.0.0",
-        help="Semver-like version of the product being generated. Todo: workout how to replace with product-run-id",
+    # Optional so it can be passed to this command or created in it
+    run_id: str | None = typer.Option(
+        None, help="ID of the product run"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
     dataset_provenance_url: str = typer.Option(
-        None, help="URL that points to the dataset provenance file"
+        ..., help="URL that points to the dataset provenance file"
     ),
-    variables_to_extract: str = typer.Option(
+    variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
         "sum-area-by-value",
         help="Comma-separated list of variables to extract from the dataset",
-        parser=lambda s: s.split(","),
+        parser=parse_csv_list
     ),
-    datetime_string_match: str = typer.Option(
+    datetime_string_match: str | None = typer.Option(
         None,
         help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
     ),
@@ -257,10 +264,10 @@ def process_geometry(
         help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
     ),
     target_location: str = typer.Option(
-        "cache/products",
-        help="Location to write the results to (otherwise print to console)",
+        "./cache/products/<product>/0-0-1",
+        help="Location to write the JSON result to",
     ),
-    geometry_id: str = typer.Option(..., help="ID of the geometry to process"),
+    geometry_id: str = typer.Option(..., help="ID of the geometry to process."), # This is the actual single geometry being processed. Not to be confused with the EEZ Geometry. This is one geometry within that i.e. one EEZ e.g. Fiji.
     variable_name: str = typer.Option(
         "asset", help="Name of the variable to use for calculations (if applicable)"
     ),
@@ -286,41 +293,96 @@ def process_geometry(
         False, help="If true, overwrite existing product file"
     ),
 ) -> None:
+    asyncio.run(process_geometry(
+        product_id=product_id,
+        run_id=run_id,
+        geometry_provenance_url=geometry_provenance_url,
+        dataset_provenance_url=dataset_provenance_url,
+        variables_to_extract=variables_to_extract,
+        datetime_string_match=datetime_string_match,
+        datetime=datetime,
+        target_location=target_location,
+        geometry_id=geometry_id,
+        variable_name=variable_name,
+        variable_value=variable_value,
+        load_kwargs=load_kwargs,
+        use_dask=use_dask,
+        dask_client_opts=dask_client_opts,
+        overwrite=overwrite
+    ))
+
+async def process_geometry(
+    product_id: str,
+    run_id: str | None,
+    geometry_provenance_url: str,
+    dataset_provenance_url: str,
+    variables_to_extract: str,
+    datetime_string_match: str | None,
+    datetime: str | None,
+    target_location: str,
+    geometry_id: str,
+    variable_name: str,
+    variable_value: str | None,
+    load_kwargs: dict[str, str],
+    use_dask: bool,
+    dask_client_opts: dict[str, str],
+    overwrite: bool
+) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
 
+    if run_id:
+        logger.info(f"Run ID provided: {run_id}")
+    else:
+        # Make a run_id if there wasn't one provided. TODO: validate the parameters to the make_uuid function
+        run_id = make_uuid(
+            f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
+        )
+        logger.info(f"Created run ID because none was provided: {run_id}")
+
+    logger.info(f"variables_to_extract {variables_to_extract}") # TODO: change type of variables_to_extract from str to list[str]
+
+    target_location = target_location.rstrip("/") # Remove trailing slash if present
+
+    # Validate parameters
     variable_value_float = float(variable_value) if variable_value is not None else None
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )
-    version_clean = version_parser(version)
 
-    # Get paths for writing results
-    dest = get_store_for_url(target_location)
-    path = get_product_path(
+    # Get paths for writing result JSON
+    target_store = get_store_for_url(target_location)
+    # this path includes the filename (because geometry_id is provided to get_product_path)
+    target_path = get_product_path(
         product_id,
-        version_clean,
         variable_name,
+        run_id=run_id,
         geometry_id=geometry_id,
         datetime=datetime,
     )
 
-    if type(dest) is S3Store:
+    # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py
+
+    if type(target_store) is S3Store:
+        # S3Store needs the full path including prefix
         prefix = get_prefix(target_location)
         if prefix is not None:
-            path = f"{prefix}/{path}"
+            target_path = f"{prefix}/{target_path}"
+    target_url = get_url_from_store_filename(target_store, target_path)
+    logger.info(f"target_url: {target_url}")
 
-    dest_url = get_url_from_store_filename(dest, path)
-    logger.info(f"Will write results to {dest_url}")
+    if exists(target_store, target_path) and not overwrite:
+            logger.info(f"Product already exists at {target_url}, skipping processing.")
+            raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
-    if exists(dest, path) and not overwrite:
-        logger.info(f"Product already exists at {dest_url}, skipping processing.")
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+    logger.info(f"JSON doesn't exist for {geometry_id} or overwrite is True, processing geometry.")
 
     # Load geometry data
-    gdf, _ = _load_geometry_data(geometry_provenance_url)
-    geometry = get_geom_from_gdf(gdf, geometry_id)
+    gdf, _ = _load_geometry_data(geometry_provenance_url) # GeoDataFrame
+    geometry = get_geom_from_gdf(gdf, geometry_id) # ODC Geometry object
 
     # Set up Dask client
+    # What is this Dask client used for? It isn't used except to be closed. Is it used indirectly in process_variables_for_geometry (load_xarray_stacgeoparquet)?
+    # use_dask defaults to False
     client = _setup_dask_client(use_dask, dask_client_opts)
 
     try:
@@ -333,23 +395,28 @@ def process_geometry(
             variable_value=variable_value_float,
             load_kwargs=load_kwargs,
         )
-        print(results)
-
         logger.info(f"Results for geometry {geometry_id}: {results}")
 
         # TODO: Validate product id, variable name and other things.
+        # Product ID will be created in product workflow.
 
         product_output = _create_product_output(
-            product_id,
+            product_id, # Is product_id needed here? Probably. Do we also need run_id? Probably.
             geometry_id,
             geometry_provenance_url,
             dataset_provenance_url,
             datetime,
             results,
+            run_id=run_id,
         )
 
-        write_json(dest, path, product_output)
-        logger.info(f"Wrote results to {get_url_from_store_filename(dest, path)}")
+        # write_json(target_store, target_path, product_output)
+        # logger.info(f"Wrote results to {target_url}")
+
+        # try to use async put instead of write_json. This is consistent with geometry eez code.
+        logger.info(f"Writing to {target_url}. target_path: {target_path}...")
+        await target_store.put_async(target_path, json.dumps(product_output).encode("utf-8"))
+        logger.info(f"Wrote results to {target_url}")
 
     finally:
         if client is not None:
@@ -359,11 +426,11 @@ def process_geometry(
 @products_app.command("process-all-geometries")
 def process_all_geometries(
     product_id: str = typer.Option(
-        "example-product", help="ID of the product being generated"
+        "example-product", help="ID of the product being generated (UUID)"
     ),
-    version: str = typer.Option(
-        "0.0.0",
-        help="Semver-like version of the product being generated. Todo: workout how to replace with product-run-id",
+    # Optional so it can be passed to this command or created in it
+    run_id: str | None = typer.Option(
+        None, help="ID of the product run"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
@@ -371,10 +438,10 @@ def process_all_geometries(
     dataset_provenance_url: str = typer.Option(
         None, help="URL that points to the dataset provenance file"
     ),
-    variables_to_extract: str = typer.Option(
+    variables_to_extract: list[str] = typer.Option( # TODO: fix this type. It comes in as str but is list[str] in the function
         "sum-area-by-value",
         help="Comma-separated list of variables to extract from the dataset",
-        parser=lambda s: s.split(","),
+        parser=parse_csv_list
     ),
     datetime_string_match: str = typer.Option(
         None,
@@ -417,15 +484,24 @@ def process_all_geometries(
         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
     )
 
+    # Should run id be made at the list_geometries step of the workflow? Then it will be given here and not nullable and created here
+    if run_id:
+        logger.info(f"Run ID provided: {run_id}")
+    else:
+        # Make a run_id if there wasn't one provided. TODO: validate the parameters to the make_uuid function
+        run_id = make_uuid(
+            f"{product_id}-{run_id}-{geometry_provenance_url}-{dataset_provenance_url}"
+        )
+        logger.info(f"Created run ID because none was provided: {run_id}")
+
     variable_value_float = float(variable_value) if variable_value is not None else None
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )
-    version_clean = version_parser(version)
 
     # Get paths for writing results
     dest = get_store_for_url(target_location)
-    base_path = get_product_path(product_id, version_clean, variable_name)
+    base_path = get_product_path(product_id, variable_name, run_id) # Do we need to add datetime, geometry_id, run_id here?
 
     if type(dest) is S3Store:
         prefix = get_prefix(target_location)
@@ -474,11 +550,7 @@ def process_all_geometries(
 @products_app.command("consolidate")
 def consolidate_product(
     product_id: str = typer.Option(
-        "example-product", help="ID of the product being consolidated"
-    ),
-    version: str = typer.Option(
-        "0.0.0",
-        help="Semver-like version of the product being consolidated. Todo: workout how to replace with product-run-id",
+        "example-product", help="ID of the product being consolidated (UUID)"
     ),
     location: str = typer.Option(
         "cache/products", help="Location to read the product files from"
@@ -497,8 +569,7 @@ def consolidate_product(
 
     store = get_store_for_url(location)
 
-    version_clean = version_parser(version)
-    path = get_product_path(product_id, version_clean, variable_name)
+    path = get_product_path(product_id, variable_name, run_id) # Do we need to add datetime, geometry_id, run_id here?
 
     if type(store) is S3Store:
         prefix = get_prefix(location)
