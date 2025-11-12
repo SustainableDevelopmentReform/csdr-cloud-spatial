@@ -113,55 +113,55 @@ def _create_product_output(
         },
     }
 
-# Is _process_single_geometry the planned way to do it? While process_geometry is for debugging?
-# Uses external Dask client passed from process_all_geometries I think.
-def _process_single_geometry(
-    geometry_id: str,
-    geometry: Geometry,
-    run_id: str,
-    variables_to_extract: list[str],
-    dataset_provenance_url: str,
-    datetime_string_match: str | None,
-    variable_name: str,
-    variable_value: float | None,
-    load_kwargs: dict[str, Any],
-    product_id: str,
-    geometry_provenance_url: str,
-    datetime: str,
-    dest: HTTPStore | LocalStore | S3Store,
-    path: str,
-    overwrite: bool,
-) -> bool:
-    """Process a single geometry and return True if processed, False if skipped."""
-    if exists(dest, path) and not overwrite:
-        logger.info(
-            f"Product already exists at {get_url_from_store_filename(dest, path)}, skipping processing for geometry {geometry_id}."
-        )
-        return False
+# # Is _process_single_geometry the planned way to do it? While process_geometry is for debugging?
+# # Uses external Dask client passed from process_all_geometries I think.
+# def _process_single_geometry(
+#     geometry_id: str,
+#     geometry: Geometry,
+#     run_id: str,
+#     variables_to_extract: list[str],
+#     dataset_provenance_url: str,
+#     datetime_string_match: str | None,
+#     variable_name: str,
+#     variable_value: float | None,
+#     load_kwargs: dict[str, Any],
+#     product_id: str,
+#     geometry_provenance_url: str,
+#     datetime: str,
+#     dest: HTTPStore | LocalStore | S3Store,
+#     path: str,
+#     overwrite: bool,
+# ) -> bool:
+#     """Process a single geometry and return True if processed, False if skipped."""
+#     if exists(dest, path) and not overwrite:
+#         logger.info(
+#             f"Product already exists at {get_url_from_store_filename(dest, path)}, skipping processing for geometry {geometry_id}."
+#         )
+#         return False
 
-    logger.info(f"Processing geometry {geometry_id}")
-    results = process_variables_for_geometry(
-        geometry,
-        variables_to_extract,
-        dataset_provenance_url,
-        datetime_string_match=datetime_string_match,
-        variable_name=variable_name,
-        variable_value=variable_value,
-        load_kwargs=load_kwargs,
-    )
-    logger.info(f"Results for geometry {geometry_id}: {results}")
+#     logger.info(f"Processing geometry {geometry_id}")
+#     results = process_variables_for_geometry(
+#         geometry,
+#         variables_to_extract,
+#         dataset_provenance_url,
+#         datetime_string_match=datetime_string_match,
+#         variable_name=variable_name,
+#         variable_value=variable_value,
+#         load_kwargs=load_kwargs,
+#     )
+#     logger.info(f"Results for geometry {geometry_id}: {results}")
 
-    product_output = _create_product_output(
-        product_id,
-        geometry_id,
-        geometry_provenance_url,
-        dataset_provenance_url,
-        datetime,
-        results,
-        run_id,
-    )
-    write_json(dest, path, product_output)
-    return True
+#     product_output = _create_product_output(
+#         product_id,
+#         geometry_id,
+#         geometry_provenance_url,
+#         dataset_provenance_url,
+#         datetime,
+#         results,
+#         run_id,
+#     )
+#     write_json(dest, path, product_output)
+#     return True
 
 def parse_csv_list(value: str) -> list[str]:
     return value.split(",") if value else []
@@ -413,121 +413,121 @@ async def process_geometry(
         if client is not None:
             client.close()
 
+# # Is this needed? Workflow just uses process_geometry, not process_all_geometries and _process_single_geometry.
+# @products_app.command("process-all-geometries")
+# def process_all_geometries(
+#     product_id: str = typer.Option(
+#         "example-product", help="ID of the product being generated (UUID)"
+#     ),
+#     run_id: str = typer.Option(
+#         ..., help="ID of the product run"
+#     ),
+#     geometry_provenance_url: str = typer.Option(
+#         ..., help="URL that points to the geometry provenance file"
+#     ),
+#     dataset_provenance_url: str = typer.Option(
+#         ..., help="URL that points to the dataset provenance file"
+#     ),
+#     variables_to_extract: list[str] = typer.Option( # TODO: fix this type. It comes in as str but is list[str] in the function
+#         "sum-area-by-value",
+#         help="Comma-separated list of variables to extract from the dataset",
+#         parser=parse_csv_list
+#     ),
+#     datetime_string_match: str = typer.Option(
+#         None,
+#         help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
+#     ),
+#     datetime: str | None = typer.Option(
+#         None,
+#         help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
+#     ),
+#     target_location: str = typer.Option(
+#         "./cache/products",
+#         help="Location to write the results to (otherwise print to console)",
+#     ),
+#     variable_name: str = typer.Option(
+#         "asset", help="Name of the variable to use for calculations (if applicable)"
+#     ),
+#     variable_value: str | None = typer.Option(
+#         None, help="Value of the variable to use for calculations (if applicable)"
+#     ),
+#     load_kwargs: dict[str, str] = typer.Option(
+#         {},
+#         "--load-kwargs",
+#         help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
+#         parser=opt_dict_parser,
+#     ),
+#     use_dask: bool = typer.Option(
+#         False, help="Whether to use Dask distributed for processing"
+#     ),
+#     dask_client_opts: dict[str, str] = typer.Option(
+#         {},
+#         "--dask-opts",
+#         help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
+#         parser=opt_dict_parser,
+#     ),
+#     overwrite: bool = typer.Option(
+#         False, help="If true, overwrite existing product file"
+#     ),
+# ) -> None:
+#     logger.info(
+#         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
+#     )
 
-@products_app.command("process-all-geometries")
-def process_all_geometries(
-    product_id: str = typer.Option(
-        "example-product", help="ID of the product being generated (UUID)"
-    ),
-    run_id: str = typer.Option(
-        ..., help="ID of the product run"
-    ),
-    geometry_provenance_url: str = typer.Option(
-        ..., help="URL that points to the geometry provenance file"
-    ),
-    dataset_provenance_url: str = typer.Option(
-        ..., help="URL that points to the dataset provenance file"
-    ),
-    variables_to_extract: list[str] = typer.Option( # TODO: fix this type. It comes in as str but is list[str] in the function
-        "sum-area-by-value",
-        help="Comma-separated list of variables to extract from the dataset",
-        parser=parse_csv_list
-    ),
-    datetime_string_match: str = typer.Option(
-        None,
-        help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
-    ),
-    datetime: str | None = typer.Option(
-        None,
-        help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
-    ),
-    target_location: str = typer.Option(
-        "./cache/products",
-        help="Location to write the results to (otherwise print to console)",
-    ),
-    variable_name: str = typer.Option(
-        "asset", help="Name of the variable to use for calculations (if applicable)"
-    ),
-    variable_value: str | None = typer.Option(
-        None, help="Value of the variable to use for calculations (if applicable)"
-    ),
-    load_kwargs: dict[str, str] = typer.Option(
-        {},
-        "--load-kwargs",
-        help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
-        parser=opt_dict_parser,
-    ),
-    use_dask: bool = typer.Option(
-        False, help="Whether to use Dask distributed for processing"
-    ),
-    dask_client_opts: dict[str, str] = typer.Option(
-        {},
-        "--dask-opts",
-        help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
-        parser=opt_dict_parser,
-    ),
-    overwrite: bool = typer.Option(
-        False, help="If true, overwrite existing product file"
-    ),
-) -> None:
-    logger.info(
-        f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
-    )
+#     logger.info(f"Run ID: {run_id}")
 
-    logger.info(f"Run ID: {run_id}")
+#     variable_value_float = float(variable_value) if variable_value is not None else None
+#     datetime = _validate_parameters(
+#         variables_to_extract, datetime, datetime_string_match
+#     )
 
-    variable_value_float = float(variable_value) if variable_value is not None else None
-    datetime = _validate_parameters(
-        variables_to_extract, datetime, datetime_string_match
-    )
+#     # Get paths for writing results
+#     dest = get_store_for_url(target_location)
+#     base_path = get_product_path(product_id, variable_name, run_id, datetime)
 
-    # Get paths for writing results
-    dest = get_store_for_url(target_location)
-    base_path = get_product_path(product_id, variable_name, run_id, datetime)
+#     if type(dest) is S3Store:
+#         prefix = get_prefix(target_location)
+#         if prefix is not None:
+#             base_path = f"{prefix}/{base_path}"
 
-    if type(dest) is S3Store:
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            base_path = f"{prefix}/{base_path}"
+#     dest_url = get_url_from_store_filename(dest, base_path)
+#     logger.info(f"Will write results to {dest_url}")
 
-    dest_url = get_url_from_store_filename(dest, base_path)
-    logger.info(f"Will write results to {dest_url}")
+#     # Load geometry data
+#     gdf, _ = _load_geometry_data(geometry_provenance_url)
+#     logger.info(f"Found {len(gdf)} geometries")
 
-    # Load geometry data
-    gdf, _ = _load_geometry_data(geometry_provenance_url)
-    logger.info(f"Found {len(gdf)} geometries")
+#     # Set up Dask client
+#     client = _setup_dask_client(use_dask, dask_client_opts)
 
-    # Set up Dask client
-    client = _setup_dask_client(use_dask, dask_client_opts)
+#     try:
+#         for _, row in gdf.iterrows():
+#             geometry_id = row["csdr-id"]
+#             geometry = get_geom_from_gdf(gdf, geometry_id)
+#             path = f"{base_path}/{product_id}-{geometry_id}.json"
 
-    try:
-        for _, row in gdf.iterrows():
-            geometry_id = row["csdr-id"]
-            geometry = get_geom_from_gdf(gdf, geometry_id)
-            path = f"{base_path}/{product_id}-{geometry_id}.json"
+#             _process_single_geometry(
+#                 geometry_id=geometry_id,
+#                 geometry=geometry,
+#                 run_id=run_id,
+#                 variables_to_extract=variables_to_extract,
+#                 dataset_provenance_url=dataset_provenance_url,
+#                 datetime_string_match=datetime_string_match,
+#                 variable_name=variable_name,
+#                 variable_value=variable_value_float,
+#                 load_kwargs=load_kwargs,
+#                 product_id=product_id,
+#                 geometry_provenance_url=geometry_provenance_url,
+#                 datetime=datetime,
+#                 dest=dest,
+#                 path=path,
+#                 overwrite=overwrite,
+#             )
+#     finally:
+#         if client is not None:
+#             client.close()
 
-            _process_single_geometry(
-                geometry_id=geometry_id,
-                geometry=geometry,
-                run_id=run_id,
-                variables_to_extract=variables_to_extract,
-                dataset_provenance_url=dataset_provenance_url,
-                datetime_string_match=datetime_string_match,
-                variable_name=variable_name,
-                variable_value=variable_value_float,
-                load_kwargs=load_kwargs,
-                product_id=product_id,
-                geometry_provenance_url=geometry_provenance_url,
-                datetime=datetime,
-                dest=dest,
-                path=path,
-                overwrite=overwrite,
-            )
-    finally:
-        if client is not None:
-            client.close()
-
-    logger.info(f"Wrote results to {dest_url}")
+#     logger.info(f"Wrote results to {dest_url}")
 
 
 @products_app.command("consolidate")
