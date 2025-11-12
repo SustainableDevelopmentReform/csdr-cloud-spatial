@@ -20,7 +20,7 @@ async def run_cache_eez(
     source_url: str,
     target_location: str,
     overwrite: bool,
-) -> None:
+) -> str:
     # Downloads the EEZ zip file from source_url and stores it at target_location
     # Source url can be s3://, http://, or local file path
     # Target location can be s3:// or local file path
@@ -55,10 +55,10 @@ async def run_cache_eez(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logger.info(f"Downloading {file_name} from {source_url} to {target_url}...")
-    await target_store.put_async(target_filename, store.get(file_name))
+    logger.info(f"Downloading {target_filename} from {source_url} to {target_url}...")
+    await target_store.put_async(target_filename, store.get(target_filename))
 
-    return f"{target_url}"
+    return target_url
 
 
 @eez_app.command("cache")

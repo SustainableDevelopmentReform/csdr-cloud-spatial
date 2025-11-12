@@ -1,4 +1,6 @@
-# This makefile holds a bunch of test commands for working with datasets, geometries and products
+# This makefile holds many test commands for working with datasets, geometries and products.
+# It is the base for creating the workflows in the -flux repo.
+# See here to get developing: ./how_to_run_dataset_eez-v4_workflow.md
 
 ### DATASETS ###
 
@@ -79,9 +81,9 @@ geometry-eez-cache-s3-public-dev:
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location ./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
+		--source-zip-location ./cache/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location ./cache/eez-v4/0-0-1/runs/test-run-id \
+		--target-location ./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--create-pmtiles
 
 geometry-eez-convert-s3:
@@ -89,7 +91,7 @@ geometry-eez-convert-s3:
 		--name-field UNION \
 		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id \
+		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--create-pmtiles
 
 geometry-eez-convert-s3-public-dev:
@@ -97,28 +99,27 @@ geometry-eez-convert-s3-public-dev:
 		--name-field UNION \
 		--source-zip-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id \
+		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--create-pmtiles
 
 ### EEZ provenance
 geometry-eez-provenance-local:
 	csdr provenance geometry \
-		--id <geometry_id> \
-		--run-id=test-run-id \
-		--dataset-url=./cache/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--id 6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--dataset-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
 		--overwrite
 
-# json is local. how to write to local db too? configure host setting when running container and run local app server
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
-		--id <geometry_id> \
-		--run-id=test-run-id \
-		--dataset-url=./cache/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--id 6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--dataset-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -129,9 +130,9 @@ geometry-eez-provenance-local-db:
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
 		--id <geometry_id> \
-		--run-id=test-run-id \
-		--dataset-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--dataset-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--dataset-type geoparquet \
@@ -153,10 +154,11 @@ geometry-eez-provenance-s3-db:
 # 3. Consolidate - consolidates the processed geometries.
 # 4. Provenance - generates provenance information for the product.
 
+# How do we have the run id here? Maybe we make it and then pass it to the app when we make the product
 # Product GMW EEZ V4 List Geometries
 product-gmw-v4-eez-list-geometries-local:
 	csdr products list-geometries \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/geometries_list.json
 
 product-gmw-v4-eez-list-geometries-s3:
@@ -177,11 +179,13 @@ product-gmw-v4-eez-list-geometries-s3:
 # 1333bb28-0af0-528b-a802-6cefa61ac13a Indonesia - to test
 # 11f92a8a-8343-5721-82ab-902a56eaa53e Brazil - to test
 # 29ac8bce-fb58-5049-aa30-39eefd64c17d Mexico - to test
+# The above IDs may be outdated now
+# Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/f574ad55-1a73-5087-8317-4fda4d32ade2/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
 		--variable-name=mangrove \
@@ -193,7 +197,7 @@ product-gmw-v4-eez-process-geometry-local:
 
 product-gmw-v3-eez-process-geometry-s3:
 	csdr products process-geometry \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
@@ -208,7 +212,7 @@ product-gmw-v3-eez-process-geometry-s3:
 # Process all geometries
 product-gmw-v4-eez-process-all-geometries-local:
 	csdr products process-all-geometries \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
@@ -221,7 +225,7 @@ product-gmw-v4-eez-process-all-geometries-local:
 
 product-gmw-v4-eez-process-all-geometries-s3:
 	csdr products process-all-geometries \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
@@ -235,7 +239,7 @@ product-gmw-v4-eez-process-all-geometries-s3:
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
 		--location=./cache/products/gmw-v4-eez/0-0-1 \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
@@ -245,7 +249,7 @@ product-gmw-v4-eez-consolidate-local:
 
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
-		--product-id=test-product-id \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-run-id \
 		--location s3://csdr-public-dev/products/testing/gmw-eez-100m \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
@@ -257,10 +261,10 @@ product-gmw-v4-eez-consolidate-s3:
 # Product GMW v4 EEZ Provenance
 product-gmw-v4-eez-provenance-db-local:
 	csdr provenance product \
-		--product-id test-product-id \
-		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/mangrove/2024-01-01/test-product-id.parquet \
-		--dataset-run-id=test-dataset-run-id \
-		--geometries-run-id=test-geometries-run-id \
+		--product-id 935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
+		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite
 
