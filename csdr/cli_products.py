@@ -95,15 +95,15 @@ def _create_product_output(
     dataset_provenance_url: str,
     datetime: str,
     results: dict[str, Any],
-    run_id: str | None
+    run_id: str
 ) -> dict[str, Any]:
     """Create the product output dictionary."""
     return {
-        # Product run ID can be passed to this function, or it will be created here.
-        "id": run_id if run_id is not None else make_uuid(
+        "id": make_uuid(
             f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
         ),
         "productId": product_id,
+        "productRunId": run_id,
         "geometryOutputId": geometry_id,
         "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
         "variables": results,
@@ -118,6 +118,7 @@ def _create_product_output(
 def _process_single_geometry(
     geometry_id: str,
     geometry: Geometry,
+    run_id: str,
     variables_to_extract: list[str],
     dataset_provenance_url: str,
     datetime_string_match: str | None,
@@ -240,9 +241,8 @@ def list_geometries(
 def process_geometry_sync(product_id: str = typer.Option(
         "example-product", help="ID of the product being generated (UUID)"
     ),
-    # Optional so it can be passed to this command or created in it
-    run_id: str | None = typer.Option(
-        None, help="ID of the product run"
+    run_id: str = typer.Option(
+        ..., help="ID of the product run"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
@@ -313,7 +313,7 @@ def process_geometry_sync(product_id: str = typer.Option(
 
 async def process_geometry(
     product_id: str,
-    run_id: str | None,
+    run_id: str,
     geometry_provenance_url: str,
     dataset_provenance_url: str,
     variables_to_extract: str,
@@ -329,16 +329,7 @@ async def process_geometry(
     overwrite: bool
 ) -> None:
     logger.info(f"Processing geometry {geometry_id} from {geometry_provenance_url}")
-
-    if run_id:
-        logger.info(f"Run ID provided: {run_id}")
-    else:
-        # Make a run_id if there wasn't one provided. TODO: validate the parameters to the make_uuid function
-        run_id = make_uuid(
-            f"{product_id}-{geometry_id}-{geometry_provenance_url}-{dataset_provenance_url}"
-        )
-        logger.info(f"Created run ID because none was provided: {run_id}")
-
+    logger.info(f"Run ID: {run_id}")
     logger.info(f"variables_to_extract {variables_to_extract}") # TODO: change type of variables_to_extract from str to list[str]
 
     target_location = target_location.rstrip("/") # Remove trailing slash if present
@@ -401,13 +392,13 @@ async def process_geometry(
         # Product ID will be created in product workflow.
 
         product_output = _create_product_output(
-            product_id, # Is product_id needed here? Probably. Do we also need run_id? Probably.
+            product_id,
             geometry_id,
             geometry_provenance_url,
             dataset_provenance_url,
             datetime,
             results,
-            run_id=run_id,
+            run_id,
         )
 
         # write_json(target_store, target_path, product_output)
@@ -428,15 +419,14 @@ def process_all_geometries(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being generated (UUID)"
     ),
-    # Optional so it can be passed to this command or created in it
-    run_id: str | None = typer.Option(
-        None, help="ID of the product run"
+    run_id: str = typer.Option(
+        ..., help="ID of the product run"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
     dataset_provenance_url: str = typer.Option(
-        None, help="URL that points to the dataset provenance file"
+        ..., help="URL that points to the dataset provenance file"
     ),
     variables_to_extract: list[str] = typer.Option( # TODO: fix this type. It comes in as str but is list[str] in the function
         "sum-area-by-value",
@@ -452,7 +442,7 @@ def process_all_geometries(
         help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
     ),
     target_location: str = typer.Option(
-        "cache/products",
+        "./cache/products",
         help="Location to write the results to (otherwise print to console)",
     ),
     variable_name: str = typer.Option(
@@ -484,15 +474,7 @@ def process_all_geometries(
         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
     )
 
-    # Should run id be made at the list_geometries step of the workflow? Then it will be given here and not nullable and created here
-    if run_id:
-        logger.info(f"Run ID provided: {run_id}")
-    else:
-        # Make a run_id if there wasn't one provided. TODO: validate the parameters to the make_uuid function
-        run_id = make_uuid(
-            f"{product_id}-{run_id}-{geometry_provenance_url}-{dataset_provenance_url}"
-        )
-        logger.info(f"Created run ID because none was provided: {run_id}")
+    logger.info(f"Run ID: {run_id}")
 
     variable_value_float = float(variable_value) if variable_value is not None else None
     datetime = _validate_parameters(
@@ -501,7 +483,7 @@ def process_all_geometries(
 
     # Get paths for writing results
     dest = get_store_for_url(target_location)
-    base_path = get_product_path(product_id, variable_name, run_id) # Do we need to add datetime, geometry_id, run_id here?
+    base_path = get_product_path(product_id, variable_name, run_id, datetime)
 
     if type(dest) is S3Store:
         prefix = get_prefix(target_location)
@@ -527,6 +509,7 @@ def process_all_geometries(
             _process_single_geometry(
                 geometry_id=geometry_id,
                 geometry=geometry,
+                run_id=run_id,
                 variables_to_extract=variables_to_extract,
                 dataset_provenance_url=dataset_provenance_url,
                 datetime_string_match=datetime_string_match,
@@ -552,26 +535,37 @@ def consolidate_product(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being consolidated (UUID)"
     ),
+    run_id: str = typer.Option(
+        ..., help="ID of the product run"
+    ),
     location: str = typer.Option(
-        "cache/products", help="Location to read the product files from"
+        "./cache/products/gmw-v4-eez/0-0-1/runs", help="Location to read the product files from"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
     dataset_provenance_url: str = typer.Option(
-        None, help="URL that points to the dataset provenance file"
+        ..., help="URL that points to the dataset provenance file"
     ),
     variable_name: str = typer.Option(
         "asset", help="Name of the variable to use for calculations (if applicable)"
     ),
+    datetime: str | None = typer.Option(
+        None,
+        help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
+    ),
 ) -> None:
     logger.info(f"Consolidating product {product_id} from {location}")
+    logger.info(f"run_id {run_id}")
 
     store = get_store_for_url(location)
 
-    path = get_product_path(product_id, variable_name, run_id) # Do we need to add datetime, geometry_id, run_id here?
+    # TODO: standardise target path logic with other functions
+    path = get_product_path(product_id, variable_name, run_id, datetime)
+    logger.info(f"path {path}")
 
     if type(store) is S3Store:
+        # S3Store needs the full path including prefix
         prefix = get_prefix(location)
         if prefix is not None:
             path = f"{prefix}/{path}"
@@ -627,7 +621,7 @@ def consolidate_product(
     logger.info(f"Consolidated product data from {url}: {df.shape[0]} rows")
 
     # Write the consolidated DataFrame to a new parquet
-    output_file = f"{path}/{product_id}-{version_clean}.parquet"
+    output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
     out_url = get_url_from_store_filename(store, output_file)
