@@ -136,7 +136,7 @@ def write_dataset_provenance(
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
-    # TODO: Create dataset_run_id in the dataset workflow like we do in the EEZ geometry workflow
+    # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id =_meta_provenance(
         id=id,
         type="dataset",

@@ -8,6 +8,7 @@ cache-gmw-v4-local:
 		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v4/raw
 
+# Extracting takes a few minutes
 extract-gmw-v4-local:
 	csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v4/raw \
@@ -18,13 +19,16 @@ index-gmw-v4-local:
 		--source-location=./cache/datasets/gmw-v4/0-0-1/data \
 		--target-location=./cache/datasets/gmw-v4/0-0-1
 
-provenance-gmw-v4-local:
+# Make a Dataset in the app and use the ID here
+provenance-gmw-v4-local-db:
 	csdr provenance dataset \
-		--id 97e943d9-4f37-4466-b0ef-162ed5e49368 \
+		--id=97e943d9-4f37-4466-b0ef-162ed5e49368 \
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://example.com" \
 		--source-metadata-url="https://example.com" \
-		--dataset-type stac-geoparquet
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
 
 # Dataset GMW v3
 cache-gmw-v3-single-file:

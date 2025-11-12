@@ -32,7 +32,8 @@ def get_provenance(
     description: str = "",
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    extra_info_dict: dict[str, str | int] = {},
+    # Dataset doesn't pass an extra_info_dict, geometry does (including PMTiles url, and geometry run ID). Product probably does (incl. product run ID).
+    extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
     """
     This function builds a provenance dictionary for a dataset, geometry, or product.
@@ -47,6 +48,9 @@ def get_provenance(
     info = get_file_info(store, path)
     image_state = get_image_state()
 
+    # Handle extra_info_dict being optional
+    if extra_info_dict is None:
+        extra_info_dict = {}
     provenance = {
         "id": id,
         "dataType": data_type,
