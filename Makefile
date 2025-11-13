@@ -173,19 +173,10 @@ product-gmw-v4-eez-list-geometries-s3:
 		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries_list.json
 
 # Product GMW EEZ V4 Process Geometries
-# 2 EEZs killed by OOM. Need to figure out if this problem persists.
 # variable-value=1.0 for mangrove presence. It is boolean raster with 1 for presence and 0 for absence.
 # resolution=100 is 100m. 10 is max for GMW v4.
 # https://epsg.io/6933
 # This is not using Dask (the default). Should it?
-# geometry-id is Burundi's EEZ. 691f98c9-f9da-5987-b994-023afefc6563 # This is a good test to exit quickly because there won't be mangroves there.
-# geometry-id is Fiji's EEZ. 50a3e198-6cc8-54c8-b2af-0585b8efbdd1 # This is a good test for mangroves.
-# Countries with lots of mangroves to test memory use:
-# 157af02d-fd8c-566d-a73e-24cba6d5b119 Australia - worked locally
-# 1333bb28-0af0-528b-a802-6cefa61ac13a Indonesia - to test
-# 11f92a8a-8343-5721-82ab-902a56eaa53e Brazil - to test
-# 29ac8bce-fb58-5049-aa30-39eefd64c17d Mexico - to test
-# The above IDs may be outdated now
 # Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
@@ -198,7 +189,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=c72551c2-2946-50b9-9f49-0b3293413522 \
+		--geometry-id=ac14cbdb-a20c-55e3-bfab-d7e0d79b3c6d \
 		--overwrite
 
 product-gmw-v3-eez-process-geometry-s3:
