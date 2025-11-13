@@ -1,7 +1,7 @@
 
 import pandas as pd
 from loguru import logger
-from odc.geo.geom import Geometry
+from odc.geo.geom import multipolygon, Geometry
 from pystac import ItemCollection
 
 from csdr.provenance import read_provenance
@@ -47,24 +47,18 @@ def get_area_from_dataset_geometry(
     # TODO: can we include datetime_string_match in this optimisation? It would filter out some items potentially before checking intersection. The temporal filter is currently done in load_xarray_stacgeoparquet but would increase performance if done here.
     def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
         # make geometry bbox
-        geom_bbox = geometry.boundingbox  # Should be [minx, miny, maxx, maxy]
+        geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
         # Intersect geometry bbox with each STAC item bbox
         # If any intersect, return true
         # Else, return false
         for item in stac_items:
-            item_bbox = item.properties.get("proj:bbox")
-            if item_bbox is None:
-                continue
-            # Check for intersection. If none of these are true, the boxes must overlap in both x and y, so there is a spatial intersection.
-            if not (
-                geom_bbox[2] < item_bbox[0] # geom maxx is less than item minx
-                or geom_bbox[0] > item_bbox[2] # geom minx is greater than item maxx
-                or geom_bbox[3] < item_bbox[1] # geom maxy is less than item miny
-                or geom_bbox[1] > item_bbox[3] # geom miny is greater than item maxy
-            ):
+            # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
+            # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+            item_geometry = multipolygon([item.properties.get("proj:geometry")], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+            if geom_bbox.intersects(item_geometry):
                 return True
         return False
-
+    
     any_intersection = check_for_any_intersection(geometry, items)
     if not any_intersection:
         logger.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
