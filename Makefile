@@ -189,7 +189,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=ac14cbdb-a20c-55e3-bfab-d7e0d79b3c6d \
+		--geometry-id=605efc56-2be3-53ef-b5e4-c1c9127dcbae \
 		--overwrite
 
 product-gmw-v3-eez-process-geometry-s3:

@@ -245,11 +245,19 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
 
 
 def load_xarray_stacgeoparquet(
-    items: ItemCollection, # these are already temporally and spatially filtered
+    items: ItemCollection,
     bbox: Iterable[float] | None = None,
     geom: Geometry | None = None,
+    datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
+    # Temporal filter (if parameter is provided)
+    if datetime_string_match is not None:
+        all_items = items.clone()
+        items = []
+        for item in all_items:
+            if datetime_string_match in item.datetime.isoformat():
+                items.append(item)
 
     # Force the use of Dask. This is already done in the function that calls this. Redundant?
     if "chunks" not in load_kwargs:

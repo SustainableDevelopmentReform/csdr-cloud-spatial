@@ -1,4 +1,3 @@
-
 import pandas as pd
 from loguru import logger
 from odc.geo.geom import Geometry
@@ -37,22 +36,13 @@ def get_area_from_dataset_geometry(
     # Force the use of Dask. Is this needed here? load_xarray_stacgeoparquet already does this. This is the only use of the load_xarray_stacgeoparquet function in the CLI (excluding a test).
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
-
-    # Temporal filter (if parameter is provided). Do this before more intensive spatial intersect.
-    if datetime_string_match is None:
-        temporally_filtered_items = items.clone()
-    else:
-        temporally_filtered_items = []
-        for item in items:
-            if datetime_string_match in item.datetime.isoformat():
-                temporally_filtered_items.append(item)
     
     # Performance optimisation to return quickly if no spatial intersection between geometry and dataset bounding boxes. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
     # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC item bboxes.
     # 3. If no intersect, return 0.0 area immediately (fast!). Else do the actual calculation (because there is potential overlap).
     # STAC Geoparquet has proj:bbox attribute. STAC Geoparquet of Mangroves is sparse. There are 1647 STAC items, each with a bbox. Checking intersection of geometry bbox with these bboxes is very fast.
     # TODO: make this a param to use or not because if there were less sparse data it could slow processing down potentially?
-    any_intersection = check_for_any_intersection(geometry, temporally_filtered_items)
+    any_intersection = check_for_any_intersection(geometry, items)
     if not any_intersection:
         logger.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
         return 0.0
@@ -63,6 +53,7 @@ def get_area_from_dataset_geometry(
     data = load_xarray_stacgeoparquet(
         items,
         geom=geometry,
+        datetime_string_match=datetime_string_match,
         **load_kwargs,
     )
 
