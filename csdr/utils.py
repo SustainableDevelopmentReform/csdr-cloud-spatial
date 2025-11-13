@@ -13,7 +13,7 @@ import rustac
 from affine import Affine
 from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
-from odc.geo.geom import Geometry
+from odc.geo.geom import multipolygon, Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
@@ -245,20 +245,11 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
 
 
 def load_xarray_stacgeoparquet(
-    # TODO: tighten up these parameters. This function is only called once in the codebase so it doesn't make sense to be so generic/flexible.
-    items: ItemCollection,
+    items: ItemCollection, # these are already temporally and spatially filtered
     bbox: Iterable[float] | None = None,
     geom: Geometry | None = None,
-    datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
-    # Temporal filter (if parameter is provided)
-    if datetime_string_match is not None:
-        all_items = items.clone()
-        items = []
-        for item in all_items:
-            if datetime_string_match in item.datetime.isoformat():
-                items.append(item)
 
     # Force the use of Dask. This is already done in the function that calls this. Redundant?
     if "chunks" not in load_kwargs:
@@ -343,3 +334,17 @@ def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
 
     # Convert to ODC geometry
     return Geometry(feature.geometry, crs=gdf.crs)
+
+def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
+    # make geometry bbox
+    geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
+    # Intersect geometry bbox with each STAC item bbox
+    # If any intersect, return true
+    # Else, return false
+    for item in stac_items:
+        # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
+        # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+        item_geometry = multipolygon([item.properties.get("proj:geometry")], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+        if geom_bbox.intersects(item_geometry):
+            return True
+    return False
