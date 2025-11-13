@@ -29,7 +29,7 @@ def get_area_from_dataset_geometry(
         raise ValueError(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' is supported."
         )
-    
+
     # Get the STAC items
     items = open_stacgeoparquet(dataset_url)
 
