@@ -27,6 +27,7 @@ async def run_index_dep_seagrass(
     dest = get_store_for_url(target_location)
     out_filename = "dep_s2_seagrass.parquet"
 
+    # TODO: make this S3 prefix code a function.
     if type(dest) is S3Store:
         dest_s3_prefix = get_prefix(target_location)
         if dest_s3_prefix is not None:

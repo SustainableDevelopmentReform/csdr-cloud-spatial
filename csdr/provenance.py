@@ -64,7 +64,7 @@ def get_provenance(
         "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
-        # Extra stuff! e.g. runId for the geometry run. To be expanded to dataset and product runId too I assume.
+        # Extra stuff! e.g. geometriesRunId and productRunId
         **extra_info_dict,
     }
 

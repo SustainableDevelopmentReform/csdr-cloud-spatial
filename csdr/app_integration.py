@@ -54,12 +54,16 @@ def post_provenance(
         # Change id to datasetId
         # Should this restructuring happen before posting to database? Currently the DB version is different to the json file.
         provenance["datasetId"] = provenance.pop("id")
-        # TODO: Handle datasetRunId
+        # Datasets do not have a run ID by design.
     else:  # Product
         path = "api/v0/product-run"
         # Change id to productId
         provenance["productId"] = provenance.pop("id")
-        # TODO: Handle productRunId
+        # Change runId to id if it exists
+        productRunId = provenance.pop("productRunId", None)
+        if productRunId:
+            provenance["id"] = productRunId
+        # Else if no productRunId, then one will be assigned by the database
 
     url = f"{HOSTNAME}/{path}"
 

@@ -8,18 +8,23 @@
 cache-gmw-v4-local:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v4/raw
+		--target-location=./cache/datasets/gmw-v4/raw \
+		--overwrite
 
 # Extracting takes a few minutes
+# Extract target-location must be an absolute path! Otherwise STAC items will be made with broken href attributes.
 extract-gmw-v4-local:
 	csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v4/raw \
-		--target-location=./cache/datasets/gmw-v4/0-0-1/data
+		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
+		--overwrite
 
+# TODO: Check whether index source and target locations must be absolute paths too for STAC hrefs to be correct. Using absolute paths just in case.
 index-gmw-v4-local:
 	csdr gmw index \
-		--source-location=./cache/datasets/gmw-v4/0-0-1/data \
-		--target-location=./cache/datasets/gmw-v4/0-0-1
+		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
+		--overwrite
 
 # Make a Dataset in the app and use the ID here
 provenance-gmw-v4-local-db:
@@ -156,15 +161,16 @@ geometry-eez-provenance-s3-db:
 
 # How do we have the run id here? Maybe we make it and then pass it to the app when we make the product
 # Product GMW EEZ V4 List Geometries
+# This run ID is just for testing. It will actually to be passed from the workflow
 product-gmw-v4-eez-list-geometries-local:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/geometries_list.json
+		--out-file=./cache/tmp/geometries_list.json
 
 product-gmw-v4-eez-list-geometries-s3:
 	csdr products list-geometries \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-run-id/geometries_list.json
+		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries_list.json
 
 # Product GMW EEZ V4 Process Geometries
 # 2 EEZs killed by OOM. Need to figure out if this problem persists.
@@ -184,24 +190,24 @@ product-gmw-v4-eez-list-geometries-s3:
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
+		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=157af02d-fd8c-566d-a73e-24cba6d5b119 \
+		--geometry-id=c72551c2-2946-50b9-9f49-0b3293413522 \
 		--overwrite
 
 product-gmw-v3-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw_v3_eez/0-0-1 \
+		--target-location=./cache/products/gmw_v3_eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime-string-match=1996 \
@@ -210,39 +216,60 @@ product-gmw-v3-eez-process-geometry-s3:
 		--overwrite
 
 # Process all geometries
+# This does not use Dask parallelization. It loops through the geometry IDs and processes them one at a time.
+# This takes a long time.
+product-gmw-v4-eez-process-all-geometries-local-loop:
+	jq -r '.[]' ./cache/tmp/geometries_list.json | while read id; do \
+		echo "Processing geometry ID: $$id"; \
+		csdr products process-geometry \
+			--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+			--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+			--target-location=./cache/products/gmw-v4-eez/0-0-1 \
+			--variable-name=mangrove \
+			--variable-value=1.0 \
+			--datetime=2024-01-01 \
+			--load-kwargs="resolution=100,crs=epsg:6933" \
+			--geometry-id="$$id" \
+			--overwrite; \
+	done
+
+# This uses Dask to parallelize the processing of all geometries. Much faster!
 product-gmw-v4-eez-process-all-geometries-local:
 	csdr products process-all-geometries \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw_v3_eez/0-0-1 \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--datetime=2024 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
-		--overwrite
-
-product-gmw-v4-eez-process-all-geometries-s3:
-	csdr products process-all-geometries \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
 		--variable-name=mangrove \
-		--variable-value=1 \
-		--datetime=2024 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
-		--overwrite
+		--variable-value=1.0 \
+		--datetime=2024-01-01 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--overwrite; \
+		--use_dask
+
+# product-gmw-v4-eez-process-all-geometries-s3:
+# 	csdr products process-all-geometries \
+# 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+# 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+# 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/EEZ_land_union_v4_202410.parquet.provenance.json \
+# 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+# 		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
+# 		--variable-name=mangrove \
+# 		--variable-value=1 \
+# 		--datetime=2024 \
+# 		--load-kwargs="resolution=500,crs=epsg:6933" \
+# 		--overwrite
 
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--location=./cache/products/gmw-v4-eez/0-0-1 \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove \
 		--datetime=2024-01-01
@@ -250,23 +277,26 @@ product-gmw-v4-eez-consolidate-local:
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-run-id \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--location s3://csdr-public-dev/products/testing/gmw-eez-100m \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove \
 		--datetime=2024-01-01
 
-# Do I need to make a Product in the app before running provenance? Yes because: stack': 'Error: Failed query: insert into "product_run" ("id", "name", "description", "me'+29
-# Product GMW v4 EEZ Provenance
-product-gmw-v4-eez-provenance-db-local:
+# You need to make a Product in the app before running provenance. Use that product ID here.
+# You also need to make a Variable. It must have the ID 'sum-area-by-value'.
+product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id 935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-run-id/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite
+
+
 
 # Product Seagrass EEZ v4
 product-seagrass-eez-fiji:

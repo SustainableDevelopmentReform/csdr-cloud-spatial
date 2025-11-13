@@ -192,6 +192,7 @@ async def process_single_file(
         out_stac = name.replace(".tif", ".stac-item.json")
 
         # If S3, we need a S3 URI, otherwise, just a local path
+        # TODO: make this S3 prefix code a function.
         if type(target_store) is S3Store:
             s3_prefix = get_prefix(target_location)
             if s3_prefix is not None:
@@ -279,12 +280,14 @@ async def run_extract_gmw(
 
     store = get_store_for_url(source_location)
 
+    # TODO: make this S3 prefix code a function.
     if type(store) is S3Store:
         s3_prefix = get_prefix(source_location)
         if s3_prefix is not None:
             source_zip_name = f"{s3_prefix}/{source_zip_name}"
 
     logger.info(f"Checking for source zip file at path {source_zip_name}...")
+    # TODO: make this S3 prefix code a function.
     if type(store) is S3Store:
         logger.info(
             f"Store is S3Store with bucket {store.config['bucket']} and prefix {s3_prefix}"
@@ -301,6 +304,7 @@ async def run_extract_gmw(
             f"Source zip file found at {source_location}, proceeding with extraction."
         )
 
+    # TODO: make a local target_store relative path absolute. Otherwise the STAC hrefs will be broken. These hrefs are in the STAC item jsons.
     target_store = get_store_for_url(target_location)
 
     # Open the zip file, and extract all files into memory
@@ -345,7 +349,8 @@ def extract_gmw(
     ),
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/datasets/gmw-vX/0-0-1/data",
+        # This must be an absolute path. Otherwise the STAC href attribute will be a relative path which breaks when used.
+        default="/Users/wj/Projects/csdr/csdr-cloud-spatial/cache/datasets/gmw-vX/0-0-1/data",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
@@ -367,6 +372,7 @@ async def run_index_gmw(
 ) -> None:
     store = get_store_for_url(source_location)
     s3_prefix = None
+    # TODO: make this S3 prefix code a function.
     if type(store) is S3Store:
         s3_prefix = get_prefix(source_location)
 
@@ -375,6 +381,7 @@ async def run_index_gmw(
     out_filename = "gmw.parquet"
     dest_s3_prefix = None
 
+    # TODO: make this S3 prefix code a function.
     if type(dest) is S3Store:
         dest_s3_prefix = get_prefix(target_location)
         if dest_s3_prefix is not None:

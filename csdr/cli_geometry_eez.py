@@ -32,6 +32,7 @@ async def run_cache_eez(
     target_filename = get_dataset_name_from_url(store, source_url, keep_path=False)
     target_store = get_store_for_url(target_location)
 
+    # TODO: make this S3 prefix code a function.
     if type(target_store) is S3Store:
         # S3Store needs the full path including prefix
         prefix = get_prefix(target_location)
