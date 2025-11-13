@@ -44,6 +44,7 @@ def get_area_from_dataset_geometry(
     # STAC Geoparquet has proj:bbox attribute. STAC Geoparquet of Mangroves is sparse. There are 1647 STAC items, each with a bbox. Checking intersection of geometry bbox with these bboxes is very fast.
     # TODO: move the check function outside of this function
     # TODO: make this a param to use or not because if there were less sparse data it could slow processing down potentially?
+    # TODO: can we include datetime_string_match in this optimisation? It would filter out some items potentially before checking intersection. The temporal filter is currently done in load_xarray_stacgeoparquet but would increase performance if done here.
     def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
         # make geometry bbox
         geom_bbox = geometry.boundingbox  # Should be [minx, miny, maxx, maxy]
