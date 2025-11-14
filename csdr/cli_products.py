@@ -360,12 +360,13 @@ async def process_geometry(
             target_path = f"{prefix}/{target_path}"
     target_url = get_url_from_store_filename(target_store, target_path)
     logger.info(f"target_url: {target_url}")
+    logger.info(f"geometry_id: '{geometry_id}'")
 
     if exists(target_store, target_path) and not overwrite:
             logger.info(f"Product already exists at {target_url}, skipping processing.")
             raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
-    logger.info(f"JSON doesn't exist for {geometry_id} or overwrite is True, processing geometry.")
+    logger.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
     # Load geometry data
     gdf, _ = _load_geometry_data(geometry_provenance_url) # GeoDataFrame

@@ -226,10 +226,11 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
     store = get_store_for_url(path)
     filepath = get_dataset_name_from_url(store, path)
 
-    async def _read_thing() -> ItemCollection:
+    async def _read_stac_items_async() -> ItemCollection:
         return await rustac.read(filepath, store=store)
-
+    
     # Check if we're already in an event loop (e.g., Jupyter notebook)
+    # Does Argo/Dask also have an event loop running?
     try:
         asyncio.get_running_loop()
         # If we're in an event loop, we need to use nest_asyncio
@@ -239,7 +240,7 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
         item_dict = asyncio.run(_read_thing())
     except RuntimeError:
         # No event loop running, safe to use asyncio.run()
-        item_dict = asyncio.run(_read_thing())
+        item_dict = asyncio.run(_read_stac_items_async())
 
     return ItemCollection.from_dict(item_dict)
 
@@ -259,7 +260,7 @@ def load_xarray_stacgeoparquet(
             if datetime_string_match in item.datetime.isoformat():
                 items.append(item)
 
-    # Force the use of Dask. This is already done in the function that calls this. Redundant?
+    # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 

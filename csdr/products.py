@@ -30,13 +30,9 @@ def get_area_from_dataset_geometry(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' is supported."
         )
 
-    # Get the STAC items
+    # Get the STAC items (just metadata, not the data itself, so dask chunking not needed yet)
     items = open_stacgeoparquet(dataset_url)
 
-    # Force the use of Dask. Is this needed here? load_xarray_stacgeoparquet already does this. This is the only use of the load_xarray_stacgeoparquet function in the CLI (excluding a test).
-    if load_kwargs.get("chunks") is None:
-        load_kwargs["chunks"] = {}
-    
     # Performance optimisation to return quickly if no spatial intersection between geometry and dataset bounding boxes. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
     # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC item bboxes.
     # 3. If no intersect, return 0.0 area immediately (fast!). Else do the actual calculation (because there is potential overlap).
@@ -49,6 +45,10 @@ def get_area_from_dataset_geometry(
     else:
         logger.info("Spatial intersection found between geometry and dataset bounding boxes. Proceeding with area calculation.")
 
+    # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
+    if load_kwargs.get("chunks") is None:
+        load_kwargs["chunks"] = {}
+    
     # Load the dataset
     data = load_xarray_stacgeoparquet(
         items,
