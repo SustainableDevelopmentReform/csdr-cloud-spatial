@@ -18,8 +18,9 @@ from rioxarray import open_rasterio
 from rustac import write
 
 from csdr.io import (
+    prepend_prefix_if_s3_store,
     exists,
-    get_prefix,
+    get_s3_prefix,
     get_stac_item_dicts_from_store,
     get_store_for_url,
     get_url_from_store_filename,
@@ -58,19 +59,19 @@ async def cache_single_source(
         source_meta = source.head(url.path)
         size = source_meta.get("size", None)
 
-        dest = None
-        dest = get_store_for_url(target_location)
+        target_store = None
+        target_store = get_store_for_url(target_location)
         target_zip_name = (
             f"{target_path}/{target_zip_name}"
             if target_path is not None
             else target_zip_name
         )
 
-        target_url = get_url_from_store_filename(dest, target_zip_name)
+        target_url = get_url_from_store_filename(target_store, target_zip_name)
         logging.info(f"Target URL for caching is {target_url}")
 
-        if exists(dest, target_zip_name) and not overwrite:
-            dest_meta = dest.head(target_zip_name)
+        if exists(target_store, target_zip_name) and not overwrite:
+            dest_meta = target_store.head(target_zip_name)
             if size is not None and "size" in dest_meta and dest_meta["size"] == size:
                 logging.info(
                     f"File already exists at target location with matching size of {size}. Skipping download."
@@ -87,7 +88,7 @@ async def cache_single_source(
             logging.info(
                 f"File {target_zip_name} does not exist at target location, downloading."
             )
-        _ = await dest.put_async(target_zip_name, source.get(url.path))
+        _ = await target_store.put_async(target_zip_name, source.get(url.path))
         logging.info(f"File cached successfully, downloaded to {target_url}")
 
         return f"{target_location}/{target_zip_name}"
@@ -157,6 +158,7 @@ def cache_gmw(
 ) -> None:
     logging.info("Starting GMW caching process...")
     target_path = None
+    # Handle S3 target path
     if target_location.startswith("s3://"):
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
@@ -194,12 +196,12 @@ async def process_single_file(
         out_stac = name.replace(".tif", ".stac-item.json")
 
         # If S3, we need a S3 URI, otherwise, just a local path
-        # TODO: make this S3 prefix code a function.
+        out_key = prepend_prefix_if_s3_store(target_store, target_location, out_key)
+        out_stac = prepend_prefix_if_s3_store(
+            target_store, target_location, out_stac
+        )
+        # TODO: make target_uri more elegant like other functions
         if type(target_store) is S3Store:
-            s3_prefix = get_prefix(target_location)
-            if s3_prefix is not None:
-                out_key = f"{s3_prefix}/{out_key}"
-                out_stac = f"{s3_prefix}/{out_stac}"
             target_uri = f"s3://{target_store.config['bucket']}/{out_key}"
         else:
             target_uri = f"{target_location}/{out_key}"
@@ -275,27 +277,10 @@ async def run_extract_gmw(
     max_concurrent: int,
 ) -> None:
     """Async function to run the GMW extraction with parallel processing."""
-    store = None
-    s3_prefix = None
-
-    # Cleanup...
-    source_location = source_location.rstrip("/")
-
+    source_location = source_location.rstrip("/") # Remove trailing slash if present
     store = get_store_for_url(source_location)
-
-    # TODO: make this S3 prefix code a function.
-    if type(store) is S3Store:
-        s3_prefix = get_prefix(source_location)
-        if s3_prefix is not None:
-            source_zip_name = f"{s3_prefix}/{source_zip_name}"
-
+    source_zip_name = prepend_prefix_if_s3_store(store, source_location, source_zip_name)
     logging.info(f"Checking for source zip file at path {source_zip_name}...")
-    # TODO: make this S3 prefix code a function.
-    if type(store) is S3Store:
-        logging.info(
-            f"Store is S3Store with bucket {store.config['bucket']} and prefix {s3_prefix}"
-        )
-
     source_exists = exists(store, source_zip_name)
     if not source_exists:
         logging.error(
@@ -307,7 +292,13 @@ async def run_extract_gmw(
             f"Source zip file found at {source_location}, proceeding with extraction."
         )
 
-    # TODO: make a local target_store relative path absolute. Otherwise the STAC hrefs will be broken. These hrefs are in the STAC item jsons.
+    # TODO: If store is local, make target_store an absolute path (if relative). This prevents STAC Item href attribute from being unusable.
+    # TODO: Test this:
+    # if target_store is LocalStore:
+    #     target_location = str(
+    #         Path(target_location).absolute()
+    #     )  # Convert to absolute path as safeguard
+
     target_store = get_store_for_url(target_location)
 
     # Open the zip file, and extract all files into memory
@@ -378,26 +369,15 @@ async def run_index_gmw(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
     store = get_store_for_url(source_location)
-    s3_prefix = None
-    # TODO: make this S3 prefix code a function.
-    if type(store) is S3Store:
-        s3_prefix = get_prefix(source_location)
-
-    dest = get_store_for_url(target_location)
-
-    out_filename = "gmw.parquet"
-    dest_s3_prefix = None
-
-    # TODO: make this S3 prefix code a function.
-    if type(dest) is S3Store:
-        dest_s3_prefix = get_prefix(target_location)
-        if dest_s3_prefix is not None:
-            out_filename = f"{dest_s3_prefix}/{out_filename}"
+    s3_prefix = get_s3_prefix(source_location)
+    target_store = get_store_for_url(target_location)
+    target_filename = "gmw.parquet"
+    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
 
     # Check for existing geoparquet file
-    if exists(dest, out_filename) and not overwrite:
+    if exists(target_store, target_filename) and not overwrite:
         logging.info(
-            f"Parquet file already exists at {out_filename}, skipping indexing."
+            f"Parquet file already exists at {target_filename}, skipping indexing."
         )
         return
     else:
@@ -410,11 +390,11 @@ async def run_index_gmw(
     # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    result_location = get_url_from_store_filename(dest, out_filename)
+    result_location = get_url_from_store_filename(target_store, target_filename)
 
     logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
-        await write(out_filename, item_dicts, store=dest) # rustac infers that it is writing a parquet format from filename
+        await write(target_filename, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
 
     logging.info(f"Parquet write completed, wrote to {result_location}")
 

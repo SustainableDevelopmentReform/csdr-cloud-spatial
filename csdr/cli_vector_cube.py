@@ -111,6 +111,7 @@ def zonal_stats(
             da = da.odc.reproject(proj_crs, resampling="nearest")
             da.name = data_variable  # name gets changed by reproject
 
+        # Handle S3 vs local paths automatically via geopandas
         logging.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
             gdf_orig = gpd.read_parquet(

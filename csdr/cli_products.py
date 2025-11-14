@@ -11,12 +11,13 @@ from dask.distributed import Client
 import logging
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
+import asyncio
 
 from csdr.io import (
     exists,
-    get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
+    prepend_prefix_if_s3_store,
     read_dict,
     read_geospatial_file,
     write_gdf_to_parquet,
@@ -319,14 +320,9 @@ def process_geometry(
         datetime=datetime,
     )
 
-    # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py
+    # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py and other files.
 
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            target_path = f"{prefix}/{target_path}"
+    target_path = prepend_prefix_if_s3_store(target_store, target_location, target_path)
     target_url = get_url_from_store_filename(target_store, target_path)
     logging.info(f"target_url: {target_url}")
 
@@ -540,19 +536,11 @@ def consolidate_product(
     store = get_store_for_url(location)
 
     # TODO: standardise target path logic with other functions
-    path = get_product_path(
-        product_id,
-        variable_name,
-        datetime
-    )
-    logging.info(f"path {path}")
 
-    # TODO: make this S3 prefix code a function.
-    if type(store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(location)
-        if prefix is not None:
-            path = f"{prefix}/{path}"
+    path = get_product_path(product_id, variable_name, run_id, datetime)
+    logging.info(f"path {path}")
+    path = prepend_prefix_if_s3_store(store, location, path)
+    logging.info(f"path {path}")
 
     url = get_url_from_store_filename(store, path)
     logging.info(f"Looking for product files in {url}")

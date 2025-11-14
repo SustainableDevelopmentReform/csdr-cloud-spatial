@@ -3,25 +3,28 @@ import pytest
 from csdr.io import (
     get_dataset_name_from_url,
     get_file_name_from_url,
-    get_prefix,
+    get_s3_prefix,
     get_store_for_url,
     get_url_from_store_filename,
 )
 
 
-def test_get_prefix() -> None:
-    assert get_prefix("s3://bucket-name/prefix/to/file.txt") == "prefix/to"
-    assert get_prefix("s3://bucket-name/file.txt") is None
-    assert get_prefix("s3://bucket-name/prefix/to/") == "prefix/to"
-    assert get_prefix("s3://bucket-name/prefix/to") == "prefix/to"
-    assert get_prefix("s3://bucket-name/") is None
-    assert get_prefix("s3://bucket-name") is None
-    assert get_prefix("s3://bucket-name/prefix.to/file.txt") == "prefix.to"
-    assert get_prefix("s3://bucket-name/prefix.to/file.name.txt") == "prefix.to"
+def test_get_s3_prefix() -> None:
+    assert get_s3_prefix("s3://bucket-name/prefix/to/file.txt") == "prefix/to"
+    assert get_s3_prefix("s3://bucket-name/file.txt") is None
+    assert get_s3_prefix("s3://bucket-name/prefix/to/") == "prefix/to"
+    assert get_s3_prefix("s3://bucket-name/prefix/to") == "prefix/to"
+    assert get_s3_prefix("s3://bucket-name/") is None
+    assert get_s3_prefix("s3://bucket-name") is None
+    assert get_s3_prefix("s3://bucket-name/prefix.to/file.txt") == "prefix.to"
+    assert get_s3_prefix("s3://bucket-name/prefix.to/file.name.txt") == "prefix.to"
     assert (
-        get_prefix("s3://bucket-name/long/prefix/with/lots/of/parts/file.csv")
+        get_s3_prefix("s3://bucket-name/long/prefix/with/lots/of/parts/file.csv")
         == "long/prefix/with/lots/of/parts"
     )
+
+
+# TODO: prepend_prefix_if_s3_store() test
 
 
 def test_get_file_name_from_url() -> None:
