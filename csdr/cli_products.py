@@ -113,9 +113,7 @@ def _create_product_output(
         },
     }
 
-# # Is _process_single_geometry the planned way to do it? While process_geometry is for debugging?
-# # Uses external Dask client passed from process_all_geometries I think.
-# # I guess I need to update process_single_geometry because I have updated process_geometry.
+# TODO: remove or update this. It is not used/outdated but could be helpful for local Dask processing all geometries.
 # def _process_single_geometry(
 #     geometry_id: str,
 #     geometry: Geometry,
@@ -211,7 +209,6 @@ def list_geometries(
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
-    # Should out_file be optional? Should it then default to printing to console?
     out_file: str = typer.Option(
         None, help="Tempfile to write list of IDs to (otherwise print to console)"
     ),
@@ -375,8 +372,6 @@ async def process_geometry(
     geometry = get_geom_from_gdf(gdf, geometry_id) # ODC Geometry object. This is just one geometry.
 
     # Set up Dask client
-    # What is this Dask client used for? It isn't used except to be closed. Is it used indirectly in process_variables_for_geometry (load_xarray_stacgeoparquet)?
-    # use_dask defaults to False
     client = _setup_dask_client(use_dask, dask_client_opts)
 
     try:
@@ -404,18 +399,19 @@ async def process_geometry(
             run_id,
         )
 
-        # write_json(target_store, target_path, product_output)
-        # logger.info(f"Wrote results to {target_url}")
 
         # try to use async put instead of write_json. This is consistent with geometry eez code.
         logger.info(f"Writing to {target_url}. target_path: {target_path}...")
+        # TODO: here we could use write_json function or .put instead of .put_async and then this whole function could be synchronous.
         await target_store.put_async(target_path, json.dumps(product_output).encode("utf-8"))
+        # write_json(target_store, target_path, product_output) # this needs the S3 logic cleaned up.
         logger.info(f"Wrote results to {target_url}")
 
     finally:
         if client is not None:
             client.close()
 
+# TODO: remove or update this. It is not used/outdated but could be helpful for local Dask processing all geometries.
 # # process-all-geometries is for debugging parallel processing of all geometries. It is not used in the product workflow template.
 # @products_app.command("process-all-geometries")
 # def process_all_geometries(

@@ -206,41 +206,7 @@ product-gmw-v3-eez-process-geometry-s3:
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
 
-# Process all geometries
-# This does not use Dask parallelization. It loops through the geometry IDs and processes them one at a time.
-# This takes a long time.
-product-gmw-v4-eez-process-all-geometries-local-loop:
-	jq -r '.[]' ./cache/tmp/geometries_list.json | while read id; do \
-		echo "Processing geometry ID: $$id"; \
-		csdr products process-geometry \
-			--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-			--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-			--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-			--target-location=./cache/products/gmw-v4-eez/0-0-1 \
-			--variable-name=mangrove \
-			--variable-value=1.0 \
-			--datetime=2024-01-01 \
-			--load-kwargs="resolution=100,crs=epsg:6933" \
-			--geometry-id="$$id" \
-			--overwrite; \
-	done
-
-# This uses Dask to parallelize the processing of all geometries. Much faster!
-product-gmw-v4-eez-process-all-geometries-local:
-	csdr products process-all-geometries \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--datetime=2024-01-01 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--overwrite; \
-		--use_dask
-
+# Process all geometries with Dask. Not used in workflow and code is outdated.
 # product-gmw-v4-eez-process-all-geometries-s3:
 # 	csdr products process-all-geometries \
 # 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
