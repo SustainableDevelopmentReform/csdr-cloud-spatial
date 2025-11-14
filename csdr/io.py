@@ -31,14 +31,14 @@ def get_file_info(store: HTTPStore | S3Store | LocalStore, path: str) -> dict[st
     }
 
 
-# TODO: This S3 logic should be split out to its own function.
 def write_json(
     store: HTTPStore | S3Store | LocalStore, path: str, data: dict[str, Any]
 ) -> None:
     if type(store) is HTTPStore:
         raise ValueError("Cannot write to HTTPStore")
     elif type(store) is LocalStore:
-        # No put, so do it a boring way
+        # TODO: validate that LocalStore does not have put. I think it does https://developmentseed.org/obstore/latest/api/store/local/#obstore.store.LocalStore.put
+        # Use put if possible to streamline code
         full_path = Path(store.prefix) / path
         full_path.parent.mkdir(parents=True, exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
@@ -89,23 +89,40 @@ def get_file_name_from_url(url: str) -> str:
     return file_name
 
 
-def get_prefix(url: str) -> str | None:
+# A prefix is the path of a path that excludes the provider (S3, HTTP, Local), and the file name and extension.
+# E.g. the s3://my-bucket/path/to/myfile.geojson has prefix path/to. Locally, /data/files/myfile.geojson has prefix data/files.
+def get_s3_prefix(url: str) -> str | None:
+    # Should we validate the input? E.g. Check that the url starts with 's3://'. Otherwise error because it is not an S3 path.
     s3_url = urlparse(url)
     file_name = get_file_name_from_url(url)
 
     s3_prefix = None
     if file_name is not None and s3_url.path.endswith(file_name):
+        # Remove file name and extension from path if present. Remove leading and trailing slashes.
         s3_prefix = s3_url.path.lstrip("/").replace(file_name, "").rstrip("/")
     else:
+        # Else just remove leading and trailing slashes
         s3_prefix = s3_url.path.lstrip("/").rstrip("/")
 
+    # Handle case where prefix is empty string
     if s3_prefix == "":
         s3_prefix = None
 
+    # Remove any leading or trailing slashes
     if s3_prefix is not None:
         s3_prefix = s3_prefix.lstrip("/").rstrip("/")
 
     return s3_prefix
+
+
+# Returns prefix + filename for S3, else just filename
+def prepend_prefix_if_s3_store(store: HTTPStore | S3Store | LocalStore, url: str, filename: str) -> str:
+    if type(store) is S3Store:
+        # S3Store needs the full path
+        s3_prefix = get_s3_prefix(url)
+        if s3_prefix is not None:
+            filename = f"{s3_prefix}/{filename}"
+    return filename
 
 
 def get_dataset_name_from_url(
@@ -116,11 +133,7 @@ def get_dataset_name_from_url(
         raise ValueError(f"Could not determine dataset name from URL: {url}")
 
     if keep_path:
-        if type(store) in (S3Store, HTTPStore):
-            s3_prefix = get_prefix(url)
-            if s3_prefix is not None:
-                dataset_name = f"{s3_prefix}/{dataset_name}"
-
+        dataset_name = prepend_prefix_if_s3_store(store, url, dataset_name)
     dataset_name = dataset_name.lstrip("/").rstrip("/")
 
     return dataset_name
