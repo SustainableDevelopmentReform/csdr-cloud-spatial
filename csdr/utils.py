@@ -237,7 +237,7 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
         import nest_asyncio
 
         nest_asyncio.apply()
-        item_dict = asyncio.run(_read_thing())
+        item_dict = asyncio.run(_read_stac_items_async())
     except RuntimeError:
         # No event loop running, safe to use asyncio.run()
         item_dict = asyncio.run(_read_stac_items_async())
