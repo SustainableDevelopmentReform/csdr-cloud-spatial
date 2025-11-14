@@ -2,15 +2,14 @@ import asyncio
 
 import typer
 from loguru import logger
-from obstore.store import S3Store
 
 from csdr.io import (
     exists,
     get_dataset_name_from_url,
     get_file_info,
-    get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
+    prepend_prefix_if_s3_store,
 )
 
 eez_app = typer.Typer()
@@ -32,12 +31,7 @@ async def run_cache_eez(
     target_filename = get_dataset_name_from_url(store, source_url, keep_path=False)
     target_store = get_store_for_url(target_location)
 
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            target_filename = f"{prefix}/{target_filename}"
+    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
     target_url = get_url_from_store_filename(target_store, target_filename)
 
     if exists(target_store, target_filename):

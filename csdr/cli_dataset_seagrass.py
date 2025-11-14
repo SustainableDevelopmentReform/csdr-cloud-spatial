@@ -3,15 +3,16 @@ import asyncio
 
 import typer
 from loguru import logger
-from obstore.store import S3Store
 from rasterio import Env
 from rustac import write
 
 from csdr.io import (
     exists,
-    get_prefix,
+    get_s3_prefix,
     get_stac_item_dicts_from_store,
     get_store_for_url,
+    get_url_from_store_filename,
+    prepend_prefix_if_s3_store,
 )
 from csdr.utils import suppress_rust_output
 
@@ -22,21 +23,18 @@ async def run_index_dep_seagrass(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
     store = get_store_for_url(source_location, region="us-west-2")
-    s3_prefix = get_prefix(source_location)
+    s3_prefix = get_s3_prefix(source_location)
 
-    dest = get_store_for_url(target_location)
-    out_filename = "dep_s2_seagrass.parquet"
-
-    # TODO: make this S3 prefix code a function.
-    if type(dest) is S3Store:
-        dest_s3_prefix = get_prefix(target_location)
-        if dest_s3_prefix is not None:
-            out_filename = f"{dest_s3_prefix}/{out_filename}"
-
+    target_store = get_store_for_url(target_location)
+    target_filename = "dep_s2_seagrass.parquet"
+    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
+    target_url = get_url_from_store_filename(target_store, target_filename)
+    logger.info(f"Target URL for DEP Seagrass parquet: {target_url}")
+    
     # Check for existing geoparquet file
-    if exists(dest, out_filename) and not overwrite:
+    if exists(target_store, target_filename) and not overwrite:
         logger.info(
-            f"Parquet file already exists at {out_filename}, skipping indexing."
+            f"Parquet file already exists at {target_filename}, skipping indexing."
         )
         return
     else:
@@ -50,17 +48,12 @@ async def run_index_dep_seagrass(
         item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
     logger.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
+        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{target_filename}"
     )
     with suppress_rust_output():
-        await write(out_filename, item_dicts, store=dest)
+        await write(target_filename, item_dicts, store=target_store)
 
-    logger.info("Parquet write completed.")
-
-    if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
-    else:
-        logger.info(f"Finished writing to {target_location}/{out_filename}")
+    logger.info(f"Finished writing parquet file to {target_url}")
 
 
 @seagrass_app.command("index-dep")

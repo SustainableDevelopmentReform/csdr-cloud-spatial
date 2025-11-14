@@ -7,14 +7,13 @@ import geopandas as gpd
 import typer
 from fiona.io import ZipMemoryFile
 from loguru import logger
-from obstore.store import S3Store
 
 from csdr.geometries import add_geometry_id_name
 from csdr.io import (
+    prepend_prefix_if_s3_store,
     exists,
     get_dataset_name_from_url,
     get_file_name_from_url,
-    get_prefix,
     get_store_for_url,
     get_url_from_store_filename,
     read_geospatial_file,
@@ -86,12 +85,7 @@ def convert_zipfile_to_parquet(
         ".shp", ".parquet"
     )
     
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        path = get_prefix(target_location)
-        if path is not None:
-            target_filename = f"{path}/{target_filename}"
+    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
     target_url = get_url_from_store_filename(target_store, target_filename)
 
     # Check if target file already exists
@@ -205,12 +199,7 @@ def convert_geospatial_file_to_parquet(
     # Set up the target store
     target_store = get_store_for_url(target_location)
     target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        path = get_prefix(target_location)
-        if path is not None:
-            target_filename = f"{path}/{target_filename}"
+    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
     target_url = get_url_from_store_filename(target_store, target_filename)
 
     # Check if target file already exists
