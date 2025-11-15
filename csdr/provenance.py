@@ -9,7 +9,7 @@ from csdr.io import (
     get_dataset_name_from_url,
     get_file_info,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
 )
 
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
@@ -61,7 +61,7 @@ def get_provenance(
         "imageCode": image_state["imageCode"],
         "imageTag": image_state["imageTag"],
         # This should be the URL to this file itself
-        "provenanceUrl": get_url_from_store_filename(store, path) + ".provenance.json",
+        "provenanceUrl": get_url_from_store_prefix_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
         # Extra stuff! e.g. geometriesRunId and productRunId
