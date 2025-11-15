@@ -16,7 +16,7 @@ import asyncio
 from csdr.io import (
     exists,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
     prepend_prefix_if_s3_store,
     read_dict,
     read_geospatial_file,
@@ -323,8 +323,9 @@ def process_geometry(
     # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py and other files.
 
     target_path = prepend_prefix_if_s3_store(target_store, target_location, target_path)
-    target_url = get_url_from_store_filename(target_store, target_path)
+    target_url = get_url_from_store_prefix_filename(target_store, target_path)
     logging.info(f"target_url: {target_url}")
+    logging.info(f"geometry_id: '{geometry_id}'")
 
     if exists(target_store, target_path) and not overwrite:
             logging.info(f"Product already exists at {target_url}, skipping processing.")
@@ -542,7 +543,7 @@ def consolidate_product(
     path = prepend_prefix_if_s3_store(store, location, path)
     logging.info(f"path {path}")
 
-    url = get_url_from_store_filename(store, path)
+    url = get_url_from_store_prefix_filename(store, path)
     logging.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
@@ -596,5 +597,5 @@ def consolidate_product(
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
-    out_url = get_url_from_store_filename(store, output_file)
+    out_url = get_url_from_store_prefix_filename(store, output_file)
     logging.info(f"Wrote consolidated product data to {out_url}")

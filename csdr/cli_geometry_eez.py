@@ -9,7 +9,7 @@ from csdr.io import (
     get_dataset_name_from_url,
     get_file_info,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
     prepend_prefix_if_s3_store,
 )
 
@@ -33,7 +33,7 @@ async def run_cache_eez(
     target_store = get_store_for_url(target_location)
 
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_filename(target_store, target_filename)
+    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
 
     if exists(target_store, target_filename):
         if not overwrite:

@@ -12,7 +12,7 @@ from csdr.io import (
     get_s3_prefix,
     get_stac_item_dicts_from_store,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
     prepend_prefix_if_s3_store,
 )
 from csdr.utils import suppress_rust_output
@@ -29,7 +29,7 @@ async def run_index_dep_seagrass(
     target_store = get_store_for_url(target_location)
     target_filename = "dep_s2_seagrass.parquet"
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_filename(target_store, target_filename)
+    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
     logger.info(f"Target URL for DEP Seagrass parquet: {target_url}")
     
     # Check for existing geoparquet file

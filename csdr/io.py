@@ -77,6 +77,7 @@ def get_store_for_url(
         return LocalStore(prefix=path_prefix, **kwargs)
 
 
+# Does not return the path, just the file name e.g. "file.txt" from "s3://bucket-name/prefix/to/file.txt"
 def get_file_name_from_url(url: str) -> str:
     parsed_url = urlparse(url)
     file_name = os.path.basename(parsed_url.path)
@@ -125,6 +126,7 @@ def prepend_prefix_if_s3_store(store: HTTPStore | S3Store | LocalStore, url: str
     return filename
 
 
+# By default this keeps the path. If keep_path is False, it only returns the file name.
 def get_dataset_name_from_url(
     store: HTTPStore | S3Store | LocalStore, url: str, keep_path: bool = True
 ) -> str:
@@ -133,21 +135,30 @@ def get_dataset_name_from_url(
         raise ValueError(f"Could not determine dataset name from URL: {url}")
 
     if keep_path:
-        dataset_name = prepend_prefix_if_s3_store(store, url, dataset_name)
+        if type(store) is S3Store:
+            dataset_name = prepend_prefix_if_s3_store(store, url, dataset_name)
+        elif type(store) is HTTPStore or type(store) is LocalStore:
+            parsed = urlparse(url)
+            # For local paths, parsed.path may start with '/' (absolute) or './' (relative)
+            dataset_name = parsed.path.lstrip("/.")
+        else:
+            raise ValueError(f"Unsupported store type: {type(store)}")
+
     dataset_name = dataset_name.lstrip("/").rstrip("/")
 
     return dataset_name
 
 
-def get_url_from_store_filename(
-    store: HTTPStore | S3Store | LocalStore, filename: str
+
+def get_url_from_store_prefix_filename(
+    store: HTTPStore | S3Store | LocalStore, prefix_filename: str
 ) -> str:
     if type(store) is HTTPStore:
-        return f"{store.url.rstrip('/')}/{filename.lstrip('/')}"
+        return f"{store.url.rstrip('/')}/{prefix_filename.lstrip('/')}"
     elif type(store) is S3Store:
-        return f"s3://{store.config['bucket']}/{filename.lstrip('/')}"
+        return f"s3://{store.config['bucket']}/{prefix_filename.lstrip('/')}"
     elif type(store) is LocalStore:
-        return f"{store.prefix}/{filename}"
+        return store.prefix.joinpath(get_file_name_from_url(prefix_filename)).as_posix()
     else:
         raise ValueError(f"Unsupported store type: {type(store)}")
 
