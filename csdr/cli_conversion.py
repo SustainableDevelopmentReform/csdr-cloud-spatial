@@ -15,7 +15,7 @@ from csdr.io import (
     get_dataset_name_from_url,
     get_file_name_from_url,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
     read_geospatial_file,
     write_gdf_to_parquet,
 )
@@ -86,7 +86,7 @@ def convert_zipfile_to_parquet(
     )
     
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_filename(target_store, target_filename)
+    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
@@ -200,7 +200,7 @@ def convert_geospatial_file_to_parquet(
     target_store = get_store_for_url(target_location)
     target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_filename(target_store, target_filename)
+    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:

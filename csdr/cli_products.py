@@ -13,7 +13,7 @@ import asyncio
 from csdr.io import (
     exists,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
     prepend_prefix_if_s3_store,
     read_dict,
     read_geospatial_file,
@@ -131,7 +131,7 @@ def _create_product_output(
 #     """Process a single geometry and return True if processed, False if skipped."""
 #     if exists(target_store, path) and not overwrite:
 #         logger.info(
-#             f"Product already exists at {get_url_from_store_filename(target_store, path)}, skipping processing for geometry {geometry_id}."
+#             f"Product already exists at {get_url_from_store_prefix_filename(target_store, path)}, skipping processing for geometry {geometry_id}."
 #         )
 #         return False
 
@@ -350,7 +350,7 @@ async def process_geometry(
     # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py and other files.
 
     target_path = prepend_prefix_if_s3_store(target_store, target_location, target_path)
-    target_url = get_url_from_store_filename(target_store, target_path)
+    target_url = get_url_from_store_prefix_filename(target_store, target_path)
     logger.info(f"target_url: {target_url}")
     logger.info(f"geometry_id: '{geometry_id}'")
 
@@ -487,7 +487,7 @@ async def process_geometry(
 
 #     # TODO: Does this path contain the filename or just the directory?
 #     target_path = prepend_prefix_if_s3_store(target_store, target_location, target_path)
-#     target_url = get_url_from_store_filename(target_store, target_path)
+#     target_url = get_url_from_store_prefix_filename(target_store, target_path)
 #     logger.info(f"target_url: {target_url}")
 
 #     # Load geometry data
@@ -568,7 +568,7 @@ def consolidate_product(
     path = prepend_prefix_if_s3_store(store, location, path)
     logger.info(f"path {path}")
 
-    url = get_url_from_store_filename(store, path)
+    url = get_url_from_store_prefix_filename(store, path)
     logger.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
@@ -622,5 +622,5 @@ def consolidate_product(
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
-    out_url = get_url_from_store_filename(store, output_file)
+    out_url = get_url_from_store_prefix_filename(store, output_file)
     logger.info(f"Wrote consolidated product data to {out_url}")

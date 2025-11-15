@@ -22,7 +22,7 @@ from csdr.io import (
     get_s3_prefix,
     get_stac_item_dicts_from_store,
     get_store_for_url,
-    get_url_from_store_filename,
+    get_url_from_store_prefix_filename,
 )
 from csdr.utils import suppress_rust_output
 
@@ -66,7 +66,7 @@ async def cache_single_source(
             else target_zip_name
         )
 
-        target_url = get_url_from_store_filename(target_store, target_zip_name)
+        target_url = get_url_from_store_prefix_filename(target_store, target_zip_name)
         logger.info(f"Target URL for caching is {target_url}")
 
         if exists(target_store, target_zip_name) and not overwrite:
@@ -382,7 +382,7 @@ async def run_index_gmw(
     # Find all the the GMW STAC files
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    result_location = get_url_from_store_filename(target_store, target_filename)
+    result_location = get_url_from_store_prefix_filename(target_store, target_filename)
 
     logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
