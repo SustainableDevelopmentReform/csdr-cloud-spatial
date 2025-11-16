@@ -48,7 +48,7 @@ dependencies = [
     "zarr"
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "poetry",
     "bokeh",
