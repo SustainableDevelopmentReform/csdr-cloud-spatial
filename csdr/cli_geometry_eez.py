@@ -5,10 +5,10 @@ from loguru import logger
 
 from csdr.io import (
     exists,
-    get_dataset_name_from_url,
+    get_file_name_from_url,
     get_file_info,
-    get_store_for_url,
-    get_url_from_store_prefix_filename,
+    get_store_from_url,
+    make_url_from_store_prefix_filename,
     prepend_prefix_if_s3_store,
 )
 
@@ -25,14 +25,14 @@ async def run_cache_eez(
     # Target location can be s3:// or local file path
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
     target_location = target_location.rstrip("/") # Remove trailing slash if present
-    store = get_store_for_url(source_url)
-    source_name_path = get_dataset_name_from_url(store, source_url)
+    store = get_store_from_url(source_url)
+    source_name_path = get_file_name_from_url(store, source_url)
     size = get_file_info(store, source_name_path).get("size", None)
-    target_filename = get_dataset_name_from_url(store, source_url, keep_path=False)
-    target_store = get_store_for_url(target_location)
+    target_filename = get_file_name_from_url(store, source_url, keep_path=False)
+    target_store = get_store_from_url(target_location)
 
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
+    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     if exists(target_store, target_filename):
         if not overwrite:

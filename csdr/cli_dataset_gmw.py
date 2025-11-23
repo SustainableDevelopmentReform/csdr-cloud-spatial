@@ -17,12 +17,12 @@ from rioxarray import open_rasterio
 from rustac import write
 
 from csdr.io import (
-    prepend_prefix_if_s3_store,
     exists,
     get_s3_prefix,
     get_stac_item_dicts_from_store,
-    get_store_for_url,
-    get_url_from_store_prefix_filename,
+    get_store_from_url,
+    make_url_from_store_prefix_filename,
+    prepend_prefix_if_s3_store,
 )
 from csdr.utils import suppress_rust_output
 
@@ -59,14 +59,14 @@ async def cache_single_source(
         size = source_meta.get("size", None)
 
         target_store = None
-        target_store = get_store_for_url(target_location)
+        target_store = get_store_from_url(target_location)
         target_zip_name = (
             f"{target_path}/{target_zip_name}"
             if target_path is not None
             else target_zip_name
         )
 
-        target_url = get_url_from_store_prefix_filename(target_store, target_zip_name)
+        target_url = make_url_from_store_prefix_filename(target_store, target_zip_name)
         logger.info(f"Target URL for caching is {target_url}")
 
         if exists(target_store, target_zip_name) and not overwrite:
@@ -275,7 +275,7 @@ async def run_extract_gmw(
 ) -> None:
     """Async function to run the GMW extraction with parallel processing."""
     source_location = source_location.rstrip("/") # Remove trailing slash if present
-    store = get_store_for_url(source_location)
+    store = get_store_from_url(source_location)
     source_zip_name = prepend_prefix_if_s3_store(store, source_location, source_zip_name)
     logger.info(f"Checking for source zip file at path {source_zip_name}...")
     source_exists = exists(store, source_zip_name)
@@ -296,7 +296,7 @@ async def run_extract_gmw(
     #         Path(target_location).absolute()
     #     )  # Convert to absolute path as safeguard
 
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_from_url(target_location)
 
     # Open the zip file, and extract all files into memory
     # Load the file as bytes first
@@ -361,9 +361,9 @@ def extract_gmw(
 async def run_index_gmw(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
-    store = get_store_for_url(source_location)
+    store = get_store_from_url(source_location)
     s3_prefix = get_s3_prefix(source_location)
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_from_url(target_location)
     target_filename = "gmw.parquet"
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
 
@@ -382,7 +382,7 @@ async def run_index_gmw(
     # Find all the the GMW STAC files
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    result_location = get_url_from_store_prefix_filename(target_store, target_filename)
+    result_location = make_url_from_store_prefix_filename(target_store, target_filename)
 
     logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():

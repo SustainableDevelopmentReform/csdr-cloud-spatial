@@ -12,10 +12,10 @@ from csdr.geometries import add_geometry_id_name
 from csdr.io import (
     prepend_prefix_if_s3_store,
     exists,
-    get_dataset_name_from_url,
     get_file_name_from_url,
-    get_store_for_url,
-    get_url_from_store_prefix_filename,
+    get_file_name_from_url,
+    get_store_from_url,
+    make_url_from_store_prefix_filename,
     read_geospatial_file,
     write_gdf_to_parquet,
 )
@@ -64,8 +64,8 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    store = get_store_for_url(source_zip_location)
-    source_zip_name_path = get_dataset_name_from_url(store, source_zip_location)
+    store = get_store_from_url(source_zip_location)
+    source_zip_name_path = get_file_name_from_url(store, source_zip_location)
 
     if not exists(store, source_zip_name_path):
         logger.error(
@@ -80,13 +80,13 @@ def convert_zipfile_to_parquet(
     target_location = target_location.rstrip("/")
 
     # Set up the target store
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_from_url(target_location)
     target_filename = source_internal_path_name.split("/")[-1].replace(
         ".shp", ".parquet"
     )
     
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
+    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
@@ -181,8 +181,8 @@ def convert_geospatial_file_to_parquet(
 ) -> None:
     logger.info("Starting geospatial to parquet conversion process...")
 
-    store = get_store_for_url(source_location)
-    source_name_path = get_dataset_name_from_url(store, source_location)
+    store = get_store_from_url(source_location)
+    source_name_path = get_file_name_from_url(store, source_location)
 
     if not exists(store, source_name_path):
         logger.error(
@@ -197,10 +197,10 @@ def convert_geospatial_file_to_parquet(
         target_location = source_location
 
     # Set up the target store
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_from_url(target_location)
     target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
     target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = get_url_from_store_prefix_filename(target_store, target_filename)
+    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:

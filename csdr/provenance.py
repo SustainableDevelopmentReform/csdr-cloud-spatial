@@ -6,10 +6,10 @@ from json import load
 from obstore.store import HTTPStore, LocalStore, S3Store
 
 from csdr.io import (
-    get_dataset_name_from_url,
+    get_file_name_from_url,
     get_file_info,
-    get_store_for_url,
-    get_url_from_store_prefix_filename,
+    get_store_from_url,
+    make_url_from_store_prefix_filename,
 )
 
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
@@ -61,7 +61,7 @@ def get_provenance(
         "imageCode": image_state["imageCode"],
         "imageTag": image_state["imageTag"],
         # This should be the URL to this file itself
-        "provenanceUrl": get_url_from_store_prefix_filename(store, path) + ".provenance.json",
+        "provenanceUrl": make_url_from_store_prefix_filename(store, path) + ".provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
         # Extra stuff! e.g. geometriesRunId and productRunId
@@ -81,8 +81,8 @@ def read_provenance(url: str) -> dict[str, str | int]:
     This function reads a provenance JSON file from the given URL (which can be local, S3, or HTTP). It uses the appropriate store to fetch the file, loads the JSON content, and returns it as a Python dictionary.
     It does not read from a database, just from a file.
     """
-    store = get_store_for_url(url)
-    path = get_dataset_name_from_url(store, url)
+    store = get_store_from_url(url)
+    path = get_file_name_from_url(store, url)
     document = BytesIO(store.get(path).bytes())
 
     return load(document)
