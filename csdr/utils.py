@@ -19,7 +19,7 @@ from odc.stac import load
 from pystac import ItemCollection
 from xarray import DataArray, Dataset
 
-from csdr.io import get_dataset_name_from_url, get_store_for_url
+from csdr.io import get_file_name_from_url, get_store_from_url
 
 
 class Event(TypedDict):
@@ -217,11 +217,11 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", str(e)
 
 
-def open_stacgeoparquet(path: str) -> ItemCollection:
+def open_stacgeoparquet(url: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
-    store = get_store_for_url(path)
-    filepath = get_dataset_name_from_url(store, path)
+    store = get_store_from_url(url)
+    filepath = get_file_name_from_url(url)
 
     async def _read_stac_items_async() -> ItemCollection:
         return await rustac.read(filepath, store=store)
