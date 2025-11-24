@@ -291,7 +291,7 @@ def process_geometry_sync(
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
-        help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
+        help="Options to pass to Dask client, in the form --dask-opts=\"n_workers=8,threads_per_worker=1,memory_limit=3GB\"",
         parser=opt_dict_parser,
     ),
     overwrite: bool = typer.Option(
@@ -471,7 +471,7 @@ def process_all_geometries_dask(
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
-        help="Options to pass to Dask client, in the form --dask-opts key1=value1,key2=value2",
+        help="Options to pass to Dask client, in the form --dask-opts=\"n_workers=8,threads_per_worker=1,memory_limit=3GB\"",
         parser=opt_dict_parser,
     ),
     overwrite: bool = typer.Option(

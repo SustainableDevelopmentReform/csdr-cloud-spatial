@@ -220,7 +220,7 @@ product-gmw-v4-eez-process-all-geometries-dask-s3:
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
 		--use-dask \
-		--dask-opts="n_workers=2,threads_per_worker=2,memory_limit=8GB"
+		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
 
 # TODO: make new run-id for this local test?
 product-gmw-v4-eez-process-all-geometries-dask-local:
@@ -236,7 +236,7 @@ product-gmw-v4-eez-process-all-geometries-dask-local:
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
 		--use-dask \
-		--dask-opts="n_workers=2,threads_per_worker=2,memory_limit=8GB"
+		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
 
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
