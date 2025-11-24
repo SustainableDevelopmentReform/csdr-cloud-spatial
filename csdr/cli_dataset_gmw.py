@@ -18,11 +18,10 @@ from rustac import write
 
 from csdr.io import (
     exists,
-    get_s3_prefix,
+    get_prefix_from_url,
     get_stac_item_dicts_from_store,
     get_store_from_url,
     make_url_from_store_prefix_filename,
-    prepend_prefix_if_s3_store,
 )
 from csdr.utils import suppress_rust_output
 
@@ -189,30 +188,17 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        # logger.info(f"Working on {name}...")
-        out_key = name
-        out_stac = name.replace(".tif", ".stac-item.json")
+        out_key = make_url_from_store_prefix_filename(target_store, f"{target_location}/{name}")
+        out_stac = out_key.replace(".tif", ".stac-item.json")
 
-        # If S3, we need a S3 URI, otherwise, just a local path
-        out_key = prepend_prefix_if_s3_store(target_store, target_location, out_key)
-        out_stac = prepend_prefix_if_s3_store(
-            target_store, target_location, out_stac
-        )
-        # TODO: make target_uri more elegant like other functions
-        if type(target_store) is S3Store:
-            target_uri = f"s3://{target_store.config['bucket']}/{out_key}"
-        else:
-            target_uri = f"{target_location}/{out_key}"
-
-        stac_uri = target_uri.replace(".tif", ".stac-item.json")
         if exists(target_store, out_stac) and not overwrite:
-            logger.info(f"STAC doc already exists for {stac_uri}, skipping.")
+            logger.info(f"STAC doc already exists for {out_stac}, skipping.")
             return
         else:
             if overwrite:
-                logger.info(f"Overwrite is enabled, re-processing {stac_uri}.")
+                logger.info(f"Overwrite is enabled, re-processing {out_stac}.")
             else:
-                logger.info(f"STAC does not exist for {stac_uri}, processing.")
+                logger.info(f"STAC does not exist for {out_stac}, processing.")
 
         # Get the data from memory into a rasterio dataset
         data = open_rasterio(zip_file.open(name))
@@ -246,7 +232,7 @@ async def process_single_file(
                 end_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             stac_doc = create_stac_item(
-                target_uri,
+                out_stac,
                 input_datetime=mid_datetime,
                 collection="gmw",
                 properties={
@@ -263,7 +249,7 @@ async def process_single_file(
             stac_data = json.dumps(stac_doc.to_dict()).encode()
             await target_store.put_async(out_stac, stac_data)
 
-            logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
+            logger.info(f"Finished processing {name}. STAC doc is at {out_stac}")
 
 
 async def run_extract_gmw(
@@ -276,7 +262,6 @@ async def run_extract_gmw(
     """Async function to run the GMW extraction with parallel processing."""
     source_location = source_location.rstrip("/") # Remove trailing slash if present
     store = get_store_from_url(source_location)
-    source_zip_name = prepend_prefix_if_s3_store(store, source_location, source_zip_name)
     logger.info(f"Checking for source zip file at path {source_zip_name}...")
     source_exists = exists(store, source_zip_name)
     if not source_exists:
@@ -361,16 +346,16 @@ def extract_gmw(
 async def run_index_gmw(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
-    store = get_store_from_url(source_location)
-    s3_prefix = get_s3_prefix(source_location)
+    source_store = get_store_from_url(source_location)
     target_store = get_store_from_url(target_location)
-    target_filename = "gmw.parquet"
-    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
+    target_url = f"{target_location}/gmw.parquet"
+    source_prefix = get_prefix_from_url(source_location)
+    target_prefix = get_prefix_from_url(target_url)
 
     # Check for existing geoparquet file
-    if exists(target_store, target_filename) and not overwrite:
+    if exists(target_store, target_prefix) and not overwrite:
         logger.info(
-            f"Parquet file already exists at {target_filename}, skipping indexing."
+            f"Parquet file already exists at {target_prefix}, skipping indexing."
         )
         return
     else:
@@ -380,15 +365,14 @@ async def run_index_gmw(
             logger.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
-    item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
+    item_dicts = await get_stac_item_dicts_from_store(source_store, source_prefix)
 
-    result_location = make_url_from_store_prefix_filename(target_store, target_filename)
 
-    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
+    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
     with suppress_rust_output():
-        await write(target_filename, item_dicts, store=target_store)
+        await write(target_prefix, item_dicts, store=target_store)
 
-    logger.info(f"Parquet write completed, wrote to {result_location}")
+    logger.info(f"Parquet write completed, wrote to {target_url}")
 
 
 @gmw_app.command("index")
