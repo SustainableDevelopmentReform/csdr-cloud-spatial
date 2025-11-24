@@ -2,7 +2,7 @@
 import asyncio
 
 import typer
-from loguru import logger
+import logging
 from obstore.store import S3Store
 from rasterio import Env
 from rustac import write
@@ -35,32 +35,32 @@ async def run_index_dep_seagrass(
 
     # Check for existing geoparquet file
     if exists(dest, out_filename) and not overwrite:
-        logger.info(
+        logging.info(
             f"Parquet file already exists at {out_filename}, skipping indexing."
         )
         return
     else:
         if overwrite:
-            logger.info("Overwrite is enabled, re-indexing.")
+            logging.info("Overwrite is enabled, re-indexing.")
         else:
-            logger.info("Parquet file does not exist, proceeding with indexing.")
+            logging.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the DEP Seagrass STAC files
     with Env(AWS_REGION="us-west-2"):
         item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
-    logger.info(
+    logging.info(
         f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
     )
     with suppress_rust_output():
         await write(out_filename, item_dicts, store=dest)
 
-    logger.info("Parquet write completed.")
+    logging.info("Parquet write completed.")
 
     if target_location.startswith("s3://"):
-        logger.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
+        logging.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
     else:
-        logger.info(f"Finished writing to {target_location}/{out_filename}")
+        logging.info(f"Finished writing to {target_location}/{out_filename}")
 
 
 @seagrass_app.command("index-dep")
@@ -75,6 +75,6 @@ def index_dep_seagrass(
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
-    logger.info("Starting DEP Seagrass indexing process...")
+    logging.info("Starting DEP Seagrass indexing process...")
     asyncio.run(run_index_dep_seagrass(source_location, target_location, overwrite))
-    logger.info("DEP Seagrass indexing process completed.")
+    logging.info("DEP Seagrass indexing process completed.")

@@ -1,5 +1,5 @@
 import pandas as pd
-from loguru import logger
+import logging
 from odc.geo.geom import Geometry
 
 from csdr.provenance import read_provenance
@@ -20,7 +20,7 @@ def get_area_from_dataset_geometry(
     load_kwargs: dict = {},
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
-    logger.info(f"Loading dataset from {dataset_provenance_url}")
+    logging.info(f"Loading dataset from {dataset_provenance_url}")
     provenance = read_provenance(dataset_provenance_url)
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
@@ -40,10 +40,10 @@ def get_area_from_dataset_geometry(
     # TODO: make this a param to use or not because if there were less sparse data it could slow processing down potentially?
     any_intersection = check_for_any_intersection(geometry, items)
     if not any_intersection:
-        logger.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
+        logging.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
         return 0.0
     else:
-        logger.info("Spatial intersection found between geometry and dataset bounding boxes. Proceeding with area calculation.")
+        logging.info("Spatial intersection found between geometry and dataset bounding boxes. Proceeding with area calculation.")
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
@@ -57,7 +57,7 @@ def get_area_from_dataset_geometry(
         **load_kwargs,
     )
 
-    logger.info(f"Loaded data with shape {data.dims}")
+    logging.info(f"Loaded data with shape {data.dims}")
 
     if variable not in data.data_vars:
         raise ValueError(
@@ -87,7 +87,7 @@ def process_variables_for_geometry(
             if geometry.geom_type == "MultiPolygon":
                 geoms = list(geometry.geoms)
             total_area = 0.0
-            logger.info(f"Amount of single geometries: {len(geoms)}")
+            logging.info(f"Amount of single geometries: {len(geoms)}")
             for geom in geoms:
                 area = get_area_from_dataset_geometry(
                     dataset_provenance_url,
@@ -99,9 +99,9 @@ def process_variables_for_geometry(
                 )
                 total_area += area
             results["sum-area-by-value"] = total_area
-            logger.info(f"Total area by value: {total_area}")
+            logging.info(f"Total area by value: {total_area}")
         else:
-            logger.warning(f"Unknown variable requested: {var}")
+            logging.warning(f"Unknown variable requested: {var}")
     return results
 
 

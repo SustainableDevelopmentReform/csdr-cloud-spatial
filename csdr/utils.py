@@ -147,36 +147,33 @@ def execute(year: int, tile: tuple[int, int] | None = None) -> str:
     return job_id
 
 
-util_logger = logging.getLogger(__name__)
-
-
 def download_file(url: str, local_path: str) -> None:
     """Downloads a file from a URL to a local path."""
-    util_logger.info(f"Downloading data from {url}...")
+    logging.info(f"Downloading data from {url}...")
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()  # Raise exception for bad status codes
         with open(local_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        util_logger.info(f"Successfully downloaded to {local_path}")
+        logging.info(f"Successfully downloaded to {local_path}")
     except requests.exceptions.RequestException as e:
-        util_logger.exception(f"Error downloading {url}: {e}")
+        logging.error(f"Error downloading {url}: {e}", exc_info=True)
         raise
 
 
 def unzip_file(zip_path: str, extract_dir: str) -> None:
     """Unzips a file to a specified directory."""
-    util_logger.info(f"Unzipping {zip_path} to {extract_dir}")
+    logging.info(f"Unzipping {zip_path} to {extract_dir}")
     try:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(extract_dir)
-        util_logger.info(f"Successfully unzipped to {extract_dir}")
+        logging.info(f"Successfully unzipped to {extract_dir}")
     except zipfile.BadZipFile:
-        util_logger.error(f"Error: {zip_path} is not a valid zip file or is corrupted.")
+        logging.error(f"Error: {zip_path} is not a valid zip file or is corrupted.")
         raise
     except Exception as e:
-        util_logger.exception(f"Error unzipping {zip_path}: {e}")
+        logging.error(f"Error unzipping {zip_path}: {e}", exc_info=True)
         raise
 
 
@@ -193,8 +190,8 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         # Log stderr even on success, as it might contain warnings
         if process.stderr:
             cmd_str = " ".join(command)
-            util_logger.debug(f"Command '{cmd_str}' stderr:")
-            util_logger.debug(process.stderr.strip())
+            logging.debug(f"Command '{cmd_str}' stderr:")
+            logging.debug(process.stderr.strip())
 
         if process.returncode == 0:
             return True, process.stdout.strip(), ""
@@ -208,15 +205,15 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
                 f"Stderr:\n{stderr_str}\n"
                 f"Stdout:\n{stdout_str}"
             )
-            util_logger.error(error_message)
+            logging.error(error_message)
             return False, stdout_str, stderr_str
     except FileNotFoundError:
         cmd_zero = command[0] if command else "<empty command>"
-        util_logger.error(f"Command not found: {cmd_zero}")
+        logging.error(f"Command not found: {cmd_zero}")
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
         cmd_str = " ".join(command)
-        util_logger.exception(f"Failed to run command '{cmd_str}': {e}")
+        logging.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
         return False, "", str(e)
 
 

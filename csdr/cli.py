@@ -1,3 +1,6 @@
+import logging
+import sys
+
 import typer
 
 from csdr import get_version
@@ -14,6 +17,14 @@ from csdr.cli_provenance import provenance_app
 from csdr.cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
+
+# All files will inherit this logging configuration so we only write once
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(module)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stderr,
+)
 
 # Add the subcommands
 app.add_typer(dataset_app, name="datasets", help="Commands for processing datasets.")

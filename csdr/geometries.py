@@ -3,7 +3,7 @@ from datetime import datetime
 from json import dumps
 
 from geopandas import GeoDataFrame
-from loguru import logger
+import logging
 from odc.geo.geom import Geometry
 from pandas import Series
 from requests.exceptions import HTTPError
@@ -99,7 +99,7 @@ def post_bulk_geometry_outputs_to_database(
             "geometriesRunId": run_id, # This is plural but will be made singular in future DB refactor
             "outputs": outputs[i : i + batch_size],
         }
-        logger.info(
+        logging.info(
             f"Posting batch {i // batch_size + 1} with {len(bulk_output['outputs'])} geometry outputs to database in bulk..."
         )
 
@@ -107,16 +107,14 @@ def post_bulk_geometry_outputs_to_database(
 
         try:
             response.raise_for_status()
-        except HTTPError:
-            logger.info(
-                f"Failed to post geometry outputs: {json.dumps(bulk_output, indent=2)}"
-            )
-            logger.exception(
-                f"Failed to post bulk geometry outputs to database. Response was \n{dumps(response.json(), indent=2)}"
+        except HTTPError as e:
+            logging.error(
+                f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
+                exc_info=True,
             )
 
         # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
-        logger.info(
+        logging.info(
             f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
         )
 
@@ -131,19 +129,17 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         response = post_geometry_output(geometry_output)
         try:
             response.raise_for_status()
-        except HTTPError:
-            logger.error(
-                f"Failed to post geometry output: {json.dumps(geometry_output, indent=2)}"
-            )
-            logger.exception(
-                f"Failed to post geometry output to database. Response was \n{dumps(response.json(), indent=2)}"
+        except HTTPError as e:
+            logging.error(
+                f"Failed to post geometry output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
+                exc_info=True,
             )
             errors += 1
         else:
             successes += 1
-            logger.info(
+            logging.info(
                 f"Wrote geometry output to database \n {dumps(response.json(), indent=2)}"
             )
-    logger.info(
+    logging.info(
         f"Posted {successes} geometry outputs to database with {errors} errors."
     )

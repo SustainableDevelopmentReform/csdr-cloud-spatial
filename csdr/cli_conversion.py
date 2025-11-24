@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import geopandas as gpd
 import typer
 from fiona.io import ZipMemoryFile
-from loguru import logger
+import logging
 from obstore.store import S3Store
 
 from csdr.geometries import add_geometry_id_name
@@ -61,7 +61,7 @@ def convert_zipfile_to_parquet(
         True, help="Replace existing parquet file if it exists."
     ),
 ) -> None:
-    logger.info("Starting parquet conversion process...")
+    logging.info("Starting parquet conversion process...")
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
@@ -69,12 +69,12 @@ def convert_zipfile_to_parquet(
     source_zip_name_path = get_dataset_name_from_url(store, source_zip_location)
 
     if not exists(store, source_zip_name_path):
-        logger.error(
+        logging.error(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
         raise typer.Exit(code=1)
     else:
-        logger.info(
+        logging.info(
             f"Source zip file found at {source_zip_location}, proceeding with extraction."
         )
 
@@ -96,7 +96,7 @@ def convert_zipfile_to_parquet(
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
-        logger.warning(
+        logging.warning(
             f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
         raise typer.Exit(code=0)
@@ -110,7 +110,7 @@ def convert_zipfile_to_parquet(
         with z.open(source_internal_path_name) as src:
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
 
-    logger.info(f"Loaded {len(gdf)} records from the shapefile.")
+    logging.info(f"Loaded {len(gdf)} records from the shapefile.")
 
     # Add ID and Name fields
     gdf = add_geometry_id_name(
@@ -126,7 +126,7 @@ def convert_zipfile_to_parquet(
     # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
 
     if create_pmtiles:
-        logger.info("Creating PMTiles file alongside the parquet...")
+        logging.info("Creating PMTiles file alongside the parquet...")
         # Create a PMTiles files with tippecanoe
         pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
 
@@ -161,11 +161,11 @@ def convert_zipfile_to_parquet(
 
             # Upload the PMTiles file to the target store
             target_store.put(pmtiles_file, local_pmtiles)
-        logger.info(f"Created PMTiles file at {pmtiles_file}")
+        logging.info(f"Created PMTiles file at {pmtiles_file}")
     else:
-        logger.info("Skipping PMTiles creation because flag is set to false.")
+        logging.info("Skipping PMTiles creation because flag is set to false.")
 
-    logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
+    logging.info(f"Parquet extraction process completed. Wrote file to {target_url}")
 
 
 @conversion_app.command("geo-to-parquet")
@@ -185,18 +185,18 @@ def convert_geospatial_file_to_parquet(
         True, help="Replace existing parquet file if it exists."
     ),
 ) -> None:
-    logger.info("Starting geospatial to parquet conversion process...")
+    logging.info("Starting geospatial to parquet conversion process...")
 
     store = get_store_for_url(source_location)
     source_name_path = get_dataset_name_from_url(store, source_location)
 
     if not exists(store, source_name_path):
-        logger.error(
+        logging.error(
             f"Source geospatial file does not exist at {source_location}. Cannot convert."
         )
         raise typer.Exit(code=1)
     else:
-        logger.info(
+        logging.info(
             f"Source geospatial file found at {source_location}, proceeding with conversion."
         )
     if target_location is None:
@@ -215,7 +215,7 @@ def convert_geospatial_file_to_parquet(
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
-        logger.warning(
+        logging.warning(
             f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
         raise typer.Exit(code=0)
@@ -227,7 +227,7 @@ def convert_geospatial_file_to_parquet(
         gdf, name_field=name_field, geometry_id=_get_geometry_id(None, source_name_path)
     )
 
-    logger.info(f"Opened file with {len(gdf)} features")
+    logging.info(f"Opened file with {len(gdf)} features")
 
     with BytesIO() as parquet_buffer:
         gdf.to_parquet(parquet_buffer, engine="pyarrow")
@@ -236,5 +236,5 @@ def convert_geospatial_file_to_parquet(
         # Write the parquet bytes to the target store using obstore
         target_store.put(target_filename, parquet_buffer.getvalue())
 
-    logger.info(f"Loaded {len(gdf)} records from the geospatial file.")
-    logger.info(f"Parquet conversion process completed. Wrote file to {target_url}")
+    logging.info(f"Loaded {len(gdf)} records from the geospatial file.")
+    logging.info(f"Parquet conversion process completed. Wrote file to {target_url}")

@@ -2,7 +2,7 @@ from json import dumps
 from typing import Literal
 
 import typer
-from loguru import logger
+import logging
 from requests.exceptions import HTTPError
 from toolz import get_in
 from typer import Typer
@@ -85,11 +85,11 @@ def _meta_provenance(
     target_file = f"{dataset_name}.provenance.json" # Name includes the input file extension e.g. "EEZ_land_union_v4_202410.parquet.provenance.json"
 
     if exists(store, target_file) and not overwrite:
-        logger.warning(f"Provenance file already exists: {target_file}")
+        logging.warning(f"Provenance file already exists: {target_file}")
     else:
-        logger.info("Either provenance file doesn't exist or it does and overwrite is on.")
+        logging.info("Either provenance file doesn't exist or it does and overwrite is on.")
         write_json(store, target_file, provenance)
-        logger.info(
+        logging.info(
             f"Wrote provenance for {dataset_name} to: {dataset_url}.provenance.json"
         )
 
@@ -99,10 +99,11 @@ def _meta_provenance(
         try:
             response.raise_for_status()
         except HTTPError:
-            logger.exception(
-                f"Failed to post provenance to database. Response was \n{dumps(response.json(), indent=2)}"
+            logging.error(
+                f"Failed to post provenance to database. Response was: \n{dumps(response.json(), indent=2)}",
+                exc_info=True,
             )
-        logger.info(
+        logging.info(
             f"Wrote provenance to database \n {dumps(response.json(), indent=2)}"
         )
 
@@ -135,7 +136,7 @@ def write_dataset_provenance(
         False, help="If true, post the provenance to the database"
     ),
 ) -> None:
-    logger.info(f"Getting provenance for dataset: {dataset_url}")
+    logging.info(f"Getting provenance for dataset: {dataset_url}")
 
     # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id =_meta_provenance(
@@ -148,8 +149,8 @@ def write_dataset_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
     )
-    logger.info(f"dataset_run_id: {dataset_run_id}")
-    logger.info(f"Wrote provenance for dataset: {dataset_url}")
+    logging.info(f"dataset_run_id: {dataset_run_id}")
+    logging.info(f"Wrote provenance for dataset: {dataset_url}")
 
 
 @provenance_app.command("geometry")
@@ -194,12 +195,12 @@ def write_geometry_provenance(
         50, help="Batch size for posting geometry outputs in bulk"
     ),
 ) -> None:
-    logger.info(f"Getting provenance for geometry: {dataset_url}")
+    logging.info(f"Getting provenance for geometry: {dataset_url}")
 
     if run_id is not None:
-        logger.info(f"Run ID '{run_id}' was provided.")
+        logging.info(f"Run ID '{run_id}' was provided.")
     else:
-        logger.info("No Run ID provided, one will be created.")
+        logging.info("No Run ID provided, one will be created.")
 
     extra_info_dict = {}
     extra_info_dict["geometriesRunId"] = run_id
@@ -219,17 +220,17 @@ def write_geometry_provenance(
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
     )
-    logger.info(f"Wrote provenance for geometry: {dataset_url}")
+    logging.info(f"Wrote provenance for geometry: {dataset_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
-    logger.info(f"Consolidated geometry run ID: {consolidated_run_id}")
+    logging.info(f"Consolidated geometry run ID: {consolidated_run_id}")
     if post_geometry_outputs:
         if post_geometry_in_bulk:
-            logger.info("Posting geometry outputs to database in bulk...")
+            logging.info("Posting geometry outputs to database in bulk...")
             post_bulk_geometry_outputs_to_database(
                 dataset_url, run_id=consolidated_run_id, batch_size=batch_size
             )
         else:
-            logger.info("Posting geometry outputs to database one at a time...")
+            logging.info("Posting geometry outputs to database one at a time...")
             post_geometry_outputs_to_database(dataset_url, run_id=consolidated_run_id)
 
 
@@ -256,14 +257,14 @@ def write_product_provenance(
         False, help="If true, overwrite existing provenance file"
     ),
 ) -> None:
-    logger.info(f"Getting provenance for product: {product_url}")
+    logging.info(f"Getting provenance for product: {product_url}")
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
 
     if run_id is not None:
-        logger.info(f"Run ID '{run_id}' was provided.")
+        logging.info(f"Run ID '{run_id}' was provided.")
     else:
-        logger.info("No Run ID provided, one will be created.")
+        logging.info("No Run ID provided, one will be created.")
 
     extra_info_dict = {
         "datasetRunId": dataset_run_id,
@@ -281,18 +282,18 @@ def write_product_provenance(
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
     )
-    logger.info(f"Wrote provenance for product: {product_url}")
+    logging.info(f"Wrote provenance for product: {product_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
-    logger.info(f"Consolidated product run ID: {consolidated_run_id}")
+    logging.info(f"Consolidated product run ID: {consolidated_run_id}")
 
     # Write to DB
     if post_to_database:
-        logger.info("Posting consolidated product data to database")
+        logging.info("Posting consolidated product data to database")
 
         for variable, output in parsed_outputs.items():
             for timePoint in output.keys():
                 outputs = output[timePoint]
-                logger.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
+                logging.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
                 content = {
                     "productRunId": consolidated_run_id,
                     "timePoint": timePoint,
@@ -303,11 +304,12 @@ def write_product_provenance(
                 response = post_product_output_bulk(content)
                 try:
                     response.raise_for_status()
-                except HTTPError:
-                    logger.exception(
-                        f"Failed to post product output to database. Response was \n{dumps(response.json(), indent=2)}"
+                except HTTPError as e:
+                    logging.error(
+                        f"Failed to post product output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
+                        exc_info=True,
                     )
                 else:
-                    logger.info(
+                    logging.info(
                         f"Posted product output for variable {variable} timePoint {timePoint}: {response.status_code}"
                     )

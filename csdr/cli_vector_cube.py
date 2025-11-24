@@ -8,11 +8,6 @@ import typer
 import xarray as xr
 import xvec  # noqa: F401
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 vector_cube_app = typer.Typer()
 
@@ -79,7 +74,7 @@ def zonal_stats(
     from a GeoParquet file and outputs the results to a new GeoParquet file.
     """
     if not zarr_path or not geoparquet_path or not output_path or not data_variable:
-        logger.error(
+        logging.error(
             "--input-zarr, --input-geoparquet, --output-path, and "
             "--data-variable are required."
         )
@@ -90,11 +85,11 @@ def zonal_stats(
     if "zonal_stats" in params:
         stats = params["zonal_stats"]
     else:
-        logger.error("zonal_stats must be specified in params.yaml.")
+        logging.error("zonal_stats must be specified in params.yaml.")
         raise typer.Exit(code=1)
 
     try:
-        logger.info(f"Reading Zarr dataset from: {zarr_path}")
+        logging.info(f"Reading Zarr dataset from: {zarr_path}")
 
         options = {}
         if decode_all:
@@ -103,20 +98,20 @@ def zonal_stats(
         ds = xr.open_zarr(zarr_path, **options)
 
         if data_variable not in ds:
-            logger.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
-            logger.error(f"Available variables: {list(ds.data_vars)}")
+            logging.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
+            logging.error(f"Available variables: {list(ds.data_vars)}")
             raise typer.Exit(code=1)
 
         da = ds[data_variable]  # Select the data variable
 
         if proj_crs and da.odc.crs != proj_crs:
-            logger.info(
+            logging.info(
                 f"Reprojecting dataset from {da.odc.crs.to_wkt(pretty=True)} to {proj_crs}."
             )
             da = da.odc.reproject(proj_crs, resampling="nearest")
             da.name = data_variable  # name gets changed by reproject
 
-        logger.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
+        logging.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
             gdf_orig = gpd.read_parquet(
                 geoparquet_path,
@@ -127,26 +122,26 @@ def zonal_stats(
         # Filter out rows without geoms (important for zonal_stats)
         gdf_filtered = gdf_orig[gdf_orig.geometry.notnull()].copy()
         if len(gdf_filtered) != len(gdf_orig):
-            logger.warning(
+            logging.warning(
                 f"Removed {len(gdf_orig) - len(gdf_filtered)} rows "
                 f"with null geometries."
             )
         if len(gdf_filtered) == 0:
-            logger.error("No valid geometries found in the input GeoParquet.")
+            logging.error("No valid geometries found in the input GeoParquet.")
             raise typer.Exit(code=1)
         target_crs = da.rio.crs
         if not target_crs:
-            logger.error("Could not determine CRS from Zarr dataset.")
+            logging.error("Could not determine CRS from Zarr dataset.")
             raise typer.Exit(code=1)
-        logger.info(f"Using target CRS from Zarr: {target_crs}")
+        logging.info(f"Using target CRS from Zarr: {target_crs}")
 
-        logger.info(
+        logging.info(
             f"Reprojecting geometries from {gdf_filtered.crs.to_wkt(pretty=True)} to {target_crs}"
         )
         gdf_reprojected = gdf_filtered.to_crs(target_crs)
 
         # Crop the DataArray to the bounds of the reprojected geometries
-        logger.info("Cropping Zarr data to geometry bounds...")
+        logging.info("Cropping Zarr data to geometry bounds...")
         minx, miny, maxx, maxy = gdf_reprojected.total_bounds
 
         # Extract coordinate names
@@ -160,18 +155,18 @@ def zonal_stats(
                 y_coord: slice(maxy, miny),  # Note: max first for decreasing y
             }
         )
-        logger.info("Cropping complete.")
+        logging.info("Cropping complete.")
 
         # Fill NaN values if requested
         if fill_value is not None:
-            logger.info(f"Filling NaN values with {fill_value}...")
+            logging.info(f"Filling NaN values with {fill_value}...")
             da_filled = da_cropped.fillna(fill_value)
         else:
-            logger.info("Skipping NaN filling.")
+            logging.info("Skipping NaN filling.")
             da_filled = da_cropped
 
         # Calculate zonal statistics
-        logger.info(
+        logging.info(
             f"Calculating zonal statistics ({[stat['stat'] for stat in stats]})"
         )
         if "classes" in params:
@@ -204,7 +199,7 @@ def zonal_stats(
             # Calculate area-based statistics if requested:
             if stat["mode"] == "area":
                 if not stats_da.rio.crs.is_projected:
-                    logger.error(
+                    logging.error(
                         "Data is in a geographic CRS, must specify a projected CRS for area-based statistics."
                     )
                     raise typer.Exit(code=1)
@@ -215,12 +210,12 @@ def zonal_stats(
                     area_da = stats_da.sel(zonal_statistics=stat["name"]) * pixel_area
                     stats_da.loc[dict(zonal_statistics=stat["name"])] = area_da.values
 
-        logger.info("Zonal statistics calculation complete. Computing results...")
+        logging.info("Zonal statistics calculation complete. Computing results...")
         stats_computed = stats_da.compute()  # Compute the dask array
-        logger.info("Computation complete.")
+        logging.info("Computation complete.")
 
         # Format and Write Output
-        logger.info("Formatting results into GeoDataFrame...")
+        logging.info("Formatting results into GeoDataFrame...")
         # Convert the DataArray results to a GeoDataFrame
         stats_gdf = stats_computed.xvec.to_geodataframe()
         stats_gdf = stats_gdf.reset_index()
@@ -243,7 +238,7 @@ def zonal_stats(
 
         # Reproject final output if needed
         if stats_gdf.crs != output_crs:
-            logger.info(f"Reprojecting final output to {output_crs}")
+            logging.info(f"Reprojecting final output to {output_crs}")
             stats_gdf = stats_gdf.to_crs(output_crs)
 
         # Ensure output directory exists
@@ -252,12 +247,12 @@ def zonal_stats(
             os.makedirs(output_dir, exist_ok=True)
 
         # Write out the final GeoParquet
-        logger.info(f"Writing final GeoParquet to: {output_path}")
+        logging.info(f"Writing final GeoParquet to: {output_path}")
         stats_gdf.to_parquet(output_path)
-        logger.info("Processing complete.")
+        logging.info("Processing complete.")
 
     except Exception as e:
-        logger.exception(f"An error occurred during zonal statistics: {e}")
+        logging.error(f"An error occurred during zonal statistics: {e}", exc_info=True)
         raise typer.Exit(code=1)
 
 
