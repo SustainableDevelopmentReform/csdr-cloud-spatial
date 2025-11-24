@@ -176,7 +176,6 @@ product-gmw-v4-eez-list-geometries-s3:
 # variable-value=1.0 for mangrove presence. It is boolean raster with 1 for presence and 0 for absence.
 # resolution=100 is 100m. 10 is max for GMW v4.
 # https://epsg.io/6933
-# This is not using Dask (the default). Should it?
 # Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
@@ -206,25 +205,44 @@ product-gmw-v3-eez-process-geometry-s3:
 		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
 		--overwrite
 
-# Process all geometries with Dask. Not used in workflow and code is outdated.
-# product-gmw-v4-eez-process-all-geometries-s3:
-# 	csdr products process-all-geometries \
-# 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-# 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-# 		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/EEZ_land_union_v4_202410.parquet.provenance.json \
-# 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-# 		--target-location=./cache/products/gmw-v4-eez/0-0-1 \
-# 		--variable-name=mangrove \
-# 		--variable-value=1 \
-# 		--datetime=2024 \
-# 		--load-kwargs="resolution=500,crs=epsg:6933" \
-# 		--overwrite
+
+# Process all geometries with Dask. The workflow does not use this but it is helpful for developing with Dask locally
+product-gmw-v4-eez-process-all-geometries-dask-s3:
+	csdr products process-all-geometries-dask \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime=2024-01-01 \
+		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--overwrite
+		--use-dask
+		--dask-client-opts="n_workers=2,threads_per_worker=2,memory_limit=8GB"
+
+# TODO: make new run-id for this local test?
+product-gmw-v4-eez-process-all-geometries-dask-local:
+	csdr products process-all-geometries-dask \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--run-id=test_local_dask_run_id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test_local_dask_run_id \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime=2024-01-01 \
+		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--overwrite
+		--use-dask
+		--dask-client-opts="n_workers=2,threads_per_worker=2,memory_limit=8GB"
 
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+		--run-id=test_local_dask_run_id \
 		--location=./cache/products/gmw-v4-eez/0-0-1 \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
