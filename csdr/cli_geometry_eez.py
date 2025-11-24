@@ -20,24 +20,24 @@ async def run_cache_eez(
     source_url: str,
     target_location: str,
     overwrite: bool,
-) -> None:
+) -> str:
     # Downloads the EEZ zip file from source_url and stores it at target_location
     # Source url can be s3://, http://, or local file path
     # Target location can be s3:// or local file path
     logger.info(f"Caching EEZ from {source_url} to {target_location}...")
-    target_location = target_location.rstrip("/")
+    target_location = target_location.rstrip("/") # Remove trailing slash if present
     store = get_store_for_url(source_url)
     source_name_path = get_dataset_name_from_url(store, source_url)
     size = get_file_info(store, source_name_path).get("size", None)
-    file_name = get_dataset_name_from_url(store, source_url, keep_path=False)
+    target_filename = get_dataset_name_from_url(store, source_url, keep_path=False)
     target_store = get_store_for_url(target_location)
-    target_filename = file_name
 
+    # TODO: make this S3 prefix code a function.
     if type(target_store) is S3Store:
         # S3Store needs the full path including prefix
-        path = get_prefix(target_location)
-        if path is not None:
-            target_filename = f"{path}/{target_filename}"
+        prefix = get_prefix(target_location)
+        if prefix is not None:
+            target_filename = f"{prefix}/{target_filename}"
     target_url = get_url_from_store_filename(target_store, target_filename)
 
     if exists(target_store, target_filename):
@@ -56,10 +56,10 @@ async def run_cache_eez(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logger.info(f"Downloading {file_name} from {source_url} to {target_url}...")
-    await target_store.put_async(target_filename, store.get(file_name))
+    logger.info(f"Downloading {target_filename} from {source_url} to {target_url}...")
+    await target_store.put_async(target_filename, store.get(target_filename))
 
-    return f"{target_url}"
+    return target_url
 
 
 @eez_app.command("cache")

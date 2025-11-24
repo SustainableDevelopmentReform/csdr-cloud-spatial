@@ -31,6 +31,7 @@ def get_file_info(store: HTTPStore | S3Store | LocalStore, path: str) -> dict[st
     }
 
 
+# TODO: This S3 logic should be split out to its own function.
 def write_json(
     store: HTTPStore | S3Store | LocalStore, path: str, data: dict[str, Any]
 ) -> None:

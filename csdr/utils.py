@@ -13,7 +13,7 @@ import rustac
 from affine import Affine
 from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
-from odc.geo.geom import Geometry
+from odc.geo.geom import multipolygon, Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
@@ -226,20 +226,21 @@ def open_stacgeoparquet(path: str) -> ItemCollection:
     store = get_store_for_url(path)
     filepath = get_dataset_name_from_url(store, path)
 
-    async def _read_thing() -> ItemCollection:
+    async def _read_stac_items_async() -> ItemCollection:
         return await rustac.read(filepath, store=store)
-
+    
     # Check if we're already in an event loop (e.g., Jupyter notebook)
+    # Does Argo/Dask also have an event loop running?
     try:
         asyncio.get_running_loop()
         # If we're in an event loop, we need to use nest_asyncio
         import nest_asyncio
 
         nest_asyncio.apply()
-        item_dict = asyncio.run(_read_thing())
+        item_dict = asyncio.run(_read_stac_items_async())
     except RuntimeError:
         # No event loop running, safe to use asyncio.run()
-        item_dict = asyncio.run(_read_thing())
+        item_dict = asyncio.run(_read_stac_items_async())
 
     return ItemCollection.from_dict(item_dict)
 
@@ -251,6 +252,7 @@ def load_xarray_stacgeoparquet(
     datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
+    # Temporal filter (if parameter is provided)
     if datetime_string_match is not None:
         all_items = items.clone()
         items = []
@@ -258,9 +260,11 @@ def load_xarray_stacgeoparquet(
             if datetime_string_match in item.datetime.isoformat():
                 items.append(item)
 
+    # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 
+    # ODC STAC load 
     data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
 
     return data
@@ -339,3 +343,17 @@ def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
 
     # Convert to ODC geometry
     return Geometry(feature.geometry, crs=gdf.crs)
+
+def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
+    # make geometry bbox
+    geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
+    # Intersect geometry bbox with each STAC item bbox
+    # If any intersect, return true
+    # Else, return false
+    for item in stac_items:
+        # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
+        # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+        item_geometry = multipolygon([item.properties.get("proj:geometry")], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+        if geom_bbox.intersects(item_geometry):
+            return True
+    return False

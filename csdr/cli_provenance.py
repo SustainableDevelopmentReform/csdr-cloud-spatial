@@ -39,7 +39,8 @@ def _meta_provenance(
     post_to_database: bool,
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    extra_info_dict: dict | None = None, # This likely includes geometryRunId for geometries
+    # extra_info_dict likely includes geometriesRunId for geometries and productRunId for products
+    extra_info_dict: dict | None = None,
 ) -> str | None:
     # The json is written next to where it read from. e.g. local to local, and s3 to s3.
     """
@@ -54,7 +55,7 @@ def _meta_provenance(
         post_to_database (bool): If true, post the provenance to the database.
         source_url (str | None): URL of the original source data.
         source_metadata_url (str): URL of the source metadata.
-        extra_info_dict (dict | None): Additional information to include in the provenance, such as runId for geometries.
+        extra_info_dict (dict | None): Additional information to include in the provenance, such as geometriesRunId for geometries and productRunId for products. Dataset run IDs are all made by the DB.
 
     Returns:
         None or str: If posting to database, returns the run ID.
@@ -136,7 +137,7 @@ def write_dataset_provenance(
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
-    # TODO: Create dataset_run_id in the dataset workflow like we do in the EEZ geometry workflow
+    # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id =_meta_provenance(
         id=id,
         type="dataset",
@@ -202,7 +203,6 @@ def write_geometry_provenance(
 
     extra_info_dict = {}
     extra_info_dict["geometriesRunId"] = run_id
-    logger.info(f"Geometry run ID is {run_id}")
 
     if pmtiles_url is not None: # This is optional because geometries can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url # Need to check how these are written to the db. They could be nullable fields there instead of a loose json.
@@ -237,6 +237,10 @@ def write_geometry_provenance(
 def write_product_provenance(
     product_url: str = typer.Option(..., help="URL that points to the product parquet"),
     product_id: str = typer.Option(..., help="Product ID"),
+    run_id: str | None = typer.Option(
+        None,
+        help="Product run ID to associate product outputs with",
+    ),
     dataset_run_id: str = typer.Option(
         ...,
         help="Dataset run ID",
@@ -256,19 +260,30 @@ def write_product_provenance(
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
 
-    # TODO: Create product_run_id in the product workflow like we do in the EEZ geometry workflow
-    product_run_id = _meta_provenance(
+    if run_id is not None:
+        logger.info(f"Run ID '{run_id}' was provided.")
+    else:
+        logger.info("No Run ID provided, one will be created.")
+
+    extra_info_dict = {
+        "datasetRunId": dataset_run_id,
+        "geometriesRunId": geometries_run_id,
+    }
+    if run_id is not None:
+        extra_info_dict["productRunId"] = run_id
+
+    run_id_created = _meta_provenance(
         id=product_id,
         type="product",
         dataset_url=product_url,
         dataset_type="parquet",
         overwrite=overwrite,
         post_to_database=post_to_database,
-        extra_info_dict={
-            "datasetRunId": dataset_run_id,
-            "geometriesRunId": geometries_run_id,
-        },
+        extra_info_dict=extra_info_dict,
     )
+    logger.info(f"Wrote provenance for product: {product_url}")
+    consolidated_run_id = run_id if run_id is not None else run_id_created
+    logger.info(f"Consolidated product run ID: {consolidated_run_id}")
 
     # Write to DB
     if post_to_database:
@@ -279,7 +294,7 @@ def write_product_provenance(
                 outputs = output[timePoint]
                 logger.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
                 content = {
-                    "productRunId": product_run_id,
+                    "productRunId": consolidated_run_id,
                     "timePoint": timePoint,
                     "variableId": variable,
                     "outputs": outputs,

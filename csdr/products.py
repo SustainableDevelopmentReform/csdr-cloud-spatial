@@ -4,6 +4,7 @@ from odc.geo.geom import Geometry
 
 from csdr.provenance import read_provenance
 from csdr.utils import (
+    check_for_any_intersection,
     load_xarray_stacgeoparquet,
     open_stacgeoparquet,
     xarray_calculate_area,
@@ -29,19 +30,30 @@ def get_area_from_dataset_geometry(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' is supported."
         )
 
-    # Get the STAC items
+    # Get the STAC items (just metadata, not the data itself, so dask chunking not needed yet)
     items = open_stacgeoparquet(dataset_url)
 
-    # Force the use of Dask
+    # Performance optimisation to return quickly if no spatial intersection between geometry and dataset bounding boxes. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
+    # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC item bboxes.
+    # 3. If no intersect, return 0.0 area immediately (fast!). Else do the actual calculation (because there is potential overlap).
+    # STAC Geoparquet has proj:bbox attribute. STAC Geoparquet of Mangroves is sparse. There are 1647 STAC items, each with a bbox. Checking intersection of geometry bbox with these bboxes is very fast.
+    # TODO: make this a param to use or not because if there were less sparse data it could slow processing down potentially?
+    any_intersection = check_for_any_intersection(geometry, items)
+    if not any_intersection:
+        logger.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
+        return 0.0
+    else:
+        logger.info("Spatial intersection found between geometry and dataset bounding boxes. Proceeding with area calculation.")
+
+    # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
-
+    
     # Load the dataset
     data = load_xarray_stacgeoparquet(
         items,
         geom=geometry,
         datetime_string_match=datetime_string_match,
-        # measurements=[variable],
         **load_kwargs,
     )
 
@@ -75,6 +87,7 @@ def process_variables_for_geometry(
             if geometry.geom_type == "MultiPolygon":
                 geoms = list(geometry.geoms)
             total_area = 0.0
+            logger.info(f"Amount of single geometries: {len(geoms)}")
             for geom in geoms:
                 area = get_area_from_dataset_geometry(
                     dataset_provenance_url,

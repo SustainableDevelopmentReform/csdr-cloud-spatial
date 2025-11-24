@@ -86,6 +86,7 @@ def convert_zipfile_to_parquet(
         ".shp", ".parquet"
     )
     
+    # TODO: make this S3 prefix code a function.
     if type(target_store) is S3Store:
         # S3Store needs the full path including prefix
         path = get_prefix(target_location)
@@ -204,6 +205,7 @@ def convert_geospatial_file_to_parquet(
     # Set up the target store
     target_store = get_store_for_url(target_location)
     target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
+    # TODO: make this S3 prefix code a function.
     if type(target_store) is S3Store:
         # S3Store needs the full path including prefix
         path = get_prefix(target_location)
