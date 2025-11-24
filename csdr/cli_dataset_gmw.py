@@ -1,6 +1,7 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
+import os
 import sys
 from datetime import UTC, datetime
 from io import BytesIO
@@ -350,7 +351,7 @@ def extract_gmw(
     target_location: str = typer.Option(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
         # This must be an absolute path. Otherwise the STAC href attribute will be a relative path which breaks when used.
-        default="/Users/wj/Projects/csdr/csdr-cloud-spatial/cache/datasets/gmw-vX/0-0-1/data",
+        default=os.path.join(os.getcwd(), "cache/datasets/gmw-vX/0-0-1/data"),
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
