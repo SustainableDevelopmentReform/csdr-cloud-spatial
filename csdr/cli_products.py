@@ -17,7 +17,6 @@ from csdr.io import (
     exists,
     get_store_from_url,
     make_url_from_store_prefix_filename,
-    prepend_prefix_if_s3_store,
     read_dict,
     read_geospatial_file,
     write_gdf_to_parquet,
@@ -320,9 +319,6 @@ def process_geometry(
         datetime=datetime,
     )
 
-    # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py and other files.
-
-    target_path = prepend_prefix_if_s3_store(target_store, target_location, target_path)
     target_url = make_url_from_store_prefix_filename(target_store, target_path)
     logging.info(f"target_url: {target_url}")
     logging.info(f"geometry_id: '{geometry_id}'")
@@ -539,8 +535,6 @@ def consolidate_product(
     # TODO: standardise target path logic with other functions
 
     path = get_product_path(product_id, variable_name, run_id, datetime)
-    logging.info(f"path {path}")
-    path = prepend_prefix_if_s3_store(store, location, path)
     logging.info(f"path {path}")
 
     url = make_url_from_store_prefix_filename(store, path)

@@ -19,7 +19,7 @@ from odc.stac import load
 from pystac import ItemCollection
 from xarray import DataArray, Dataset
 
-from csdr.io import get_file_name_from_url, get_store_from_url
+from csdr.io import get_prefix_file_name_from_url, get_store_from_url
 
 
 class Event(TypedDict):
@@ -221,10 +221,10 @@ def open_stacgeoparquet(url: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
     store = get_store_from_url(url)
-    filepath = get_file_name_from_url(url)
+    prefix_file_name = get_prefix_file_name_from_url(url)
 
     async def _read_stac_items_async() -> ItemCollection:
-        return await rustac.read(filepath, store=store)
+        return await rustac.read(prefix_file_name, store=store)
     
     # Check if we're already in an event loop (e.g., Jupyter notebook)
     # Does Argo/Dask also have an event loop running?
