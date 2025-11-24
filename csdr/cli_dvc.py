@@ -1,3 +1,4 @@
+# Is this file still used since we moved away from DVC?
 import json
 import logging
 import os
@@ -14,12 +15,6 @@ from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
 from csdr.utils import run_command
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 class ShapelyEncoder(json.JSONEncoder):
@@ -53,7 +48,7 @@ def status(
     ),
 ) -> None:
     """Prints the status of the DVC repo."""
-    logger.info("Checking status of DVC repo...")
+    logging.info("Checking status of DVC repo...")
     try:
         repo: Repo = Repo(uninitialized=False)
 
@@ -66,16 +61,16 @@ def status(
 
         if pipeline_type:
             if pipeline_type in ["datasets", "geometries", "products"]:
-                logger.info(f"Filtering for pipeline type: {pipeline_type}")
+                logging.info(f"Filtering for pipeline type: {pipeline_type}")
                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
             else:
-                logger.error(
+                logging.error(
                     f"Invalid pipeline type: {pipeline_type}. "
                     "Choose from 'datasets', 'geometries', 'products'."
                 )
                 raise typer.Exit(code=1)
         else:
-            logger.info("Checking all pipelines.")
+            logging.info("Checking all pipelines.")
             reproduce_kwargs["all_pipelines"] = True
 
         status_dict: list[PipelineStage] = repo.reproduce(**reproduce_kwargs)
@@ -83,19 +78,19 @@ def status(
         changed_pipelines = set()
 
         for stage in status_dict:
-            logger.info(f"Changed: {stage.relpath}:{stage.name}")
+            logging.info(f"Changed: {stage.relpath}:{stage.name}")
             changed_pipelines.add(stage.relpath)
 
         if changed_pipelines:
-            logger.info(f"Changed pipelines: {changed_pipelines}")
+            logging.info(f"Changed pipelines: {changed_pipelines}")
         else:
-            logger.info("No changes detected.")
+            logging.info("No changes detected.")
 
     except NotDvcRepoError:
-        logger.error("Current directory is not a DVC repository.")
+        logging.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.exception(f"Failed to get DVC status: {e}")
+        logging.error(f"Failed to get DVC status: {e}", exc_info=True)
         raise typer.Exit(code=1)
 
 
@@ -122,7 +117,7 @@ def status(
 #     ),
 # ):
 #     """Reproduces the pipelines."""
-#     logger.info("Reproducing pipelines...")
+#     logging.info("Reproducing pipelines...")
 #     try:
 #         repo: Repo = Repo(uninitialized=False)
 
@@ -130,55 +125,55 @@ def status(
 
 #         if pipeline_type:
 #             if pipeline_type in ["datasets", "geometries", "products"]:
-#                 logger.info(f"Filtering for pipeline type: {pipeline_type}")
+#                 logging.info(f"Filtering for pipeline type: {pipeline_type}")
 #                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
 #             else:
-#                 logger.error(
+#                 logging.error(
 #                     f"Invalid pipeline type: {pipeline_type}. "
 #                     "Choose from 'datasets', 'geometries', 'products'."
 #                 )
 #                 raise typer.Exit(code=1)
 #         else:
-#             logger.info("Checking all pipelines.")
+#             logging.info("Checking all pipelines.")
 #             reproduce_kwargs["all_pipelines"] = True
 
 #         repo.reproduce(**reproduce_kwargs)
 
-#         logger.info("Reproduction complete.")
+#         logging.info("Reproduction complete.")
 
 #     except NotDvcRepoError:
-#         logger.error("Current directory is not a DVC repository.")
+#         logging.error("Current directory is not a DVC repository.")
 #         raise typer.Exit(code=1)
 #     except Exception as e:
-#         logger.error(f"Failed to get DVC status: {e}")
+#         logging.error(f"Failed to get DVC status: {e}")
 #         raise typer.Exit(code=1)
 
 
 def commit_if_changes(message: str) -> None:
-    logger.info("Checking Git status...")
+    logging.info("Checking Git status...")
     git_status_success, git_status_output, _ = run_command(
         ["git", "status", "--porcelain"]
     )
     if not git_status_success:
-        logger.error("Failed to check Git status. Is this a Git repository?")
+        logging.error("Failed to check Git status. Is this a Git repository?")
         raise typer.Exit(code=1)
 
     if bool(git_status_output):
-        logger.info("Changes detected or commit forced. Staging and committing...")
+        logging.info("Changes detected or commit forced. Staging and committing...")
         add_success, _, add_stderr = run_command(["git", "add", "."])
         if not add_success:
-            logger.error(f"Failed to stage changes with 'git add .': {add_stderr}")
+            logging.error(f"Failed to stage changes with 'git add .': {add_stderr}")
             raise typer.Exit(code=1)
 
         commit_cmd = ["git", "commit", "-m", message]
         commit_success, _, commit_stderr = run_command(commit_cmd)
         if not commit_success:
-            logger.error(f"Failed to commit changes: {commit_stderr}")
+            logging.error(f"Failed to commit changes: {commit_stderr}")
             raise typer.Exit(code=1)
         else:
-            logger.info(f"Committed changes with message: '{message}'")
+            logging.info(f"Committed changes with message: '{message}'")
     else:
-        logger.info("No changes detected. Skipping commit.")
+        logging.info("No changes detected. Skipping commit.")
 
 
 def generate_product_json_files(
@@ -186,7 +181,7 @@ def generate_product_json_files(
 ) -> None:
     product_name = pipeline_base_path.split("/")[1]
 
-    logger.info(
+    logging.info(
         f"Generating product JSON files for: {pipeline_base_path}, {product_out_path}"
     )
     try:
@@ -239,7 +234,7 @@ def generate_product_json_files(
                 json.dump(feature, f, cls=ShapelyEncoder, indent=4)
 
     except Exception as e:
-        logger.exception(f"Failed to generate product JSON files: {e}")
+        logging.error(f"Failed to generate product JSON files: {e}", exc_info=True)
         raise typer.Exit(code=1)
 
 
@@ -273,22 +268,22 @@ def publish(
     Generates provenance JSON files for DVC pipelines after ensuring the
     repository state is captured in Git.
     """
-    logger.info("Starting provenance generation...")
+    logging.info("Starting provenance generation...")
 
     if not no_commit:
         commit_if_changes(pre_commit_message)
     else:
-        logger.info("Skipping Git commit - --no-commit flag used.")
+        logging.info("Skipping Git commit - --no-commit flag used.")
 
     try:
-        logger.info("Initializing DVC repo object...")
+        logging.info("Initializing DVC repo object...")
         dvc_repo: Repo = Repo(uninitialized=False)
 
-        logger.info("Collecting DVC stages...")
+        logging.info("Collecting DVC stages...")
         all_stages = list(dvc_repo.index.stages)
 
         if not all_stages:
-            logger.warning("No DVC stages found in the repository.")
+            logging.warning("No DVC stages found in the repository.")
             return
 
         # Group stages by their pipeline file (dvc.yaml path)
@@ -298,13 +293,13 @@ def publish(
                 pipelines[stage.relpath] = []
             pipelines[stage.relpath].append(stage)
 
-        logger.info(f"Found {len(pipelines)} DVC pipeline files.")
+        logging.info(f"Found {len(pipelines)} DVC pipeline files.")
 
         for pipeline_path, stages_in_pipeline in pipelines.items():
             pipeline_base_path = pipeline_path.replace("dvc.yaml", "")
             provenance_file_path = pipeline_path.replace("dvc.yaml", "provenance.json")
 
-            logger.info(
+            logging.info(
                 f"Processing pipeline: {pipeline_path} -> {provenance_file_path}"
             )
 
@@ -312,7 +307,7 @@ def publish(
             dvc_lock_path = pipeline_path.replace("dvc.yaml", "dvc.lock")
 
             if not os.path.exists(dvc_lock_path):
-                logger.warning(f"DVC lock file not found for pipeline: {pipeline_path}")
+                logging.warning(f"DVC lock file not found for pipeline: {pipeline_path}")
                 continue
 
             # Call git command to get commit hash for dvc.lock file
@@ -320,7 +315,7 @@ def publish(
                 ["git", "rev-list", "-1", "HEAD", "--", dvc_lock_path]
             )
             if not commit_hash_success:
-                logger.error(
+                logging.error(
                     f"Failed to get git commit hash for pipeline: {pipeline_path} - {commit_hash_stderr}"
                 )
                 continue
@@ -337,7 +332,7 @@ def publish(
                 ]
             )
             if not commit_date_success:
-                logger.error(
+                logging.error(
                     f"Failed to get git commit date for pipeline: {pipeline_path} - {commit_date_stderr}"
                 )
                 continue
@@ -348,7 +343,7 @@ def publish(
                 with open(params_file_path) as f:
                     params = yaml.safe_load(f)
             else:
-                logger.warning(f"Params file not found for pipeline: {pipeline_path}")
+                logging.warning(f"Params file not found for pipeline: {pipeline_path}")
                 params = {}
 
             base_url_with_commit_hash = base_url.format(
@@ -370,7 +365,7 @@ def publish(
             # Aggregate info from each stage within the pipeline
             for stage in stages_in_pipeline:
                 stage_name = stage.name or "<default>"
-                logger.debug(f"  Processing stage: {stage_name}")
+                logging.debug(f"  Processing stage: {stage_name}")
 
                 # Get all stages that depend on the current stage
                 for dep_stage in dvc_repo.index.graph.successors(stage):
@@ -389,17 +384,17 @@ def publish(
                 with open(provenance_file_path, "w") as f:
                     json.dump(pipeline_provenance_data, f, indent=4)
                     f.write("\n")
-                logger.info(
+                logging.info(
                     f"Successfully generated provenance file: {provenance_file_path}"
                 )
             except OSError as e:
-                logger.exception(
-                    f"Failed to write provenance file {provenance_file_path}: {e}"
+                logging.error(
+                    f"Failed to write provenance file {provenance_file_path}: {e}", exc_info=True
                 )
             except Exception as e:
-                logger.exception(
+                logging.error(
                     f"An unexpected error occurred while writing "
-                    f"{provenance_file_path}: {e}"
+                    f"{provenance_file_path}: {e}", exc_info=True
                 )
 
             if pipeline_path.startswith("products/"):
@@ -411,31 +406,31 @@ def publish(
                         pipeline_base_path, product_out_path, pipeline_provenance_data
                     )
                 else:
-                    logger.info(
+                    logging.info(
                         f"Skipping product JSON files for: {pipeline_path} - only parquet products are supported"
                     )
 
-        logger.info("Provenance generation finished.")
+        logging.info("Provenance generation finished.")
 
         if not no_commit:
             commit_if_changes(post_commit_message)
 
             # Push to the remote
-            logger.info("Pushing changes to remote repository...")
+            logging.info("Pushing changes to remote repository...")
             push_success, push_output, push_stderr = run_command(["git", "push"])
             if not push_success:
-                logger.error(f"Failed to push changes: {push_stderr}")
+                logging.error(f"Failed to push changes: {push_stderr}")
                 raise typer.Exit(code=1)
             else:
-                logger.info(f"Successfully pushed changes: {push_output}")
+                logging.info(f"Successfully pushed changes: {push_output}")
         else:
-            logger.info("Skipping Git commit - --no-commit flag used.")
+            logging.info("Skipping Git commit - --no-commit flag used.")
 
     except NotDvcRepoError:
-        logger.error("Current directory is not a DVC repository.")
+        logging.error("Current directory is not a DVC repository.")
         raise typer.Exit(code=1)
     except Exception as e:
-        logger.exception(f"Failed during DVC processing or provenance generation: {e} ")
+        logging.error(f"Failed during DVC processing or provenance generation: {e}", exc_info=True)
         raise typer.Exit(code=1)
 
 

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
-from loguru import logger
+import logging
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 from pyarrow import ArrowInvalid
@@ -145,7 +145,8 @@ def read_dict(store: S3Store | LocalStore, path: str) -> dict[str, Any]:
             json_dict = json.load(buffer)
             return json_dict
         except Exception as e:
-            logger.exception(f"Failed to read dict from {path} with exception {e}")
+            logging.error(f"Failed to read dict from {path} with exception {e}", exc_info=True)
+            
 
 
 def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
@@ -168,8 +169,8 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
                 gdf = gpd.read_file(buffer, **kwargs)
                 return gdf
             except Exception as e:
-                logger.exception(
-                    f"Failed to read geospatial file from {url} with exception {e}"
+                logging.error(
+                    f"Failed to read geospatial file from {url} with exception {e}", exc_info=True
                 )
 
 

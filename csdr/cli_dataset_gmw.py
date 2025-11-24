@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import logging
 import sys
 from datetime import UTC, datetime
 from io import BytesIO
@@ -10,7 +11,6 @@ from zipfile import ZipFile
 
 import typer
 import xarray as xr
-from loguru import logger
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
@@ -39,7 +39,7 @@ async def cache_single_source(
 ) -> str:
     """Process a single file from source."""
     async with semaphore:
-        logger.info(f"Caching GMW from {source_url} to {target_location}...")
+        logging.info(f"Caching GMW from {source_url} to {target_location}...")
 
         url = urlparse(source_url)
 
@@ -48,10 +48,10 @@ async def cache_single_source(
         # Must check this file exists before proceeding
         source_exists = exists(source, url.path)
         if not source_exists:
-            logger.error(f"Source file does not exist at {source_url}. Cannot extract.")
+            logging.error(f"Source file does not exist at {source_url}. Cannot extract.")
             return
         else:
-            logger.info(
+            logging.info(
                 f"Source file found at {source_url}, proceeding with extraction."
             )
 
@@ -67,28 +67,28 @@ async def cache_single_source(
         )
 
         target_url = get_url_from_store_filename(dest, target_zip_name)
-        logger.info(f"Target URL for caching is {target_url}")
+        logging.info(f"Target URL for caching is {target_url}")
 
         if exists(dest, target_zip_name) and not overwrite:
             dest_meta = dest.head(target_zip_name)
             if size is not None and "size" in dest_meta and dest_meta["size"] == size:
-                logger.info(
+                logging.info(
                     f"File already exists at target location with matching size of {size}. Skipping download."
                 )
                 return f"{target_location}{target_zip_name}"
             else:
-                logger.info(
+                logging.info(
                     f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
         if overwrite:
-            logger.info(f"Overwrite is enabled, re-downloading {source_url} file.")
+            logging.info(f"Overwrite is enabled, re-downloading {source_url} file.")
         else:
-            logger.info(
+            logging.info(
                 f"File {target_zip_name} does not exist at target location, downloading."
             )
         _ = await dest.put_async(target_zip_name, source.get(url.path))
-        logger.info(f"File cached successfully, downloaded to {target_url}")
+        logging.info(f"File cached successfully, downloaded to {target_url}")
 
         return f"{target_location}{target_zip_name}"
 
@@ -128,7 +128,7 @@ async def run_cache_gmw(
     if out_file is not None:
         with open(out_file, "w") as f:
             json.dump(results, f, indent=4)
-        logger.info(f"Wrote target files to {out_file}")
+        logging.info(f"Wrote target files to {out_file}")
     else:
         sys.stdout.write(json.dumps(results, indent=4))
 
@@ -155,13 +155,15 @@ def cache_gmw(
         help="Tempfile to write list of target locations (otherwise print to console)",
     ),
 ) -> None:
-    logger.info("Starting GMW caching process...")
+    logging.info("Starting GMW caching process...")
     target_path = None
     if target_location.startswith("s3://"):
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
     # Get list of source_locations
     source_locations = source_location.split(",")
+
+    logging.info("Starting async GMW caching process...")
 
     asyncio.run(
         run_cache_gmw(
@@ -173,7 +175,7 @@ def cache_gmw(
             out_file,
         )
     )
-    logger.info(
+    logging.info(
         f"GMW caching process completed. Cached to {target_location.rstrip('/')}"
     )
 
@@ -188,7 +190,7 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        # logger.info(f"Working on {name}...")
+        # logging.info(f"Working on {name}...")
         out_key = name
         out_stac = name.replace(".tif", ".stac-item.json")
 
@@ -205,19 +207,19 @@ async def process_single_file(
 
         stac_uri = target_uri.replace(".tif", ".stac-item.json")
         if exists(target_store, out_stac) and not overwrite:
-            logger.info(f"STAC doc already exists for {stac_uri}, skipping.")
+            logging.info(f"STAC doc already exists for {stac_uri}, skipping.")
             return
         else:
             if overwrite:
-                logger.info(f"Overwrite is enabled, re-processing {stac_uri}.")
+                logging.info(f"Overwrite is enabled, re-processing {stac_uri}.")
             else:
-                logger.info(f"STAC does not exist for {stac_uri}, processing.")
+                logging.info(f"STAC does not exist for {stac_uri}, processing.")
 
         # Get the data from memory into a rasterio dataset
         data = open_rasterio(zip_file.open(name))
 
         if type(data) is not xr.DataArray:  # skip
-            logger.info(
+            logging.info(
                 f"Skipping file {name}. Expecting xarray.DataArray but got {type(data)} instead."
             )
         else:
@@ -262,7 +264,7 @@ async def process_single_file(
             stac_data = json.dumps(stac_doc.to_dict()).encode()
             await target_store.put_async(out_stac, stac_data)
 
-            logger.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
+            logging.info(f"Finished processing {name}. STAC doc is at {stac_uri}")
 
 
 async def run_extract_gmw(
@@ -287,21 +289,21 @@ async def run_extract_gmw(
         if s3_prefix is not None:
             source_zip_name = f"{s3_prefix}/{source_zip_name}"
 
-    logger.info(f"Checking for source zip file at path {source_zip_name}...")
+    logging.info(f"Checking for source zip file at path {source_zip_name}...")
     # TODO: make this S3 prefix code a function.
     if type(store) is S3Store:
-        logger.info(
+        logging.info(
             f"Store is S3Store with bucket {store.config['bucket']} and prefix {s3_prefix}"
         )
 
     source_exists = exists(store, source_zip_name)
     if not source_exists:
-        logger.error(
+        logging.error(
             f"Source zip file does not exist at {source_location}. Cannot extract."
         )
         raise typer.Exit(code=1)
     else:
-        logger.info(
+        logging.info(
             f"Source zip file found at {source_location}, proceeding with extraction."
         )
 
@@ -310,9 +312,9 @@ async def run_extract_gmw(
 
     # Open the zip file, and extract all files into memory
     # Load the file as bytes first
-    logger.info("Loading data into memory")
+    logging.info("Loading data into memory")
     zip_bytes = BytesIO(store.get(source_zip_name).bytes())
-    logger.info("Finished loading data")
+    logging.info("Finished loading data")
 
     # Create semaphore to limit concurrent operations
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -320,7 +322,7 @@ async def run_extract_gmw(
     with ZipFile(zip_bytes) as z:
         # Get list of TIF files to process
         tif_files = [name for name in z.namelist() if name.endswith(".tif")]
-        logger.info(
+        logging.info(
             f"Found {len(tif_files)} TIF files to process with max {max_concurrent} concurrent operations."
         )
 
@@ -335,7 +337,7 @@ async def run_extract_gmw(
         # Execute all tasks concurrently
         await asyncio.gather(*tasks)
 
-    logger.info("GMW extraction process completed.")
+    logging.info("GMW extraction process completed.")
 
 
 @gmw_app.command("extract")
@@ -360,7 +362,7 @@ def extract_gmw(
         32, help="Maximum number of files to process concurrently."
     ),
 ) -> None:
-    logger.info("Starting GMW extraction process...")
+    logging.info("Starting GMW extraction process...")
     asyncio.run(
         run_extract_gmw(
             source_location, source_zip_name, target_location, overwrite, max_concurrent
@@ -390,26 +392,26 @@ async def run_index_gmw(
 
     # Check for existing geoparquet file
     if exists(dest, out_filename) and not overwrite:
-        logger.info(
+        logging.info(
             f"Parquet file already exists at {out_filename}, skipping indexing."
         )
         return
     else:
         if overwrite:
-            logger.info("Overwrite is enabled, re-indexing GMW.")
+            logging.info("Overwrite is enabled, re-indexing GMW.")
         else:
-            logger.info("Parquet file does not exist, proceeding with indexing.")
+            logging.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
     result_location = get_url_from_store_filename(dest, out_filename)
 
-    logger.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
+    logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
         await write(out_filename, item_dicts, store=dest)
 
-    logger.info(f"Parquet write completed, wrote to {result_location}")
+    logging.info(f"Parquet write completed, wrote to {result_location}")
 
 
 @gmw_app.command("index")
@@ -424,6 +426,6 @@ def index_gmw(
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
-    logger.info("Starting GMW indexing process...")
+    logging.info("Starting GMW indexing process...")
     asyncio.run(run_index_gmw(source_location, target_location, overwrite))
-    logger.info("GMW indexing process completed.")
+    logging.info("GMW indexing process completed.")

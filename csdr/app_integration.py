@@ -2,7 +2,6 @@ import os
 from typing import Literal
 
 import requests
-from loguru import logger
 from requests import Response
 
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
