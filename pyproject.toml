@@ -24,7 +24,6 @@ dependencies = [
     "geopandas",
     "hatchling",
     "hatch-vcs",
-    "loguru",
     "matplotlib",
     "nest_asyncio",
     "obstore",
