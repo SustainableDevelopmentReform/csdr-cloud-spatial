@@ -6,7 +6,7 @@ from json import load
 from obstore.store import HTTPStore, LocalStore, S3Store
 
 from csdr.io import (
-    get_file_name_from_url,
+    get_prefix_file_name_from_url,
     get_file_info,
     get_store_from_url,
     make_url_from_store_prefix_filename,
@@ -82,7 +82,7 @@ def read_provenance(url: str) -> dict[str, str | int]:
     It does not read from a database, just from a file.
     """
     store = get_store_from_url(url)
-    path = get_file_name_from_url(store, url)
-    document = BytesIO(store.get(path).bytes())
+    prefix_file_name = get_prefix_file_name_from_url(url)
+    document = BytesIO(store.get(prefix_file_name).bytes())
 
     return load(document)

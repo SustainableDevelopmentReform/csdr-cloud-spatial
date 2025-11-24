@@ -6,11 +6,9 @@ from obstore.store import S3Store
 
 from csdr.io import (
     exists,
-    get_file_name_from_url,
     get_file_info,
+    get_prefix_file_name_from_url,
     get_store_from_url,
-    make_url_from_store_prefix_filename,
-    prepend_prefix_if_s3_store,
 )
 
 eez_app = typer.Typer()
@@ -27,13 +25,10 @@ async def run_cache_eez(
     logging.info(f"Caching EEZ from {source_url} to {target_location}...")
     target_location = target_location.rstrip("/") # Remove trailing slash if present
     store = get_store_from_url(source_url)
-    source_name_path = get_file_name_from_url(store, source_url)
+    source_name_path = get_prefix_file_name_from_url(source_url)
     size = get_file_info(store, source_name_path).get("size", None)
-    target_filename = get_file_name_from_url(store, source_url, keep_path=False)
+    target_filename = get_prefix_file_name_from_url(source_url)
     target_store = get_store_from_url(target_location)
-
-    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
-    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     if exists(target_store, target_filename):
         if not overwrite:
@@ -51,10 +46,10 @@ async def run_cache_eez(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logging.info(f"Downloading {target_filename} from {source_url} to {target_url}...")
+    logging.info(f"Downloading {target_filename} from {source_url} to {target_location}...")
     await target_store.put_async(target_filename, store.get(target_filename))
 
-    return target_url
+    return target_location
 
 
 @eez_app.command("cache")

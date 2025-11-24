@@ -10,10 +10,8 @@ import logging
 
 from csdr.geometries import add_geometry_id_name
 from csdr.io import (
-    prepend_prefix_if_s3_store,
     exists,
-    get_file_name_from_url,
-    get_file_name_from_url,
+    get_prefix_file_name_from_url,
     get_store_from_url,
     make_url_from_store_prefix_filename,
     read_geospatial_file,
@@ -26,7 +24,7 @@ conversion_app = typer.Typer()
 def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
     if geometry_id is None:
         geometry_id = (
-            get_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
+            get_prefix_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
         )
     return geometry_id
 
@@ -65,7 +63,7 @@ def convert_zipfile_to_parquet(
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
     store = get_store_from_url(source_zip_location)
-    source_zip_name_path = get_file_name_from_url(store, source_zip_location)
+    source_zip_name_path = get_prefix_file_name_from_url(source_zip_location)
 
     if not exists(store, source_zip_name_path):
         logging.error(
@@ -85,7 +83,6 @@ def convert_zipfile_to_parquet(
         ".shp", ".parquet"
     )
     
-    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
     target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
@@ -182,7 +179,7 @@ def convert_geospatial_file_to_parquet(
     logging.info("Starting geospatial to parquet conversion process...")
 
     store = get_store_from_url(source_location)
-    source_name_path = get_file_name_from_url(store, source_location)
+    source_name_path = get_prefix_file_name_from_url(source_location)
 
     if not exists(store, source_name_path):
         logging.error(
@@ -199,7 +196,6 @@ def convert_geospatial_file_to_parquet(
     # Set up the target store
     target_store = get_store_from_url(target_location)
     target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
-    target_filename = prepend_prefix_if_s3_store(target_store, target_location, target_filename)
     target_url = make_url_from_store_prefix_filename(target_store, target_filename)
 
     # Check if target file already exists
