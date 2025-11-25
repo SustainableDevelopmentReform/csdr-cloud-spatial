@@ -1,8 +1,8 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
+import logging
 
 import typer
-import logging
 from obstore.store import S3Store
 from rasterio import Env
 from rustac import write

@@ -13,7 +13,7 @@ import rustac
 from affine import Affine
 from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
-from odc.geo.geom import multipolygon, Geometry
+from odc.geo.geom import BoundingBox, Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
@@ -27,7 +27,7 @@ class Event(TypedDict):
     message: str
     ingestionTime: int
 
-
+# What are these grids? They are not used internally anywhere.
 WGS84GRID10 = GeoboxTiles(
     GeoBox(
         (1800000, 3600000), Affine(0.0001, 0.0, -180.0, 0.0, 0.0001, -90.0), "epsg:4326"
@@ -350,7 +350,13 @@ def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -
     for item in stac_items:
         # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
         # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
-        item_geometry = multipolygon([item.properties.get("proj:geometry")], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
-        if geom_bbox.intersects(item_geometry):
+        # This code needs to handle coords that do not follow the right hand rule.
+        # Bad : [[8.0, -1.0], [9.0, -1.0], [9.0, 0.0], [8.0, 0.0], [8.0, -1.0]]
+        # Good: [[8.0, -1.0], [8.0, 0.0], [9.0, 0.0], [9.0, -1.0], [8.0, -1.0]]
+        # Need to make the polygon because some of the proj:geometry values are not valid for future steps.
+        # proj:geometry could be better because it is either the bbox or the footprint of valid data (more accurate than just bbox).
+        item_bbox = BoundingBox(*item.properties.get("proj:bbox"), item.properties.get("proj:code")).polygon
+
+        if geom_bbox.intersects(item_bbox):
             return True
     return False

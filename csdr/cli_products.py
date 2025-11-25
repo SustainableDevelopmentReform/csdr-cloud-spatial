@@ -331,7 +331,6 @@ def process_geometry(
             target_path = f"{prefix}/{target_path}"
     target_url = get_url_from_store_filename(target_store, target_path)
     logging.info(f"target_url: {target_url}")
-    logging.info(f"geometry_id: '{geometry_id}'")
 
     if exists(target_store, target_path) and not overwrite:
             logging.info(f"Product already exists at {target_url}, skipping processing.")

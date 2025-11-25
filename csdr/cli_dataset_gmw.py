@@ -1,10 +1,8 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import json
-import os
 import logging
 import os
-import logging
 import sys
 from datetime import UTC, datetime
 from io import BytesIO
@@ -348,6 +346,7 @@ def extract_gmw(
         help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
         default="./cache/datasets/gmw-vX/raw",
     ),
+    # This is just for the V3 workflow where we extract many zip files. Each zip file has an extract command so we could get rid of the source_zip_name param.
     source_zip_name: str = typer.Option(
         help="Name of the zip file to extract the GMW data from.",
         default="gmw_mng_2020_v4019_gtiff.zip",
