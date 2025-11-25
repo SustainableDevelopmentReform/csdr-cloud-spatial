@@ -47,7 +47,7 @@ index-gmw-v4-s3:
 # Make a Dataset in the app and use the ID here
 provenance-gmw-v4-local-db:
 	csdr provenance dataset \
-		--id=d40f0881-521e-4a48-8843-3ee8ce82d2dd \
+		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
@@ -57,7 +57,7 @@ provenance-gmw-v4-local-db:
 
 provenance-gmw-v4-s3-db:
 	csdr provenance dataset \
-		--id=d40f0881-521e-4a48-8843-3ee8ce82d2dd \
+		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
 		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
@@ -207,18 +207,34 @@ product-gmw-v4-eez-process-geometry-local:
 		--geometry-id=605efc56-2be3-53ef-b5e4-c1c9127dcbae \
 		--overwrite
 
+product-gmw-v4-eez-process-geometry-s3:
+	csdr products process-geometry \
+		--product-id=f7cf7d28-9e39-4e3c-8102-705fc3eb40a0 \
+		--run-id=test-product-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-run-id \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime=2024-01-01 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
+		--overwrite
+# 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+
+# V3!
 product-gmw-v3-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v3/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw_v3_eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime-string-match=1996 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=1643908b-6e6d-556f-ac60-226bed7d3b82 \
+		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
 		--overwrite
 
 

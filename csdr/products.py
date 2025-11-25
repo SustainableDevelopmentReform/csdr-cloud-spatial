@@ -32,6 +32,7 @@ def get_area_from_dataset_geometry(
 
     # Get the STAC items (just metadata, not the data itself, so dask chunking not needed yet)
     items = open_stacgeoparquet(dataset_url)
+    logging.info(f"Dataset has {len(items)} STAC items.")
 
     # Performance optimisation to return quickly if no spatial intersection between geometry and dataset bounding boxes. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
     # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC item bboxes.
@@ -48,6 +49,7 @@ def get_area_from_dataset_geometry(
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
+    logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
     
     # Load the dataset
     data = load_xarray_stacgeoparquet(
@@ -83,6 +85,7 @@ def process_variables_for_geometry(
     results = {}
     for var in variables:
         if var == "sum-area-by-value":
+            # Explode multipolygon geometries to single polygons
             geoms = [geometry]
             if geometry.geom_type == "MultiPolygon":
                 geoms = list(geometry.geoms)
