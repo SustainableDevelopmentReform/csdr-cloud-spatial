@@ -7,14 +7,16 @@
 # Dataset GMW v4
 cache-gmw-v4-local:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v4/raw \
+		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 cache-gmw-v4-s3:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 # Extracting takes a few minutes
@@ -22,12 +24,14 @@ cache-gmw-v4-s3:
 extract-gmw-v4-local:
 	csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v4/raw \
+		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
 extract-gmw-v4-s3:
 	csdr gmw extract \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
@@ -67,23 +71,78 @@ provenance-gmw-v4-s3-db:
 
 
 # Dataset GMW v3
-# One file per year
+# One file/year
 cache-gmw-v3-single-file:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1
-
+		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v3/0-0-1 \
+		--out-file=/tmp/cached_files.json \
+		--overwrite
+# Many files/years
 cache-gmw-v3-multiple-files:
 	csdr gmw cache \
-		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1
+		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v3/0-0-1 \
+		--out-file=/tmp/cached_files.json \
+		--overwrite
 
-# TODO: extract, index, provenance for GMW v3.
+## Extract v3
+extract-gmw-v3-local:
+	csdr gmw extract \
+		--source-location=./cache/datasets/gmw-v3/raw \
+		--source-zip-name=gmw_v3_1996_gtiff.zip \
+		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
+		--overwrite
+
+extract-gmw-v3-s3:
+	csdr gmw extract \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v3/raw \
+		--source-zip-name=gmw_v3_1996_gtiff.zip \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
+		--overwrite
+
+## Index v3
+index-gmw-v3-local:
+	csdr gmw index \
+		--source-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1 \
+		--overwrite
+
+index-gmw-v3-s3:
+	csdr gmw index \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1 \
+		--overwrite
+
+## Provenance v3
+# Make a Dataset in the app and use the ID here
+provenance-gmw-v3-local-db:
+	csdr provenance dataset \
+		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
+		--dataset-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet \
+		--source-url="https://zenodo.org/records/6894273" \
+		--source-metadata-url="https://zenodo.org/records/6894273" \
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
+
+provenance-gmw-v3-s3-db:
+	csdr provenance dataset \
+		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
+		--dataset-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet \
+		--source-url="https://zenodo.org/records/6894273" \
+		--source-metadata-url="https://zenodo.org/records/6894273" \
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
 
 
 # Dataset Seagrass
 dataset-seagrass-index:
 	csdr seagrass index-dep
+		--source_location=s3://dep-public-data/dep_s2_seagrass/0-2-0
+		--target_location=./cache/seagrass
+		--overwrite
 
 dataset-seagrass-provenance:
 	csdr provenance dataset \
@@ -91,7 +150,9 @@ dataset-seagrass-provenance:
 		--dataset-url=./cache/seagrass/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://example.com" \
-		--dataset-type stac-geoparquet
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
 
 
 
