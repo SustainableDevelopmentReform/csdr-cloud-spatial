@@ -63,15 +63,16 @@ async def run_index_dep_seagrass(
         logging.info(f"Finished writing to {target_location}/{out_filename}")
 
 
+# Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.
 @seagrass_app.command("index-dep")
 def index_dep_seagrass(
     source_location: str = typer.Option(
+        ...,
         help="S3 path to the bucket with Seagrass STAC documents.",
-        default="s3://dep-public-data/dep_s2_seagrass/0-2-0",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the indexed DEP Seagrass parquet file.",
-        default="./cache/seagrass",
+        ...,
+        help="Local or remote path (local or s3://) to store the indexed DEP Seagrass parquet file.",
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:

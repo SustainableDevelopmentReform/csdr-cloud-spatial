@@ -138,22 +138,35 @@ provenance-gmw-v3-s3-db:
 
 
 # Dataset Seagrass
-dataset-seagrass-index:
-	csdr seagrass index-dep
-		--source_location=s3://dep-public-data/dep_s2_seagrass/0-2-0
-		--target_location=./cache/seagrass
+dataset-seagrass-index-local:
+	csdr seagrass index-dep \
+		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--target-location=./cache/datasets/seagrass \
+		--overwrite
+dataset-seagrass-index-s3:
+	csdr seagrass index-dep \
+		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--target-location=s3://csdr-public-dev/datasets/seagrass/0-0-1 \
 		--overwrite
 
-dataset-seagrass-provenance:
+dataset-seagrass-provenance-local:
 	csdr provenance dataset \
-		--id dep-seagrass-regional-v1 \
-		--dataset-url=./cache/seagrass/dep_s2_seagrass.parquet \
+		--id 8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
+		--dataset-url=./cache/datasets/seagrass/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
-		--source-metadata-url="https://example.com" \
+		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type stac-geoparquet \
 		--post-to-database \
 		--overwrite
-
+dataset-seagrass-provenance-s3:
+	csdr provenance dataset \
+		--id 9b6875d2-f897-42a7-9923-ee6995e2d90f \
+		--dataset-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
+		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
+		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
 
 
 ### GEOMETRIES ###
