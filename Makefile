@@ -11,33 +11,63 @@ cache-gmw-v4-local:
 		--target-location=./cache/datasets/gmw-v4/raw \
 		--overwrite
 
+cache-gmw-v4-s3:
+	csdr gmw cache \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--overwrite
+
 # Extracting takes a few minutes
-# Extract target-location must be an absolute path! Otherwise STAC items will be made with broken href attributes.
+# Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
 extract-gmw-v4-local:
 	csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v4/raw \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
-# TODO: Check whether index source and target locations must be absolute paths too for STAC hrefs to be correct. Using absolute paths just in case.
+extract-gmw-v4-s3:
+	csdr gmw extract \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
+		--overwrite
+
+# TODO: Check whether index source and target locations must be absolute paths (for local store) too for STAC hrefs to be correct. Using absolute paths just in case.
 index-gmw-v4-local:
 	csdr gmw index \
 		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
 		--overwrite
 
+index-gmw-v4-s3:
+	csdr gmw index \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1 \
+		--overwrite
+
 # Make a Dataset in the app and use the ID here
 provenance-gmw-v4-local-db:
 	csdr provenance dataset \
-		--id=97e943d9-4f37-4466-b0ef-162ed5e49368 \
+		--id=d40f0881-521e-4a48-8843-3ee8ce82d2dd \
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
-		--source-url="https://example.com" \
-		--source-metadata-url="https://example.com" \
+		--source-url="https://zenodo.org/records/12756047" \
+		--source-metadata-url="https://zenodo.org/records/12756047" \
 		--dataset-type stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
+provenance-gmw-v4-s3-db:
+	csdr provenance dataset \
+		--id=d40f0881-521e-4a48-8843-3ee8ce82d2dd \
+		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet \
+		--source-url="https://zenodo.org/records/12756047" \
+		--source-metadata-url="https://zenodo.org/records/12756047" \
+		--dataset-type stac-geoparquet \
+		--post-to-database \
+		--overwrite
+
+
 # Dataset GMW v3
+# One file per year
 cache-gmw-v3-single-file:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
@@ -47,6 +77,9 @@ cache-gmw-v3-multiple-files:
 	csdr gmw cache \
 		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/0-0-1
+
+# TODO: extract, index, provenance for GMW v3.
+
 
 # Dataset Seagrass
 dataset-seagrass-index:
@@ -62,7 +95,6 @@ dataset-seagrass-provenance:
 
 
 
-
 ### GEOMETRIES ###
 
 # Geometry EEZ
@@ -73,11 +105,6 @@ geometry-eez-cache-local:
 		--overwrite
 
 geometry-eez-cache-s3:
-	csdr eez cache \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw \
-		--overwrite
-
-geometry-eez-cache-s3-public-dev:
 	csdr eez cache \
 		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
 		--overwrite
@@ -92,14 +119,6 @@ geometry-eez-convert-local:
 		--create-pmtiles
 
 geometry-eez-convert-s3:
-	csdr convert zip-to-parquet \
-		--name-field UNION \
-		--source-zip-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
-		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
-		--create-pmtiles
-
-geometry-eez-convert-s3-public-dev:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
 		--source-zip-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
@@ -144,9 +163,6 @@ geometry-eez-provenance-s3-db:
 		--post-to-database \
 		--post-geometry-outputs \
 		--overwrite
-
-
-
 
 
 
@@ -195,7 +211,7 @@ product-gmw-v3-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--geometry-provenance-url=s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw_v3_eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--variable-name=mangrove \
@@ -222,7 +238,6 @@ product-gmw-v4-eez-process-all-geometries-dask-s3:
 		--use-dask \
 		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
 
-# TODO: make new run-id for this local test?
 product-gmw-v4-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
@@ -271,6 +286,15 @@ product-gmw-v4-eez-provenance-local-db:
 		--post-to-database \
 		--overwrite
 
+product-gmw-v4-eez-provenance-s3-db:
+	csdr provenance product \
+		--product-id 935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
+		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
+		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--post-to-database \
+		--overwrite
 
 
 # Product Seagrass EEZ v4

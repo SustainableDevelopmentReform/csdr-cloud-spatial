@@ -141,7 +141,7 @@ def _process_geometry(
     
     # All the IO stuff is done in the parent process_all_geometries_dask, so we don't do it per geometry. It is passed in as params.
 
-    logger.info(f"Processing geometry {geometry_id}")
+    logger.info(f"Processing geometry id '{geometry_id}'")
     results = process_variables_for_geometry(
         geometry,
         variables_to_extract,
@@ -241,7 +241,7 @@ def list_geometries(
 
 # Process a single geometry. Makes variables using variables_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
-def process_geometry_sync(
+def process_geometry(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being generated (UUID)"
     ),
@@ -298,43 +298,7 @@ def process_geometry_sync(
         False, help="If true, overwrite existing product file"
     ),
 ) -> None:
-    asyncio.run(process_geometry(
-        product_id=product_id,
-        run_id=run_id,
-        geometry_provenance_url=geometry_provenance_url,
-        dataset_provenance_url=dataset_provenance_url,
-        variables_to_extract=variables_to_extract,
-        datetime_string_match=datetime_string_match,
-        datetime=datetime,
-        target_location=target_location,
-        geometry_id=geometry_id,
-        variable_name=variable_name,
-        variable_value=variable_value,
-        load_kwargs=load_kwargs,
-        use_dask=use_dask,
-        dask_client_opts=dask_client_opts,
-        overwrite=overwrite
-    ))
-
-# TODO: Make this synchronous again. I am worried that making this async is a problem when parallelised.
-async def process_geometry(
-    product_id: str,
-    run_id: str,
-    geometry_provenance_url: str,
-    dataset_provenance_url: str,
-    variables_to_extract: str,
-    datetime_string_match: str | None,
-    datetime: str | None,
-    target_location: str,
-    geometry_id: str,
-    variable_name: str,
-    variable_value: str | None,
-    load_kwargs: dict[str, str],
-    use_dask: bool,
-    dask_client_opts: dict[str, str],
-    overwrite: bool
-) -> None: # update this to return true if processed, false if skipped?
-    logger.info(f"Processing geometry '{geometry_id}' from '{geometry_provenance_url}'")
+    logger.info(f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'")
     logger.info(f"Run ID: '{run_id}'")
     logger.info(f"variables_to_extract {variables_to_extract}") # TODO: change type of variables_to_extract from str to list[str]
 
@@ -407,15 +371,12 @@ async def process_geometry(
             run_id,
         )
 
-        # TODO: Go back to using write_json and make this whole thing synchronous.
-        # try to use async put instead of write_json. This is consistent with geometry eez code.
         logger.info(f"Writing to {target_url}. target_path: {target_path}...")
-        # TODO: here we could use write_json function or .put instead of .put_async and then this whole function could be synchronous.
-        await target_store.put_async(target_path, json.dumps(product_output).encode("utf-8"))
-        # write_json(target_store, target_path, product_output) # this needs the S3 logic cleaned up.
+        write_json(target_store, target_path, product_output)
         logger.info(f"Wrote results to {target_url}")
 
     finally:
+        # Release resources
         if client is not None:
             client.close()
 
