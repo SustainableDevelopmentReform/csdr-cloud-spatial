@@ -133,16 +133,17 @@ async def run_cache_gmw(
         sys.stdout.write(json.dumps(results, indent=4))
 
 
+# Takes a list of source locations of one or more zip files containing many geotiff files
+# Writes these to the target location. Also writes a temporary file with list of target locations for the workflow to read.
 @gmw_app.command("cache")
 def cache_gmw(
-    source_location: str = typer.Option(
+    source_locations: str = typer.Option(
+        ...,
         help="Location of the source GMW file/s to cache.",
-        # default="https://zenodo.org/records/12756047/files/gmw_mng_2020_v4019_gtiff.zip?download=1",
-        # default="https://files.auspatious.com/gmwv3/gmw_mng_2020_v4019_gtiff.zip",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (like './cache' or s3://files.auspatious.com/path/here) to store the cached GMW file.",
-        default="./cache/datasets/gmw-vX/raw",
+        ...,
+        help="Local or remote path (like './cache' or s3://csdr-public-dev/datasets/gmw-v4) to store the cached GMW file/s.",
     ),
     overwrite: bool = typer.Option(
         False, help="Replace existing files during caching."
@@ -161,7 +162,7 @@ def cache_gmw(
         target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
 
     # Get list of source_locations
-    source_locations = source_location.split(",")
+    source_locations = source_locations.split(",")
 
     logging.info("Starting async GMW caching process...")
 
@@ -190,7 +191,6 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        # logging.info(f"Working on {name}...")
         out_key = name
         out_stac = name.replace(".tif", ".stac-item.json")
 
@@ -241,6 +241,7 @@ async def process_single_file(
                 start_datetime = datetime(2020, 1, 1).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                 mid_datetime = datetime(2020, 7, 2)
                 end_datetime = datetime(2020, 12, 31).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            # TODO: What does this else cover? We are just doing v3 and v4 aren't we?
             else:
                 start_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                 mid_datetime = datetime.now(UTC)
@@ -340,21 +341,23 @@ async def run_extract_gmw(
     logging.info("GMW extraction process completed.")
 
 
+# This is run on a single source zip of many geotiffs.
+# Unzips. For each geotiff, writes COG and STAC item. Uses Rasterio to read geotiff into memory as xarray. writes COG using ODC. Make json using rio-stac and write it.
 @gmw_app.command("extract")
 def extract_gmw(
     source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
-        default="./cache/datasets/gmw-vX/raw",
+        ...,
+        help="Local or remote path (local or s3://) to store the extracted GMW files.",
     ),
     # This is just for the V3 workflow where we extract many zip files. Each zip file has an extract command so we could get rid of the source_zip_name param.
     source_zip_name: str = typer.Option(
+        ...,
         help="Name of the zip file to extract the GMW data from.",
-        default="gmw_mng_2020_v4019_gtiff.zip",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the extracted GMW files.",
+        ...,
+        help="Local or remote path (local or s3://) to store the extracted GMW files.",
         # This must be an absolute path. Otherwise the STAC href attribute will be a relative path which breaks when used.
-        default=os.path.join(os.getcwd(), "cache/datasets/gmw-vX/0-0-1/data"),
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing files during extraction."
@@ -364,6 +367,7 @@ def extract_gmw(
     ),
 ) -> None:
     logging.info("Starting GMW extraction process...")
+    # TODO: Ensure that target_location is absolute path if local, otherwise STAC item href will be relative which is broken.
     asyncio.run(
         run_extract_gmw(
             source_location, source_zip_name, target_location, overwrite, max_concurrent
@@ -410,20 +414,22 @@ async def run_index_gmw(
 
     logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {result_location}")
     with suppress_rust_output():
-        await write(out_filename, item_dicts, store=dest)
+        await write(out_filename, item_dicts, store=dest) # rustac infers that it is writing a parquet format from filename
 
     logging.info(f"Parquet write completed, wrote to {result_location}")
 
 
+# Writes a parquet index of all the GMW STAC items found at the source location.
+# Finds all STAC item jsons, reads them, writes a STAC-Geoparquet index file to the target location using rustac.
 @gmw_app.command("index")
 def index_gmw(
     source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to the GMW files.",
-        default="./cache/datasets/gmw-vX/0-0-1/data",
+        ...,
+        help="Local or remote path (local or s3://) to the GMW files.",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the indexed GMW parquet file.",
-        default="./cache/datasets/gmw-vX/0-0-1",
+        ...,
+        help="Local or remote path (local or s3://) to store the indexed GMW parquet file.",
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
