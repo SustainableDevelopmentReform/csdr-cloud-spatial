@@ -410,7 +410,7 @@ product-seagrass-eez-process-geometry-local:
 		--run-id=test_run_id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_run_id \
+		--target-location=./cache/products/seagrass-eez/0-0-1 \
 		--variable-name=seagrass \
 		--variable-value=1 \
 		--datetime-string-match="2024" \
@@ -426,14 +426,14 @@ product-seagrass-eez-consolidate-local:
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 			--variable-name=seagrass \
-			--datetime=2024-01-01
+			--datetime=2024
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_run_id/seagrass/2024-01-01/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_run_id/seagrass/2024/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
 		--run-id=test_run_id \
-		--dataset-run-id=eaef88a1-baf6-43d1-8be6-b4396686e5ff \
+		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite
