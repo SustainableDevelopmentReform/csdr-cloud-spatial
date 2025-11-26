@@ -197,11 +197,10 @@ def version_parser(s: str) -> str:
 def get_product_path(
     product_id: str,
     variable_name: str,
-    run_id: str,
     datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
-    path = f"runs/{run_id}/{variable_name}"
+    path = f"{variable_name}"
     if datetime is not None:
         path = f"{path}/{datetime}"
     # geometry id is just for the processing of single geometries
@@ -316,7 +315,6 @@ def process_geometry(
     target_path = get_product_path(
         product_id,
         variable_name,
-        run_id=run_id,
         geometry_id=geometry_id,
         datetime=datetime,
     )
@@ -455,7 +453,6 @@ def process_all_geometries_dask(
     target_path = get_product_path(
         product_id,
         variable_name,
-        run_id=run_id,
         datetime=datetime,
     )
 
@@ -540,7 +537,11 @@ def consolidate_product(
     store = get_store_for_url(location)
 
     # TODO: standardise target path logic with other functions
-    path = get_product_path(product_id, variable_name, run_id, datetime)
+    path = get_product_path(
+        product_id,
+        variable_name,
+        datetime
+    )
     logging.info(f"path {path}")
 
     # TODO: make this S3 prefix code a function.

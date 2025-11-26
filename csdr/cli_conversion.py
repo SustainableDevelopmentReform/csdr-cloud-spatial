@@ -35,7 +35,7 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
 @conversion_app.command("zip-to-parquet")
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to the zip file containing the geospatial data.",
+        help="Local or remote path (local or s3://) to the zip file containing the geospatial data.",
         default="./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip", # EEZ is just an example
     ),
     source_internal_path_name: str = typer.Option(
@@ -44,7 +44,7 @@ def convert_zipfile_to_parquet(
     ),
     # run_id is already built into target_location
     target_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the converted file.",
+        help="Local or remote path (local or s3://) to store the converted file.",
         default="./cache/eez-v4/0-0-1/runs/fancy-long-uuid-thing",
     ),
     name_field: str = typer.Option(
@@ -171,11 +171,11 @@ def convert_zipfile_to_parquet(
 @conversion_app.command("geo-to-parquet")
 def convert_geospatial_file_to_parquet(
     source_location: str = typer.Option(
-        help="Local or remote path (file:// or s3://) to the geospatial file.",
+        help="Local or remote path (local or s3://) to the geospatial file.",
         default="./tests/data/single_geometry.geojson",
     ),
     target_location: str | None = typer.Option(
-        help="Local or remote path (file:// or s3://) to store the converted file.",
+        help="Local or remote path (local or s3://) to store the converted file.",
         default=None,
     ),
     name_field: str = typer.Option(
