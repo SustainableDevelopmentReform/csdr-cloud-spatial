@@ -345,6 +345,7 @@ def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -
     # make geometry bbox
     geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
     # Check CRS's match between geometry and stac items. Essential for intersection test.
+    # TODO: Find a way to reproject data near the antimeridian robustly. Use a global CRS. Split geometries at the antimeridian before reprojecting. Check for validity after reprojection.
     geom_epsg = geom_bbox.crs.epsg
     stac_epsg = stac_items[0].properties.get("proj:code")
     stac_epsg_number = int(stac_epsg.replace("EPSG:",""))
