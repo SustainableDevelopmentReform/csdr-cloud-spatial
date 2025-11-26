@@ -344,6 +344,13 @@ def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
 def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
     # make geometry bbox
     geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
+    # Check CRS's match between geometry and stac items. Essential for intersection test.
+    geom_epsg = geom_bbox.crs.epsg
+    stac_epsg = stac_items[0].properties.get("proj:code")
+    stac_epsg_number = int(stac_epsg.replace("EPSG:",""))
+    if geom_epsg != stac_epsg_number:
+        logging.warning("CRS mismatch between geometry and STAC items. Reprojecting...")
+        geom_bbox = geom_bbox.to_crs(stac_epsg)
     # Intersect geometry bbox with each STAC item bbox
     # If any intersect, return true
     # Else, return false
@@ -355,7 +362,7 @@ def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -
         # Good: [[8.0, -1.0], [8.0, 0.0], [9.0, 0.0], [9.0, -1.0], [8.0, -1.0]]
         # Need to make the polygon because some of the proj:geometry values are not valid for future steps.
         # proj:geometry could be better because it is either the bbox or the footprint of valid data (more accurate than just bbox).
-        item_bbox = BoundingBox(*item.properties.get("proj:bbox"), item.properties.get("proj:code")).polygon
+        item_bbox = BoundingBox(*item.properties.get("proj:bbox"), stac_epsg).polygon # This assumes all items have the same CRS
 
         if geom_bbox.intersects(item_bbox):
             return True

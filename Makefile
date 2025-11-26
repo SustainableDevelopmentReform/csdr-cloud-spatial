@@ -397,6 +397,13 @@ product-seagrass-eez-list-geometries-local:
 	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
 # 	make product-gmw-v4-eez-list-geometries-local
 
+# ac14cbdb-a20c-55e3-bfab-d7e0d79b3c6d Fiji (small, contains seagrass) # Runs slow because there is a lot of overlap.
+# 605efc56-2be3-53ef-b5e4-c1c9127dcbae Antarctica (large, no seagrass)
+# f2f4dcaf-fcc8-592c-acea-b5b71eecc147 PNG (small, contains seagrass)
+# a20afc29-221e-5c5c-8ccb-7aa05b7a7b4a Japan (small, no seagrass). Japan runs slower because the bboxes overlap, even though there is no intersection.
+# f87e98e9-2786-56f1-ab4a-7ddbee9414bd Myanmar runs quickly because bboxes do not overlap.
+# Seagress: STAC-Parquet is 4326, but STAC items are 3832.
+# EEZ is 4326.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -407,8 +414,8 @@ product-seagrass-eez-process-geometry-local:
 		--variable-name=seagrass \
 		--variable-value=1 \
 		--datetime-string-match="2024" \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=605efc56-2be3-53ef-b5e4-c1c9127dcbae \
+		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--geometry-id=a20afc29-221e-5c5c-8ccb-7aa05b7a7b4a \
 		--overwrite
 
 product-seagrass-eez-consolidate-local:
