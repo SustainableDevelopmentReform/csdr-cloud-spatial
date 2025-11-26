@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from io import BytesIO
 from pathlib import Path
@@ -8,7 +9,6 @@ from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
-import logging
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, S3Store
 from pyarrow import ArrowInvalid
@@ -180,18 +180,21 @@ async def get_stac_item_dicts_from_store(
     list_of_stac_files = []
 
     for batch in store.list(s3_prefix):
+        # A batch contains 50 files
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
                 list_of_stac_files.append(stac_file)
 
-    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
-        obj = await store.get_async(stac_file["path"])
-        data = BytesIO(obj.bytes())
-        return json.load(data)
+    logging.info(f"Found {len(list_of_stac_files)} STAC items.")
 
-    return await asyncio.gather(
-        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
-    )
+    # Use semaphore to limit concurrent requests to prevent S3 from timing out. Otherwise it would request all concurrently and sometimes time out.
+    semaphore = asyncio.Semaphore(1000)
+    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
+        async with semaphore:
+            obj = await store.get_async(stac_file["path"])
+            data = BytesIO(obj.bytes())
+            return json.load(data)
+    return await asyncio.gather(*(_fetch_item(store, stac_file) for stac_file in list_of_stac_files))
 
 
 def write_gdf_to_parquet(

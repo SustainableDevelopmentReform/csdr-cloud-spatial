@@ -141,7 +141,7 @@ provenance-gmw-v3-s3-db:
 dataset-seagrass-index-local:
 	csdr seagrass index-dep \
 		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
-		--target-location=./cache/datasets/seagrass \
+		--target-location=./cache/datasets/seagrass/0-0-1 \
 		--overwrite
 dataset-seagrass-index-s3:
 	csdr seagrass index-dep \
@@ -152,7 +152,7 @@ dataset-seagrass-index-s3:
 dataset-seagrass-provenance-local:
 	csdr provenance dataset \
 		--id 8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
-		--dataset-url=./cache/datasets/seagrass/dep_s2_seagrass.parquet \
+		--dataset-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type stac-geoparquet \
@@ -387,21 +387,49 @@ product-gmw-v4-eez-provenance-s3-db:
 		--overwrite
 
 
-# Product Seagrass EEZ v4
-product-seagrass-eez-fiji:
+
+
+
+### Product Seagrass EEZ v4 ###
+
+# Lists the same geometries as GMW v4 EEZ but for seagrass product
+product-seagrass-eez-list-geometries-local:
+	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
+# 	make product-gmw-v4-eez-list-geometries-local
+
+product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
-		# --product-id=<product_id> \
-		--geometry-provenance-url=./cache/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/seagrass/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass_eez/ \
+		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+		--run-id=test_run_id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
+		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_run_id \
 		--variable-name=seagrass \
 		--variable-value=1 \
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=67f067c7-36d2-5c91-a3e2-30f4cb6be6e7
+		--geometry-id=605efc56-2be3-53ef-b5e4-c1c9127dcbae \
+		--overwrite
 
+product-seagrass-eez-consolidate-local:
+	csdr products consolidate \
+			--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+			--run-id=test_run_id \
+			--location=./cache/products/seagrass-eez/0-0-1 \
+			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
+			--variable-name=seagrass \
+			--datetime=2024-01-01
 
-
+product-seagrass-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_run_id/seagrass/2024-01-01/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+		--run-id=test_run_id \
+		--dataset-run-id=eaef88a1-baf6-43d1-8be6-b4396686e5ff \
+		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--post-to-database \
+		--overwrite
 
 ### OTHER ###
 
