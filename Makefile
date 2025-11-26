@@ -348,7 +348,7 @@ product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test_local_dask_run_id \
-		--location=./cache/products/gmw-v4-eez/0-0-1 \
+		--location=./cache/products/gmw-v4-eez/0-0-1/runs/abc \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove \
