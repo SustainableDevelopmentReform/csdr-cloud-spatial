@@ -407,6 +407,7 @@ async def run_index_gmw(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
+    # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
     result_location = get_url_from_store_filename(dest, out_filename)
