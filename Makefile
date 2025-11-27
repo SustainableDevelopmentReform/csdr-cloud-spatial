@@ -158,7 +158,7 @@ dataset-seagrass-index-s3:
 
 dataset-seagrass-provenance-local:
 	csdr provenance dataset \
-		--id 8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
+		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
 		--dataset-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
@@ -167,7 +167,7 @@ dataset-seagrass-provenance-local:
 		--overwrite
 dataset-seagrass-provenance-s3:
 	csdr provenance dataset \
-		--id 9b6875d2-f897-42a7-9923-ee6995e2d90f \
+		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
 		--dataset-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
