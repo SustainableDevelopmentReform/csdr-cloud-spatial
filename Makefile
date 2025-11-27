@@ -404,6 +404,8 @@ product-seagrass-eez-list-geometries-local:
 	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
 # 	make product-gmw-v4-eez-list-geometries-local
 
+# TODO: Do we need to get many years like we do for v3 GMW? Seagrass has 2017-2024.
+
 # ac14cbdb-a20c-55e3-bfab-d7e0d79b3c6d Fiji (small, contains seagrass) # Runs slow because there is a lot of overlap.
 # 605efc56-2be3-53ef-b5e4-c1c9127dcbae Antarctica (large, no seagrass)
 # f2f4dcaf-fcc8-592c-acea-b5b71eecc147 PNG (small, contains seagrass)
@@ -425,6 +427,7 @@ product-seagrass-eez-process-geometry-local:
 		--geometry-id=a20afc29-221e-5c5c-8ccb-7aa05b7a7b4a \
 		--overwrite
 
+# We need to call this for 2017-2024 to process all seagrass data
 product-seagrass-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -434,7 +437,7 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
 		--variable-name=seagrass \
 		--variable-value=1 \
-		--datetime-string-match="2024" \
+		--datetime-string-match="2022" \
 		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
 		--use-dask \
@@ -447,13 +450,12 @@ product-seagrass-eez-consolidate-local:
 			--location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-			--variable-name=seagrass \
-			--datetime=2024
+			--variable-name=seagrass			
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/2024/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
 		--run-id=test_local_dask_run_id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \

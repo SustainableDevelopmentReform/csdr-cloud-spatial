@@ -471,15 +471,18 @@ def process_all_geometries_dask(
 
     # Set up Dask client. This parallelizes the processing of all geometries (which would otherwise be done sequentially and slowly).
     client = _setup_dask_client(use_dask, dask_client_opts)
-    # logging.info(client.dashboard_link)
 
     try:
         for _, row in gdf.iterrows():
             geometry_id = row["csdr-id"]
             logging.info(f"geometry_id: '{geometry_id}'")
             geometry = get_geom_from_gdf(gdf, geometry_id)
-            # TODO: Should refactor path to be built by get_product_path function.
-            path = f"{product_id}-{geometry_id}.json"
+            path = get_product_path(
+                product_id,
+                variable_name,
+                datetime,
+                geometry_id,
+            )
 
             # Dask does not natively parallelize async functions. We can wrap the process_geometry call in a sync function and use dask.delayed to parallelize it if needed.
             _process_geometry(
