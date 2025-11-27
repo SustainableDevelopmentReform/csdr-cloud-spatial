@@ -437,7 +437,7 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
 		--variable-name=seagrass \
 		--variable-value=1 \
-		--datetime-string-match="2022" \
+		--datetime-string-match="2024" \
 		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
 		--use-dask \
