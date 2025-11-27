@@ -71,20 +71,24 @@ provenance-gmw-v4-s3-db:
 
 
 # Dataset GMW v3
+# https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip?download=1
 # One file/year
 cache-gmw-v3-single-file:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1 \
+		--target-location=./cache/datasets/gmw-v3/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 # Many files/years
 cache-gmw-v3-multiple-files:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1 \
+		--target-location=./cache/datasets/gmw-v3/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
+
+# Example output of cache: ["./cache/datasets/gmw-v3/raw/gmw_v3_1996_gtiff.zip","./cache/datasets/gmw-v3/raw/gmw_v3_2020_gtiff.zip"]
+# Example output of list-file-names: ["gmw_v3_1996_gtiff.zip", "gmw_v3_2020_gtiff.zip"]
 
 ## Extract v3
 extract-gmw-v3-local:
@@ -93,6 +97,7 @@ extract-gmw-v3-local:
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
 		--overwrite
+# 		--source-zip-name=0-0-1gmw_v3_2020_gtiff.zip \
 
 extract-gmw-v3-s3:
 	csdr gmw extract \
