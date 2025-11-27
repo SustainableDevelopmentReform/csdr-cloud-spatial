@@ -468,8 +468,17 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
+<<<<<<< HEAD
 		--datetime-string-match="2024" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
+=======
+<<<<<<< HEAD
+		--datetime-string-match="2022" \
+=======
+		--datetime-string-match="2024" \
+>>>>>>> 2351d68 (Seagrass x EEZ Product make commands)
+		--load-kwargs="resolution=500,crs=epsg:3832" \
+>>>>>>> a6b1f86 (Seagrass x EEZ Product make commands)
 		--overwrite \
 		--use-dask \
 		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
@@ -484,9 +493,19 @@ product-seagrass-eez-consolidate-local:
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
+<<<<<<< HEAD
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
 		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
 		--run-id=test-product-seagrass-eez-run-id \
+=======
+		--product-id e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+<<<<<<< HEAD
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+=======
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/2024/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+>>>>>>> 2351d68 (Seagrass x EEZ Product make commands)
+		--run-id=test_local_dask_run_id \
+>>>>>>> a6b1f86 (Seagrass x EEZ Product make commands)
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
 		--post-to-database \
