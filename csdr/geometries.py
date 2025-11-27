@@ -112,6 +112,7 @@ def post_bulk_geometry_outputs_to_database(
                 f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
                 exc_info=True,
             )
+            raise
 
         # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
         logging.info(
