@@ -78,7 +78,7 @@ def get_store_with_prefix_from_url(
         return from_url(f"file://{abs_url}", mkdir=mkdir, **kwargs)
 
 
-def get_url_from_store(store: HTTPStore | S3Store | LocalStore) -> str:
+def get_url_from_store(store: ObjectStore) -> str:
     if type(store) is HTTPStore:
         return store.url
     elif type(store) is S3Store:

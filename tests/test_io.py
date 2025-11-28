@@ -2,7 +2,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
-from obstore.store import HTTPStore, LocalStore, S3Store
 
 from csdr.io import (
     get_file_name_from_url,
@@ -16,7 +15,7 @@ from csdr.io import (
     "url,expected_store_type",
     [
         ("file:///Users/wj/Projects/csdr/csdr-cloud-spatial/README.md", "LocalStore"),
-        ("s3://cool-bucket-name/path/to/blob.txt", "S3Store"),
+        ("s3://bucket-name/path/to/blob.txt", "S3Store"),
         ("https://files.auspatious.com/#share/tide_models_clipped_indonesia.zip", "HTTPStore"),
         ("/tmp/file.txt", "LocalStore"),
     ],
@@ -54,15 +53,14 @@ def test_get_file_name_from_url() -> None:
 
 
 @pytest.mark.parametrize(
-    "store,expected_url",
+    "url,expected_url",
     [
-        (get_store_with_prefix_from_url("s3://my-bucket/prefix/to/file.txt"), "s3://my-bucket/prefix/to/file.txt"),
-        (get_store_with_prefix_from_url("https://example.com/data/file.txt"), "https://example.com/data/file.txt"),
-        (get_store_with_prefix_from_url("file:///tmp/file.txt", mkdir=False), Path("/tmp/file.txt")),
+        ("s3://bucket-name/prefix/to/file.txt", "s3://bucket-name/prefix/to/file.txt"),
+        ("https://example.com/data/file.txt", "https://example.com/data/file.txt"),
+        ("file:///tmp/file.txt", Path("/tmp/file.txt")),
     ],
 )
-def test_get_url_from_store(
-    store: S3Store | HTTPStore | LocalStore, expected_url: str, aws_credentials: dict
-) -> None:
+def test_get_url_from_store(url: str, expected_url: str, aws_credentials: dict) -> None:
+    store = get_store_with_prefix_from_url(url, mkdir=False)
     reconstructed_url = get_url_from_store(store)
     assert reconstructed_url == expected_url
