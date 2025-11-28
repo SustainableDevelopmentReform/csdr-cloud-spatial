@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 from io import BytesIO
@@ -6,14 +7,13 @@ from tempfile import TemporaryDirectory
 import geopandas as gpd
 import typer
 from fiona.io import ZipMemoryFile
-import logging
 
 from csdr.geometries import add_geometry_id_name
 from csdr.io import (
     exists,
-    get_prefix_file_name_from_url,
-    get_store_from_url,
-    make_url_from_store_prefix_filename,
+    get_file_name_from_url,
+    get_store_with_prefix_from_url,
+    get_url_from_store,
     read_geospatial_file,
     write_gdf_to_parquet,
 )
@@ -24,7 +24,7 @@ conversion_app = typer.Typer()
 def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
     if geometry_id is None:
         geometry_id = (
-            get_prefix_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
+            get_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
         )
     return geometry_id
 
@@ -62,10 +62,10 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    store = get_store_from_url(source_zip_location)
-    source_zip_name_path = get_prefix_file_name_from_url(source_zip_location)
+    store = get_store_with_prefix_from_url(source_zip_location)
+    source_zip_name = get_file_name_from_url(source_zip_location)
 
-    if not exists(store, source_zip_name_path):
+    if not exists(store, source_zip_name):
         logging.error(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
@@ -78,12 +78,13 @@ def convert_zipfile_to_parquet(
     target_location = target_location.rstrip("/")
 
     # Set up the target store
-    target_store = get_store_from_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
     target_filename = source_internal_path_name.split("/")[-1].replace(
         ".shp", ".parquet"
     )
     
-    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
+    # TODO: Check this
+    target_url = get_url_from_store(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
@@ -93,7 +94,7 @@ def convert_zipfile_to_parquet(
         raise typer.Exit(code=0)
 
     # Pull the whole zip into memory
-    zip_bytes = BytesIO(store.get(source_zip_name_path).bytes())
+    zip_bytes = BytesIO(store.get(source_zip_name).bytes())
 
     # Use Fiona's in-memory ZIP reader (works with bytes and includes all sidecar files)
     with ZipMemoryFile(zip_bytes) as z:
@@ -178,10 +179,10 @@ def convert_geospatial_file_to_parquet(
 ) -> None:
     logging.info("Starting geospatial to parquet conversion process...")
 
-    store = get_store_from_url(source_location)
-    source_name_path = get_prefix_file_name_from_url(source_location)
+    store = get_store_with_prefix_from_url(source_location)
+    source_name = get_file_name_from_url(source_location)
 
-    if not exists(store, source_name_path):
+    if not exists(store, source_name):
         logging.error(
             f"Source geospatial file does not exist at {source_location}. Cannot convert."
         )
@@ -194,9 +195,10 @@ def convert_geospatial_file_to_parquet(
         target_location = source_location
 
     # Set up the target store
-    target_store = get_store_from_url(target_location)
-    target_filename = source_name_path.split("/")[-1].rsplit(".", 1)[0] + ".parquet"
-    target_url = make_url_from_store_prefix_filename(target_store, target_filename)
+    target_store = get_store_with_prefix_from_url(target_location)
+    target_filename = source_name.rsplit(".", 1)[0] + ".parquet"
+    # TODO: Check this
+    target_url = get_url_from_store(target_store, target_filename)
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
@@ -209,7 +211,7 @@ def convert_geospatial_file_to_parquet(
     gdf = read_geospatial_file(source_location)
 
     gdf = add_geometry_id_name(
-        gdf, name_field=name_field, geometry_id=_get_geometry_id(None, source_name_path)
+        gdf, name_field=name_field, geometry_id=_get_geometry_id(None, source_name)
     )
 
     logging.info(f"Opened file with {len(gdf)} features")

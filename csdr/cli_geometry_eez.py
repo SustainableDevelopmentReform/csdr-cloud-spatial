@@ -1,14 +1,13 @@
 import asyncio
+import logging
 
 import typer
-import logging
-from obstore.store import S3Store
 
 from csdr.io import (
     exists,
     get_file_info,
-    get_prefix_file_name_from_url,
-    get_store_from_url,
+    get_file_name_from_url,
+    get_store_with_prefix_from_url,
 )
 
 eez_app = typer.Typer()
@@ -24,11 +23,11 @@ async def run_cache_eez(
     # Target location can be s3:// or local file path
     logging.info(f"Caching EEZ from {source_url} to {target_location}...")
     target_location = target_location.rstrip("/") # Remove trailing slash if present
-    store = get_store_from_url(source_url)
-    source_name_path = get_prefix_file_name_from_url(source_url)
-    size = get_file_info(store, source_name_path).get("size", None)
-    target_filename = get_prefix_file_name_from_url(source_url)
-    target_store = get_store_from_url(target_location)
+    store = get_store_with_prefix_from_url(source_url)
+    source_name = get_file_name_from_url(source_url)
+    size = get_file_info(store, source_name).get("size", None)
+    target_filename = get_file_name_from_url(source_url)
+    target_store = get_store_with_prefix_from_url(target_location)
 
     if exists(target_store, target_filename):
         if not overwrite:
