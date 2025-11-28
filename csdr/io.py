@@ -3,13 +3,14 @@ import json
 import logging
 import os
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
 from obstore.auth.boto3 import Boto3CredentialProvider
-from obstore.store import HTTPStore, LocalStore, S3Store, from_url
+from obstore.store import HTTPStore, LocalStore, ObjectStore, S3Store, from_url
 from pyarrow import ArrowInvalid
 
 # We support three types of stores: 
@@ -41,31 +42,41 @@ def get_file_info(store: HTTPStore | S3Store | LocalStore, file_name: str) -> di
 def write_json(
     store: HTTPStore | S3Store | LocalStore, file_name: str, data: dict[str, Any]
 ) -> None:
-    # All store types have put method
-    store.put(
-        file_name,
-        json.dumps(data, indent=2).encode("utf-8"),
-        attributes={"Content-Type": "application/json"},
-    )
+    if type(store) is S3Store:
+        # This should work for all store types according to obstore docs, but in reality only S3Store seems to support it.
+        store.put(
+            file_name,
+            json.dumps(data, indent=2).encode("utf-8"),
+            attributes={"Content-Type": "application/json"},
+        )
+    elif type(store) is LocalStore:
+        # This should be supported https://developmentseed.org/obstore/latest/api/store/local/#obstore.store.LocalStore.put
+        full_path = Path(os.path.abspath(store.prefix)) / file_name
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    elif type(store) is HTTPStore:
+        # This should be supported https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.put
+        raise NotImplementedError("HTTPStore does not support writing files (even though it is in the obstore docs).")
 
 
 def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
-) -> HTTPStore | S3Store | LocalStore:
+) -> ObjectStore:
     # https://developmentseed.org/obstore/latest/api/store/#obstore.store.from_url
-    if url.startswith("s3://") or url.startswith("http://") or url.startswith("https://") or url.startswith("file://"):
+    if url.startswith("s3://"):
         # S3, Http, and file URLs (that start with "file://")
-        return from_url(url, credential_provider=Boto3CredentialProvider(), mkdir=mkdir, **kwargs)
+        return from_url(url, credential_provider=Boto3CredentialProvider(), **kwargs) # S3 doesn't support mkdir
+    elif url.startswith("http://") or url.startswith("https://"):
+        return from_url(url) # Can't have any configuration for HTTPStore
+    elif url.startswith("file://"):
+        # Can't have a credential provider for local
+        return from_url(url, mkdir=mkdir, **kwargs)
     else:
         # File URLs that don't start with "file://"
-        return from_url(f"file://{os.path.abspath(url)}", mkdir=mkdir, **kwargs)
+        abs_url = os.path.abspath(url)
+        return from_url(f"file://{abs_url}", mkdir=mkdir, **kwargs)
 
-# test = from_url("file:///Users/wj/Projects/csdr/csdr-cloud-spatial/README.md")
-# test = from_url("s3://bucket-name/path/to/blob.txt")
-# test = from_url("https://files.auspatious.com/#share/tide_models_clipped_indonesia.zip")
-# HTTPStore has url prop
-# S3Store has prefix prop. Also has config.bucket prop
-# LocalStore has prefix prop
 
 def get_url_from_store(store: HTTPStore | S3Store | LocalStore) -> str:
     if type(store) is HTTPStore:
@@ -80,7 +91,8 @@ def get_url_from_store(store: HTTPStore | S3Store | LocalStore) -> str:
 
 def get_file_name_from_url(url: str) -> str:
     # Get last "/" and return everything after it as the file name
-    return urlparse(url).path.split("/")[-1]
+    file_name = urlparse(url).path.split("/")[-1]
+    return file_name
 
 
 def read_dict(store: S3Store | LocalStore, file_name: str) -> dict[str, Any]:
