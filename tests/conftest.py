@@ -13,13 +13,9 @@ from pystac import ItemCollection
 
 from csdr.utils import open_stacgeoparquet
 
-# TODO: Do I need to update this now that the I/O functions have been changed?
 DATA_DIR = Path(os.path.dirname(__file__), "data")
 GEOPARQUET_FILE = Path("gmw/gmw.parquet")
 GEOPARQUET_PATH = DATA_DIR / GEOPARQUET_FILE
-print(DATA_DIR)
-print(GEOPARQUET_FILE)
-print(GEOPARQUET_PATH)
 
 
 @pytest.fixture

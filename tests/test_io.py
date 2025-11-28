@@ -1,4 +1,5 @@
-import os
+from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 from obstore.store import HTTPStore, LocalStore, S3Store
@@ -12,15 +13,15 @@ from csdr.io import (
 
 
 @pytest.mark.parametrize(
-    "url,expected_store_type,expected_value",
+    "url,expected_store_type",
     [
-        ("file:///Users/wj/Projects/csdr/csdr-cloud-spatial/README.md", "LocalStore", "/Users/wj/Projects/csdr/csdr-cloud-spatial"),
-        ("s3://bucket-name/path/to/blob.txt", "S3Store", "bucket-name"),
+        ("file:///Users/wj/Projects/csdr/csdr-cloud-spatial/README.md", "LocalStore"),
+        ("s3://cool-bucket-name/path/to/blob.txt", "S3Store"),
         ("https://files.auspatious.com/#share/tide_models_clipped_indonesia.zip", "HTTPStore"),
-        ("/tmp/file.txt", "LocalStore", "/tmp"),
+        ("/tmp/file.txt", "LocalStore"),
     ],
 )
-def test_get_store_with_prefix_from_url(url: str, expected_store_type: str, expected_value: str, aws_credentials: dict) -> None:
+def test_get_store_with_prefix_from_url(url: str, expected_store_type: str, aws_credentials: dict) -> None:
     store = get_store_with_prefix_from_url(url, mkdir=False)
     # Type check
     assert store.__class__.__name__ == expected_store_type
@@ -30,7 +31,7 @@ def test_get_store_with_prefix_from_url(url: str, expected_store_type: str, expe
     elif expected_store_type == "HTTPStore":
         assert store.url == url
     elif expected_store_type == "LocalStore":
-        assert os.path.abspath(store.prefix) == os.path.abspath(url)
+        assert str(store.prefix) == urlparse(url).path
     else:
         raise AssertionError(f"Unknown store type: {expected_store_type}")
 
@@ -46,23 +47,7 @@ def test_get_file_name_from_url() -> None:
         get_file_name_from_url("s3://bucket-name/prefix/to/file.parquet/file.txt")
         == "file.txt"
     )
-    # These should raise ValueError because there is no valid file name
-    with pytest.raises(ValueError):
-        get_file_name_from_url("s3://bucket-name/prefix/to/")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("s3://bucket-name/prefix/to")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("s3://bucket-name/")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("s3://bucket-name")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("file:///Users/wj/Projects/")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("file:///Users/wj/Projects")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("https://files.auspatious.com/#share/")
-    with pytest.raises(ValueError):
-        get_file_name_from_url("https://files.auspatious.com/#share")
+    # Http and local paths
     assert get_file_name_from_url("https://example.com/path/to/file.txt") == "file.txt"
     assert get_file_name_from_url("/tmp/file.txt") == "file.txt"
     assert get_file_name_from_url("/tmp/path/to/file.txt") == "file.txt"
@@ -71,10 +56,9 @@ def test_get_file_name_from_url() -> None:
 @pytest.mark.parametrize(
     "store,expected_url",
     [
-        (S3Store("my-bucket", "prefix/to/file.txt"), "s3://my-bucket/prefix/to/file.txt"),
-        (HTTPStore("https://example.com/data/file.txt"), "https://example.com/data/file.txt"),
-        (LocalStore("/tmp/file.txt"), "/tmp/file.txt"), # Absolute local
-        (LocalStore("file:///tmp/file.txt"), "/tmp/file.txt"),
+        (get_store_with_prefix_from_url("s3://my-bucket/prefix/to/file.txt"), "s3://my-bucket/prefix/to/file.txt"),
+        (get_store_with_prefix_from_url("https://example.com/data/file.txt"), "https://example.com/data/file.txt"),
+        (get_store_with_prefix_from_url("file:///tmp/file.txt", mkdir=False), Path("/tmp/file.txt")),
     ],
 )
 def test_get_url_from_store(

@@ -220,11 +220,12 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 def open_stacgeoparquet(url: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
-    store = get_store_with_prefix_from_url(url)
     file_name = get_file_name_from_url(url)
+    url_without_filename = url.rsplit('/', 1)[0]
+    store = get_store_with_prefix_from_url(url_without_filename, mkdir=False)
 
     async def _read_stac_items_async() -> ItemCollection:
-        return await read(file_name, store=store) # Validate this store and href
+        return await read(file_name, store=store)
     
     # Check if we're already in an event loop (e.g., Jupyter notebook)
     # Does Argo/Dask also have an event loop running?
