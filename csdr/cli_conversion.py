@@ -13,7 +13,6 @@ from csdr.io import (
     exists,
     get_file_name_from_url,
     get_store_with_prefix_from_url,
-    get_url_from_store,
     read_geospatial_file,
     write_gdf_to_parquet,
 )
@@ -82,9 +81,7 @@ def convert_zipfile_to_parquet(
     target_filename = source_internal_path_name.split("/")[-1].replace(
         ".shp", ".parquet"
     )
-    
-    # TODO: Check this
-    target_url = get_url_from_store(target_store, target_filename)
+    target_url = f"{target_location}/{target_filename}"
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
@@ -194,11 +191,13 @@ def convert_geospatial_file_to_parquet(
     if target_location is None:
         target_location = source_location
 
+    target_location = target_location.rstrip("/")
+
     # Set up the target store
     target_store = get_store_with_prefix_from_url(target_location)
     target_filename = source_name.rsplit(".", 1)[0] + ".parquet"
-    # TODO: Check this
-    target_url = get_url_from_store(target_store, target_filename)
+
+    target_url = f"{target_location}/{target_filename}"
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
