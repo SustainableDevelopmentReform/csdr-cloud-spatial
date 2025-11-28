@@ -14,7 +14,6 @@ from odc.geo.geom import Geometry
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
-    get_url_from_store,
     read_dict,
     read_geospatial_file,
     write_gdf_to_parquet,
@@ -133,7 +132,7 @@ def _process_geometry(
     """Process a single geometry and return True if processed, False if skipped."""
     if exists(target_store, path) and not overwrite:
         logging.info(
-            f"Product already exists at {get_url_from_store_filename(target_store, path)}, skipping processing for geometry {geometry_id}."
+            f"Product already exists at {target_store}/{path}, skipping processing for geometry {geometry_id}."
         )
         return False
     
@@ -316,9 +315,7 @@ def process_geometry(
         geometry_id=geometry_id,
         datetime=datetime,
     )
-
-    # TODO: Making target_url should be easy.
-    target_url = get_url_from_store(target_store, target_path)
+    target_url = f"{target_location.rstrip('/')}/{target_path}"
     logging.info(f"target_url: {target_url}")
     logging.info(f"geometry_id: '{geometry_id}'")
 
@@ -440,7 +437,7 @@ def process_all_geometries_dask(
     )
 
     # Get paths for writing result JSONs
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
     # this path includes the filename (because geometry_id is provided to get_product_path)
     target_path = get_product_path(
         product_id,
@@ -448,13 +445,7 @@ def process_all_geometries_dask(
         datetime=datetime,
     )
 
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            target_path = f"{prefix}/{target_path}"
-    target_url = get_url_from_store_filename(target_store, target_path)
+    target_url = f"{target_store}/{target_path}"
     logging.info(f"target_url: {target_url}")
 
     # Load geometry data
@@ -528,17 +519,14 @@ def consolidate_product(
 ) -> None:
     logging.info(f"Consolidating product {product_id} from {location}")
     logging.info(f"run_id {run_id}")
+    location = location.rstrip("/")
 
     store = get_store_with_prefix_from_url(location)
-
-    # TODO: standardise target path logic with other functions
 
     path = get_product_path(product_id, variable_name, run_id, datetime)
     logging.info(f"path {path}")
 
-    # TODO: Isn't url just location + path?
-    # url = f"{location}/{path}"
-    url = get_url_from_store(store, path)
+    url = f"{location}/{path}"
     logging.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
@@ -592,7 +580,5 @@ def consolidate_product(
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
-    # TODO: Isn't out_url just location + output_file?
-    # out_url = f"{location}/{output_file}"
-    out_url = get_url_from_store(store, output_file)
-    logging.info(f"Wrote consolidated product data to {out_url}")
+    target_url = f"{location}/{output_file}"
+    logging.info(f"Wrote consolidated product data to {target_url}")

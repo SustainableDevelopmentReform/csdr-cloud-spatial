@@ -21,7 +21,6 @@ from csdr.io import (
     exists,
     get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
-    get_url_from_store,
 )
 from csdr.utils import suppress_rust_output
 
@@ -64,10 +63,7 @@ async def cache_single_source(
             if target_path is not None
             else target_zip_name
         )
-
-        # TODO: Tidy up target_url creation. Is it not just f"{target_location}/{target_zip_name}"?
-        # target_url = f"{target_location}/{target_zip_name}"
-        target_url = get_url_from_store(target_store, target_zip_name)
+        target_url = f"{target_location}/{target_zip_name}"
         logging.info(f"Target URL for caching is {target_url}")
 
         if exists(target_store, target_zip_name) and not overwrite:
@@ -192,9 +188,7 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        # TODO: Tidy up out_key creation. Is it not just f"{target_location}/{zip_file}"?
-        # out_key = f"{target_location}/{zip_file}"
-        out_key = get_url_from_store(target_store, f"{target_location}/{name}")
+        out_key = f"{target_location}/{name}"
         out_stac = out_key.replace(".tif", ".stac-item.json")
 
         if exists(target_store, out_stac) and not overwrite:

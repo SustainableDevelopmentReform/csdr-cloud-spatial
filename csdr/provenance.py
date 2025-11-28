@@ -61,7 +61,7 @@ def get_provenance(
         "imageCode": image_state["imageCode"],
         "imageTag": image_state["imageTag"],
         # This should be the URL to this file itself
-        "provenanceUrl": get_url_from_store(store, file_name) + ".provenance.json",
+        "provenanceUrl": f"{get_url_from_store(store)}/{file_name}.provenance.json",
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
         # Extra stuff! e.g. geometriesRunId and productRunId
