@@ -1,5 +1,5 @@
-import asyncio
 import json
+import logging
 import os
 import sys
 from typing import Any
@@ -8,15 +8,13 @@ import dateutil
 import pandas as pd
 import typer
 from dask.distributed import Client
-import logging
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
-import asyncio
 
 from csdr.io import (
     exists,
-    get_store_from_url,
-    make_url_from_store_prefix_filename,
+    get_store_with_prefix_from_url,
+    get_url_from_store,
     read_dict,
     read_geospatial_file,
     write_gdf_to_parquet,
@@ -310,7 +308,7 @@ def process_geometry(
     )
 
     # Get paths for writing result JSON
-    target_store = get_store_from_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
     # this path includes the filename (because geometry_id is provided to get_product_path)
     target_path = get_product_path(
         product_id,
@@ -319,7 +317,8 @@ def process_geometry(
         datetime=datetime,
     )
 
-    target_url = make_url_from_store_prefix_filename(target_store, target_path)
+    # TODO: Making target_url should be easy.
+    target_url = get_url_from_store(target_store, target_path)
     logging.info(f"target_url: {target_url}")
     logging.info(f"geometry_id: '{geometry_id}'")
 
@@ -530,14 +529,16 @@ def consolidate_product(
     logging.info(f"Consolidating product {product_id} from {location}")
     logging.info(f"run_id {run_id}")
 
-    store = get_store_from_url(location)
+    store = get_store_with_prefix_from_url(location)
 
     # TODO: standardise target path logic with other functions
 
     path = get_product_path(product_id, variable_name, run_id, datetime)
     logging.info(f"path {path}")
 
-    url = make_url_from_store_prefix_filename(store, path)
+    # TODO: Isn't url just location + path?
+    # url = f"{location}/{path}"
+    url = get_url_from_store(store, path)
     logging.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
@@ -591,5 +592,7 @@ def consolidate_product(
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
-    out_url = make_url_from_store_prefix_filename(store, output_file)
+    # TODO: Isn't out_url just location + output_file?
+    # out_url = f"{location}/{output_file}"
+    out_url = get_url_from_store(store, output_file)
     logging.info(f"Wrote consolidated product data to {out_url}")

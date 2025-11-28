@@ -19,10 +19,9 @@ from rustac import write
 
 from csdr.io import (
     exists,
-    get_prefix_from_url,
     get_stac_item_dicts_from_store,
-    get_store_from_url,
-    make_url_from_store_prefix_filename,
+    get_store_with_prefix_from_url,
+    get_url_from_store,
 )
 from csdr.utils import suppress_rust_output
 
@@ -59,14 +58,16 @@ async def cache_single_source(
         size = source_meta.get("size", None)
 
         target_store = None
-        target_store = get_store_from_url(target_location)
+        target_store = get_store_with_prefix_from_url(target_location)
         target_zip_name = (
             f"{target_path}/{target_zip_name}"
             if target_path is not None
             else target_zip_name
         )
 
-        target_url = make_url_from_store_prefix_filename(target_store, target_zip_name)
+        # TODO: Tidy up target_url creation. Is it not just f"{target_location}/{target_zip_name}"?
+        # target_url = f"{target_location}/{target_zip_name}"
+        target_url = get_url_from_store(target_store, target_zip_name)
         logging.info(f"Target URL for caching is {target_url}")
 
         if exists(target_store, target_zip_name) and not overwrite:
@@ -191,7 +192,9 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        out_key = make_url_from_store_prefix_filename(target_store, f"{target_location}/{name}")
+        # TODO: Tidy up out_key creation. Is it not just f"{target_location}/{zip_file}"?
+        # out_key = f"{target_location}/{zip_file}"
+        out_key = get_url_from_store(target_store, f"{target_location}/{name}")
         out_stac = out_key.replace(".tif", ".stac-item.json")
 
         if exists(target_store, out_stac) and not overwrite:
@@ -265,7 +268,7 @@ async def run_extract_gmw(
 ) -> None:
     """Async function to run the GMW extraction with parallel processing."""
     source_location = source_location.rstrip("/") # Remove trailing slash if present
-    store = get_store_from_url(source_location)
+    store = get_store_with_prefix_from_url(source_location)
     logging.info(f"Checking for source zip file at path {source_zip_name}...")
     source_exists = exists(store, source_zip_name)
     if not source_exists:
@@ -285,7 +288,7 @@ async def run_extract_gmw(
     #         Path(target_location).absolute()
     #     )  # Convert to absolute path as safeguard
 
-    target_store = get_store_from_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
 
     # Open the zip file, and extract all files into memory
     # Load the file as bytes first
@@ -354,16 +357,15 @@ def extract_gmw(
 async def run_index_gmw(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
-    source_store = get_store_from_url(source_location)
-    target_store = get_store_from_url(target_location)
-    target_url = f"{target_location}/gmw.parquet"
-    source_prefix = get_prefix_from_url(source_location)
-    target_prefix = get_prefix_from_url(target_url)
+    source_store = get_store_with_prefix_from_url(source_location)
+    target_store = get_store_with_prefix_from_url(target_location)
+    file_name = "gmw.parquet"
+    target_url = f"{target_location}/{file_name}"
 
     # Check for existing geoparquet file
-    if exists(target_store, target_prefix) and not overwrite:
+    if exists(target_store, file_name) and not overwrite:
         logging.info(
-            f"Parquet file already exists at {target_prefix}, skipping indexing."
+            f"Parquet file already exists at {target_url}, skipping indexing."
         )
         return
     else:
@@ -374,12 +376,12 @@ async def run_index_gmw(
 
     # Find all the the GMW STAC files
     # Searches recursively. It needs to for v3 (and v4)
-    item_dicts = await get_stac_item_dicts_from_store(source_store, source_prefix)
+    item_dicts = await get_stac_item_dicts_from_store(source_store)
 
 
     logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
     with suppress_rust_output():
-        await write(target_prefix, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
+        await write(file_name, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
 
     logging.info(f"Parquet write completed, wrote to {target_url}")
 

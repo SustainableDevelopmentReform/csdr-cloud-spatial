@@ -3,67 +3,34 @@ import json
 import logging
 import os
 from io import BytesIO
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
 from obstore.auth.boto3 import Boto3CredentialProvider
-from obstore.store import HTTPStore, LocalStore, S3Store
+from obstore.store import HTTPStore, LocalStore, S3Store, from_url
 from pyarrow import ArrowInvalid
-
-# Here is a suite of functions to handle different storage backends (local filesystem, S3, HTTP) using obstore.
-# get_store_from_url: Given a URL, return the appropriate obstore store (S3Store, HTTPStore, LocalStore).
-# get_prefix_from_url: Extract the prefix (path) from a given URL.
-# get_prefix_file_name_from_url: Extract the file name from a given URL.
-# Together these three functions extract mutually exclusive components of a URL for file storage.
 
 # We support three types of stores: 
 # 1. S3Store for s3:// URLs
 # 2. HTTPStore for http:// and https:// URLs
 # 3. LocalStore for local file paths starting with / or ./
 
-# They have the following characteristics:
-# URL: https://test.com/path/to/blob.txt
-# Store: HTTPStore with base URL https://test.com
-# Prefix: path/to
-# Filename: blob.txt
-# STORE DOESN'T CONTAIN PREFIX
+# Store always includes prefix for all store types.
 
-# URL: /path/to/blob.txt
-# Store: LocalStore with prefix /path/to
-# Prefix: /path/to
-# Filename: blob.txt
-# STORE DOES CONTAIN PREFIX !!!!!!!!!!!!!!!!!!!!!
-# Now we are setting the store as just the root '/' so it is consistent.
-
-# URL: s3://bucket-name/path/to/blob.txt
-# Store: S3Store with bucket bucket-name
-# Prefix: path/to
-# Filename: blob.txt
-# STORE DOESN'T CONTAIN PREFIX
-
-# Standard naming:
-# 'url' is the full url including store, prefix, and filename.
-# 'store' is just the store for http and s3, while it is the store and prefix for local.
-# 'path' is the filename and prefix for http and s3, but it is just the filename for local.
-
-
-# TODO: Should this just have a url param? We can make the store and path here so it is more streamlined outside this function.
-def exists(store: HTTPStore | S3Store | LocalStore, path: str) -> bool:
+def exists(store: HTTPStore | S3Store | LocalStore, file_name: str) -> bool:
+    # store includes prefix, but not file_name.
     try:
-        store.head(path)
+        store.head(file_name) # Try get metadata
     except FileNotFoundError:
         return False
     return True
 
 
-# TODO: Should this take a URL rather than a store and path? Then we could handle the logic in here.
-def get_file_info(store: HTTPStore | S3Store | LocalStore, path: str) -> dict[str, Any]:
-    # store = get_store_from_url(url)
-    # prefix_file_name = get_prefix_file_name_from_url(url)
-    info = store.head(path)
+def get_file_info(store: HTTPStore | S3Store | LocalStore, file_name: str) -> dict[str, Any]:
+    # store includes prefix, but not file_name
+    info = store.head(file_name)
     return {
         "size": info["size"],
         "e_tag": info["e_tag"],
@@ -72,135 +39,63 @@ def get_file_info(store: HTTPStore | S3Store | LocalStore, path: str) -> dict[st
 
 
 def write_json(
-    store: HTTPStore | S3Store | LocalStore, path: str, data: dict[str, Any]
+    store: HTTPStore | S3Store | LocalStore, file_name: str, data: dict[str, Any]
 ) -> None:
-    if type(store) is HTTPStore:
-        raise ValueError("Cannot write to HTTPStore")
-    elif type(store) is LocalStore:
-        # TODO: validate that LocalStore does not have put. I think it does https://developmentseed.org/obstore/latest/api/store/local/#obstore.store.LocalStore.put
-        # TODO: Use put if possible to streamline code
-        full_path = Path(store.prefix) / path
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(full_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    else:
-        # S3Store has put
-        store.put(
-            path,
-            json.dumps(data, indent=2).encode("utf-8"),
-            attributes={"Content-Type": "application/json"},
-        )
+    # All store types have put method
+    store.put(
+        file_name,
+        json.dumps(data, indent=2).encode("utf-8"),
+        attributes={"Content-Type": "application/json"},
+    )
 
 
-# This function returns just the base. Bucket name for s3, and root for local.
-# TODO: This function is returning the prefix as well (maybe for just some store types like local?). It should just return the store without the prefix. Another function return just the prefix.
-# Actually local kind of needs the prefix to know where to read from/write to. This is an incosistency with S3 and HTTP stores that we need to handle.
-# Need to define where the root of the local store is. Maybe always use the actual computer root "/"? Otherwise could use the current working directory but either way we need to be consistent.
-def get_store_from_url(
+def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> HTTPStore | S3Store | LocalStore:
-    # This function allows the code to work seamlessly with local files, S3 buckets, or HTTP S3 endpoints by abstracting the storage backend.
-    # TODO: what is kwargs? The only time something else is passed in is region="us-west-2" for cli_dataset_seagrass.py. This should be used for S3, not for local.
-    # S3 Store includes bucket but not prefix
-    if url.startswith("s3://"):
-        # S3 URL
-        s3_url = urlparse(url)
-        bucket = s3_url.netloc
-        return S3Store(bucket, credential_provider=Boto3CredentialProvider(), **kwargs)
-    # Http Store includes base url, but not prefix
-    elif url.startswith("http://") or url.startswith("https://"):
-        # HTTP URL
-        parsed = urlparse(url)
-        base_url = f"{parsed.scheme}://{parsed.netloc}"
-        return HTTPStore(base_url, **kwargs) # this adds a trailing slash...
-    # Local Store includes prefix
-    elif url.startswith("/") or url.startswith("./"):
-        # Local path
-        local_path = Path(url).parent if mkdir else Path(url)
-        # Create local directory if it doesn't exist and mkdir is True
-        if mkdir:
-            local_path.mkdir(parents=True, exist_ok=True)
-        # return LocalStore(prefix=local_path, **kwargs) # The local store should includes the store and the prefix by design.
-        return LocalStore(prefix="/", **kwargs) # For consistency, don't include the prefix. Always use the absolute root directory as the LocalStore prefix
+    # https://developmentseed.org/obstore/latest/api/store/#obstore.store.from_url
+    if url.startswith("s3://") or url.startswith("http://") or url.startswith("https://") or url.startswith("file://"):
+        # S3, Http, and file URLs (that start with "file://")
+        return from_url(url, credential_provider=Boto3CredentialProvider(), mkdir=mkdir, **kwargs)
     else:
-        raise ValueError(f"Unsupported store type from URL '{url}'")
+        # File URLs that don't start with "file://"
+        return from_url(f"file://{os.path.abspath(url)}", mkdir=mkdir, **kwargs)
 
+# test = from_url("file:///Users/wj/Projects/csdr/csdr-cloud-spatial/README.md")
+# test = from_url("s3://bucket-name/path/to/blob.txt")
+# test = from_url("https://files.auspatious.com/#share/tide_models_clipped_indonesia.zip")
+# HTTPStore has url prop
+# S3Store has prefix prop. Also has config.bucket prop
+# LocalStore has prefix prop
 
-# This function is needed for example to just get a dir, not an actual file.
-# The prefix is everthing between the Store and the file name e.g. "prefix/to" from "s3://bucket-name/prefix/to/file.txt" or "/prefix/to/file.txt"
-# No leading or trailing slashes.
-# TODO: Use this function. It is not used anywhere currently.
-def get_prefix_from_url(url: str) -> str | None:
-    # TODO: Write a robust function to get the prefix from a URL.
-    # TODO: Finish this function
-    store = get_store_from_url(url)
-    file_name = get_prefix_file_name_from_url(url)
-    prefix = url.replace(file_name, "").replace(store, "").lstrip("/").rstrip("/") # This probably doesn't work but is the idea.
-    # if type(store) is S3Store:
-    #     prefix = url.replace(dataset_name, "").lstrip("s3://").rstrip("/")
-    # elif type(store) is HTTPStore or type(store) is LocalStore:
-    #     parsed = urlparse(url)
-    #     # For local paths, parsed.path may start with '/' (absolute) or './' (relative)
-    #     dataset_name = parsed.path.lstrip("/.")
-    # else:
-    #     raise ValueError(f"Unsupported store type: {type(store)}")
-    return prefix
-
-
-# Does not return the path, just the file name and file extension e.g. "file.txt" from "s3://bucket-name/prefix/to/file.txt" or "/prefix/to/file.txt"
-# Can optionally return the prefix as well, because we need this for local store.
-# TODO: Should this be just the file_name, and leave the prefix part to get_prefix_from_url?
-def get_prefix_file_name_from_url(url: str) -> str:
-    parsed_url = urlparse(url)
-
-    # Handle local stores differently because their store is the absolute root, so we need to return the prefix too.
-    if not url.startswith("http") and not url.startswith("s3"): # Local stores
-        file_name = url
-    else:
-        file_name = os.path.basename(parsed_url.path)
-        file_name = file_name.lstrip("/")
-
-    if "." not in file_name:
-        file_name = None
-
-    if file_name is None:
-        raise ValueError(f"Could not determine file name from URL: {url}")
-
-    return file_name
-
-
-# TODO: Should prefix and filename be two separate arguments?
-def make_url_from_store_prefix_filename(
-    store: HTTPStore | S3Store | LocalStore, path: str
-) -> str:
-    # This function only needs 2 parameters because:
-    # Http and Local stores include the prefix in the store itself.
-    # S3 stores do not include the prefix, but we have added it to the filename.
-    # So either way, we will end up with the full url.
+def get_url_from_store(store: HTTPStore | S3Store | LocalStore) -> str:
     if type(store) is HTTPStore:
-        return f"{store.url.rstrip('/')}/{path.lstrip('/')}"
+        return store.url
     elif type(store) is S3Store:
-        return f"s3://{store.config['bucket']}/{path.lstrip('/')}"
+        return f"s3://{store.config['bucket']}/{store.prefix}"
     elif type(store) is LocalStore:
-        # The Local store is expected to include the prefix. It would be good if filename was a seperate param.
-        return store.prefix.joinpath(get_prefix_file_name_from_url(path)).as_posix()
+        return store.prefix
     else:
         raise ValueError(f"Unsupported store type: {type(store)}")
 
 
-def read_dict(store: S3Store | LocalStore, path: str) -> dict[str, Any]:
-    with BytesIO(store.get(path).bytes()) as buffer:
+def get_file_name_from_url(url: str) -> str:
+    # Get last "/" and return everything after it as the file name
+    return urlparse(url).path.split("/")[-1]
+
+
+def read_dict(store: S3Store | LocalStore, file_name: str) -> dict[str, Any]:
+    with BytesIO(store.get(file_name).bytes()) as buffer:
         try:
             json_dict = json.load(buffer)
             return json_dict
         except Exception as e:
-            logging.error(f"Failed to read dict from {path} with exception {e}", exc_info=True)
-            
+            logging.error(f"Failed to read dict from {file_name} with exception {e}", exc_info=True)
+            raise
 
 
 def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
-    store = get_store_from_url(url)
-    prefix_filename = get_prefix_file_name_from_url(url)
+    store = get_store_with_prefix_from_url(url)
+    prefix_filename = get_file_name_from_url(url)
 
     with BytesIO(store.get(prefix_filename).bytes()) as buffer:
         try:
@@ -221,16 +116,17 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
                 logging.error(
                     f"Failed to read geospatial file from {url} with exception {e}", exc_info=True
                 )
+                raise
 
 
 async def get_stac_item_dicts_from_store(
-    store: S3Store | LocalStore | HTTPStore, prefix: str | None = None
+    store: S3Store | LocalStore | HTTPStore
 ) -> list[dict[str, Any]]:
     list_of_stac_files = []
 
     logging.info("Listing STAC items in store recursively")
 
-    for i, batch in enumerate(store.list(prefix, chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
+    for i, batch in enumerate(store.list(chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
         logging.info(f"Batch number {i} of {len(batch)} files...")
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
@@ -248,9 +144,8 @@ async def get_stac_item_dicts_from_store(
     return await asyncio.gather(*(_fetch_item(store, stac_file) for stac_file in list_of_stac_files))
 
 
-# This function only supports S3Store and LocalStore. Not Http.
 def write_gdf_to_parquet(
-    gdf: gpd.GeoDataFrame, store: S3Store | LocalStore, path: str
+    gdf: gpd.GeoDataFrame, store: S3Store | LocalStore | HTTPStore, file_name: str
 ) -> None:
     # Write GeoDataFrame to a GeoParquet file in memory
     with BytesIO() as parquet_buffer:
@@ -258,13 +153,4 @@ def write_gdf_to_parquet(
         parquet_buffer.seek(0)
 
         # Write the parquet bytes to the target store using obstore
-        store.put(path, parquet_buffer.getvalue())
-
-
-
-
-# WHAT IF?
-# There is one function that reads a url and returns a store, prefix, filename.
-# This could be a super function that calls the store, prefix, and file_name functions from a url.
-# Then there is a function that takes store, prefix, filename and returns a url. (already exists)
-
+        store.put(file_name, parquet_buffer.getvalue())
