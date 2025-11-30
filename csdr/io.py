@@ -20,7 +20,7 @@ from pyarrow import ArrowInvalid
 
 # Store always includes prefix for all store types.
 
-def exists(store: HTTPStore | S3Store | LocalStore, file_name: str) -> bool:
+def exists(store: ObjectStore, file_name: str) -> bool:
     # store includes prefix, but not file_name.
     try:
         store.head(file_name) # Try get metadata
@@ -29,7 +29,7 @@ def exists(store: HTTPStore | S3Store | LocalStore, file_name: str) -> bool:
     return True
 
 
-def get_file_info(store: HTTPStore | S3Store | LocalStore, file_name: str) -> dict[str, Any]:
+def get_file_info(store: ObjectStore, file_name: str) -> dict[str, Any]:
     # store includes prefix, but not file_name
     info = store.head(file_name)
     return {
@@ -40,7 +40,7 @@ def get_file_info(store: HTTPStore | S3Store | LocalStore, file_name: str) -> di
 
 
 def write_json(
-    store: HTTPStore | S3Store | LocalStore, file_name: str, data: dict[str, Any]
+    store: ObjectStore, file_name: str, data: dict[str, Any]
 ) -> None:
     if type(store) is S3Store:
         # This should work for all store types according to obstore docs, but in reality only S3Store seems to support it.
@@ -89,13 +89,14 @@ def get_url_from_store(store: ObjectStore) -> str:
         raise ValueError(f"Unsupported store type: {type(store)}")
 
 
-def get_file_name_from_url(url: str) -> str:
+def split_path_and_file_name_from_url(url: str) -> tuple[str, str]:
     # Get last "/" and return everything after it as the file name
     file_name = urlparse(url).path.split("/")[-1]
-    return file_name
+    path = url.replace(file_name, "").rstrip("/")
+    return path, file_name
 
 
-def read_dict(store: S3Store | LocalStore, file_name: str) -> dict[str, Any]:
+def read_dict(store: ObjectStore, file_name: str) -> dict[str, Any]:
     with BytesIO(store.get(file_name).bytes()) as buffer:
         try:
             json_dict = json.load(buffer)
@@ -106,10 +107,10 @@ def read_dict(store: S3Store | LocalStore, file_name: str) -> dict[str, Any]:
 
 
 def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
-    store = get_store_with_prefix_from_url(url)
-    prefix_filename = get_file_name_from_url(url)
+    path, file_name = split_path_and_file_name_from_url(url)
+    store = get_store_with_prefix_from_url(path)
 
-    with BytesIO(store.get(prefix_filename).bytes()) as buffer:
+    with BytesIO(store.get(file_name).bytes()) as buffer:
         try:
             # TODO: Make it read more things, not just parquet
             gdf = gpd.read_parquet(buffer, **kwargs)
@@ -132,7 +133,7 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
 
 
 async def get_stac_item_dicts_from_store(
-    store: S3Store | LocalStore | HTTPStore
+    store: ObjectStore
 ) -> list[dict[str, Any]]:
     list_of_stac_files = []
 
@@ -148,7 +149,7 @@ async def get_stac_item_dicts_from_store(
 
     # Use semaphore to limit concurrent requests to prevent S3 from timing out. Otherwise it would request all concurrently and sometimes time out.
     semaphore = asyncio.Semaphore(1000)
-    async def _fetch_item(store: S3Store | LocalStore | HTTPStore, stac_file: dict) -> dict:
+    async def _fetch_item(store: ObjectStore, stac_file: dict) -> dict:
         async with semaphore:
             obj = await store.get_async(stac_file["path"])
             data = BytesIO(obj.bytes())
@@ -157,7 +158,7 @@ async def get_stac_item_dicts_from_store(
 
 
 def write_gdf_to_parquet(
-    gdf: gpd.GeoDataFrame, store: S3Store | LocalStore | HTTPStore, file_name: str
+    gdf: gpd.GeoDataFrame, store: ObjectStore, file_name: str
 ) -> None:
     # Write GeoDataFrame to a GeoParquet file in memory
     with BytesIO() as parquet_buffer:

@@ -6,8 +6,8 @@ import typer
 from csdr.io import (
     exists,
     get_file_info,
-    get_file_name_from_url,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
 )
 
 eez_app = typer.Typer()
@@ -22,19 +22,20 @@ async def run_cache_eez(
     # Source url can be s3://, http://, or local file path
     # Target location can be s3:// or local file path
     logging.info(f"Caching EEZ from {source_url} to {target_location}...")
-    target_location = target_location.rstrip("/") # Remove trailing slash if present
-    store = get_store_with_prefix_from_url(source_url)
-    source_name = get_file_name_from_url(source_url)
-    size = get_file_info(store, source_name).get("size", None)
-    target_filename = get_file_name_from_url(source_url)
-    target_store = get_store_with_prefix_from_url(target_location)
+    target_location = target_location.rstrip("/")
+    source_path, source_name = split_path_and_file_name_from_url(source_url)
+    source_store = get_store_with_prefix_from_url(source_path)
+    size = get_file_info(source_store, source_name).get("size", None)
+    target_path = target_location # This is the path, there is no file name
+    target_file_name = source_name
+    target_store = get_store_with_prefix_from_url(target_path)
 
-    if exists(target_store, target_filename):
+    if exists(target_store, target_file_name):
         if not overwrite:
             logging.info("File already exists at target location, skipping download.")
             raise typer.Exit(code=0)  # Exit successfully, nothing to do
         else:
-            dest_meta = target_store.head(target_filename)
+            dest_meta = target_store.head(target_file_name)
             if size is not None and "size" in dest_meta and dest_meta["size"] == size:
                 logging.info(
                     f"Overwrite is on but file already exists at target location with matching size of {size}. Skipping download."
@@ -45,8 +46,8 @@ async def run_cache_eez(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logging.info(f"Downloading {target_filename} from {source_url} to {target_location}...")
-    await target_store.put_async(target_filename, store.get(target_filename))
+    logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
+    await target_store.put_async(target_file_name, source_store.get(target_file_name))
 
     return target_location
 
@@ -58,8 +59,8 @@ def cache_eez(
         default="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip",
     ),
     target_location: str = typer.Option(
-        help="Local or remote path (like './cache/eez-v4/0-0-1/raw' or s3://files.auspatious.com/csdr/eez-v4/0-0-1/raw) to store the cached EEZ file.",
-        default="./cache/eez-v4/0-0-1/raw",
+        help="Local or remote path (like './cache/geometries/eez-v4/0-0-1/raw' or s3://files.auspatious.com/csdr/geometries/eez-v4/0-0-1/raw) to store the cached EEZ file.",
+        default="./cache/geometries/eez-v4/0-0-1/raw",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."

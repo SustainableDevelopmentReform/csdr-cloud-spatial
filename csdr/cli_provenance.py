@@ -17,9 +17,9 @@ from csdr.geometries import (
 )
 from csdr.io import (
     exists,
-    get_file_name_from_url,
     get_store_with_prefix_from_url,
     read_geospatial_file,
+    split_path_and_file_name_from_url,
     write_json,
 )
 from csdr.products import parse_outputs
@@ -60,8 +60,8 @@ def _meta_provenance(
     Returns:
         None or str: If posting to database, returns the run ID.
     """
-    store = get_store_with_prefix_from_url(data_url)
-    file_name = get_file_name_from_url(data_url)
+    path, file_name = split_path_and_file_name_from_url(data_url)
+    store = get_store_with_prefix_from_url(path)
 
     if source_url is None:
         source_url = data_url

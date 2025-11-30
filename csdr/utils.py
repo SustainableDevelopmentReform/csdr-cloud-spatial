@@ -19,7 +19,7 @@ from pystac import ItemCollection
 from rustac import read
 from xarray import DataArray, Dataset
 
-from csdr.io import get_file_name_from_url, get_store_with_prefix_from_url
+from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
 
 class Event(TypedDict):
@@ -220,9 +220,8 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 def open_stacgeoparquet(url: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
-    file_name = get_file_name_from_url(url)
-    url_without_filename = url.rsplit('/', 1)[0]
-    store = get_store_with_prefix_from_url(url_without_filename, mkdir=False)
+    path, file_name = split_path_and_file_name_from_url(url)
+    store = get_store_with_prefix_from_url(path, mkdir=False)
 
     async def _read_stac_items_async() -> ItemCollection:
         return await read(file_name, store=store)

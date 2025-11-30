@@ -11,9 +11,9 @@ from fiona.io import ZipMemoryFile
 from csdr.geometries import add_geometry_id_name
 from csdr.io import (
     exists,
-    get_file_name_from_url,
     get_store_with_prefix_from_url,
     read_geospatial_file,
+    split_path_and_file_name_from_url,
     write_gdf_to_parquet,
 )
 
@@ -23,7 +23,8 @@ conversion_app = typer.Typer()
 def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
     if geometry_id is None:
         geometry_id = (
-            get_file_name_from_url(dataset_url).replace(" ", "-").lower().split(".")[0]
+            # Get the file name, replace spaces with dashes, lowercase, and remove extension
+            split_path_and_file_name_from_url(dataset_url)[1].replace(" ", "-").lower().split(".")[0]
         )
     return geometry_id
 
@@ -61,10 +62,11 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    store = get_store_with_prefix_from_url(source_zip_location)
-    source_zip_name = get_file_name_from_url(source_zip_location)
+    
+    source_path, source_zip_name = split_path_and_file_name_from_url(source_zip_location)
+    source_store = get_store_with_prefix_from_url(source_path)
 
-    if not exists(store, source_zip_name):
+    if not exists(source_store, source_zip_name):
         logging.error(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
@@ -91,7 +93,7 @@ def convert_zipfile_to_parquet(
         raise typer.Exit(code=0)
 
     # Pull the whole zip into memory
-    zip_bytes = BytesIO(store.get(source_zip_name).bytes())
+    zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
 
     # Use Fiona's in-memory ZIP reader (works with bytes and includes all sidecar files)
     with ZipMemoryFile(zip_bytes) as z:
@@ -176,10 +178,10 @@ def convert_geospatial_file_to_parquet(
 ) -> None:
     logging.info("Starting geospatial to parquet conversion process...")
 
-    store = get_store_with_prefix_from_url(source_location)
-    source_name = get_file_name_from_url(source_location)
+    source_path, source_name = split_path_and_file_name_from_url(source_location)
+    source_store = get_store_with_prefix_from_url(source_path)
 
-    if not exists(store, source_name):
+    if not exists(source_store, source_name):
         logging.error(
             f"Source geospatial file does not exist at {source_location}. Cannot convert."
         )
