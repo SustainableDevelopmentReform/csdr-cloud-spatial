@@ -73,14 +73,14 @@ provenance-gmw-v4-s3-db:
 # Dataset GMW v3
 # https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip?download=1
 # One file/year
-cache-gmw-v3-single-file:
+cache-gmw-v3-local-single-file:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 # Many files/years
-cache-gmw-v3-multiple-files:
+cache-gmw-v3-local-multiple-files:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/raw \
@@ -95,10 +95,10 @@ cache-gmw-v3-multiple-files:
 extract-gmw-v3-local:
 	csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v3/raw \
-		--source-zip-name=gmw_v3_2020_gtiff.zip \
+		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
 		--overwrite
-# 		--source-zip-name=gmw_v3_1996_gtiff.zip \
+# 		--source-zip-name=gmw_v3_2020_gtiff.zip \
 
 extract-gmw-v3-s3:
 	csdr gmw extract \

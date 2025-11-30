@@ -2,10 +2,10 @@
 import asyncio
 import json
 import logging
-import os
 import sys
 from datetime import UTC, datetime
 from io import BytesIO
+from pathlib import Path
 from urllib.parse import urlparse
 from zipfile import ZipFile
 
@@ -179,7 +179,7 @@ def cache_gmw(
 
 
 async def process_single_file(
-    name: str,
+    out_cog_name: str,
     zip_file: ZipFile,
     target_location: str,
     target_store: S3Store | LocalStore,
@@ -188,41 +188,42 @@ async def process_single_file(
 ) -> None:
     """Process a single file from the zip archive."""
     async with semaphore:
-        out_key = f"{target_location}/{name}"
-        out_stac = out_key.replace(".tif", ".stac-item.json")
+        out_cog_url = f"{target_location}/{out_cog_name}"
+        out_stac_name = out_cog_name.replace('.tif', '.stac-item.json')
+        out_stac_url = f"{target_location}/{out_stac_name}"
 
-        if exists(target_store, out_stac) and not overwrite:
-            logging.info(f"STAC doc already exists for {out_stac}, skipping.")
+        if exists(target_store, out_stac_name) and not overwrite:
+            logging.info(f"STAC doc already exists for {out_stac_url}, skipping.")
             return
         else:
             if overwrite:
-                logging.info(f"Overwrite is enabled, re-processing {out_stac}.")
+                logging.info(f"Overwrite is enabled, re-processing {out_stac_url}.")
             else:
-                logging.info(f"STAC does not exist for {out_stac}, processing.")
+                logging.info(f"STAC does not exist for {out_stac_url}, processing.")
 
         # Get the data from memory into a rasterio dataset
-        data = open_rasterio(zip_file.open(name))
+        data = open_rasterio(zip_file.open(out_cog_name))
 
         if type(data) is not xr.DataArray:  # skip
             logging.info(
-                f"Skipping file {name}. Expecting xarray.DataArray but got {type(data)} instead."
+                f"Skipping file {out_cog_name}. Expecting xarray.DataArray but got {type(data)} instead."
             )
         else:
             # Write it as a COG
             cog_data = write_cog(data, ":mem:")
-            await target_store.put_async(out_key, cog_data)
+            await target_store.put_async(out_cog_name, cog_data)
 
             # Create the STAC doc and write it
             # Let's see which version of GMW we have
-            if "_v3" in name:
-                start_datetime = datetime(int(name[-11:-7]), 1, 1).strftime(
+            if "_v3" in out_cog_name:
+                start_datetime = datetime(int(out_cog_name[-11:-7]), 1, 1).strftime(
                     "%Y-%m-%dT%H:%M:%S.%fZ"
                 )
-                mid_datetime = datetime(int(name[-11:-7]), 7, 2)
-                end_datetime = datetime(int(name[-11:-7]), 12, 31).strftime(
+                mid_datetime = datetime(int(out_cog_name[-11:-7]), 7, 2)
+                end_datetime = datetime(int(out_cog_name[-11:-7]), 12, 31).strftime(
                     "%Y-%m-%dT%H:%M:%S.%fZ"
                 )
-            elif "_v4" in name:
+            elif "_v4" in out_cog_name:
                 start_datetime = datetime(2020, 1, 1).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                 mid_datetime = datetime(2020, 7, 2)
                 end_datetime = datetime(2020, 12, 31).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -233,14 +234,14 @@ async def process_single_file(
                 end_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             stac_doc = create_stac_item(
-                out_stac,
+                out_cog_url, # Absolute URL to the COG file
                 input_datetime=mid_datetime,
                 collection="gmw",
                 properties={
                     "start_datetime": start_datetime,
                     "end_datetime": end_datetime,
                 },
-                id=name,
+                id=out_cog_name,
                 asset_name="mangrove",
                 with_proj=True,
                 with_raster=True,
@@ -248,9 +249,9 @@ async def process_single_file(
 
             # Write STAC doc
             stac_data = json.dumps(stac_doc.to_dict()).encode()
-            await target_store.put_async(out_stac, stac_data)
+            await target_store.put_async(out_stac_name, stac_data)
 
-            logging.info(f"Finished processing {name}. STAC doc is at {out_stac}")
+            logging.info(f"Finished processing {out_cog_name}. STAC doc is at {out_stac_url}")
 
 
 async def run_extract_gmw(
@@ -275,12 +276,10 @@ async def run_extract_gmw(
             f"Source zip file found at {source_location}, proceeding with extraction."
         )
 
-    # TODO: If store is local, make target_store an absolute path (if relative). This prevents STAC Item href attribute from being unusable.
-    # TODO: Test this:
-    # if target_store is LocalStore:
-    #     target_location = str(
-    #         Path(target_location).absolute()
-    #     )  # Convert to absolute path as safeguard
+    # Ensure that target_location is absolute path if local, otherwise STAC item href will be relative which is broken.
+    if not target_location.startswith("s3://") and not target_location.startswith("http"):
+        # Make target location absolute path if local. Works for "./cache" and "file://cache" relative paths.
+        target_location = str(Path(target_location).absolute())
 
     target_store = get_store_with_prefix_from_url(target_location)
 
@@ -340,7 +339,6 @@ def extract_gmw(
     ),
 ) -> None:
     logging.info("Starting GMW extraction process...")
-    # TODO: Ensure that target_location is absolute path if local, otherwise STAC item href will be relative which is broken.
     asyncio.run(
         run_extract_gmw(
             source_location, source_zip_name, target_location, overwrite, max_concurrent
