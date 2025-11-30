@@ -55,7 +55,7 @@ provenance-gmw-v4-local-db:
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
@@ -65,7 +65,7 @@ provenance-gmw-v4-s3-db:
 		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
@@ -129,7 +129,7 @@ provenance-gmw-v3-local-db:
 		--dataset-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/6894273" \
 		--source-metadata-url="https://zenodo.org/records/6894273" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
@@ -139,7 +139,7 @@ provenance-gmw-v3-s3-db:
 		--dataset-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/6894273" \
 		--source-metadata-url="https://zenodo.org/records/6894273" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
@@ -162,7 +162,7 @@ dataset-seagrass-provenance-local:
 		--dataset-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 dataset-seagrass-provenance-s3:
@@ -171,7 +171,7 @@ dataset-seagrass-provenance-s3:
 		--dataset-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
-		--dataset-type stac-geoparquet \
+		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
 
@@ -182,12 +182,12 @@ dataset-seagrass-provenance-s3:
 ### EEZ cache
 geometry-eez-cache-local:
 	csdr eez cache \
-		--target-location ./cache/eez-v4/0-0-1/raw \
+		--target-location=./cache/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 
 geometry-eez-cache-s3:
 	csdr eez cache \
-		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
+		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 		
 ### EEZ convert
@@ -195,52 +195,52 @@ geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
 		--source-zip-location ./cache/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
-		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location ./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--source-internal-path-name=EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
+		--target-location=./cache/geometries/eez-v4/0-0-1/runs/test-run-id \
 		--create-pmtiles
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
-		--source-internal-path-name EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--source-zip-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
+		--source-internal-path-name=EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
+		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id \
 		--create-pmtiles
 
 ### EEZ provenance
 geometry-eez-provenance-local:
 	csdr provenance geometry \
-		--id 6231cc07-5723-4c95-8e64-39322a9be2ed \
-		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
-		--dataset-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
+		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--run-id=test-run-id \
+		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-		--dataset-type geoparquet \
+		--geometry-type=geoparquet \
 		--overwrite
 
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
-		--id 6231cc07-5723-4c95-8e64-39322a9be2ed \
-		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
-		--dataset-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
+		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--run-id=test-run-id \
+		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-		--dataset-type geoparquet \
+		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
 		--overwrite
 
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
-		--id <geometry_id> \
-		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
-		--dataset-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
+		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--run-id=test-run-id \
+		--geometry-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-		--dataset-type geoparquet \
+		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
 		--overwrite
@@ -375,7 +375,7 @@ product-gmw-v4-eez-consolidate-s3:
 # You also need to make a Variable. It must have the ID 'sum-area-by-value'.
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
-		--product-id 935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
@@ -385,7 +385,7 @@ product-gmw-v4-eez-provenance-local-db:
 
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \
-		--product-id 935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
@@ -454,7 +454,7 @@ product-seagrass-eez-consolidate-local:
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
-		--product-id e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
 		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
 		--run-id=test_local_dask_run_id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
@@ -467,15 +467,15 @@ product-seagrass-eez-provenance-local-db:
 # Test GeoJSON
 geometry-geojson-convert:
 	csdr convert geo-to-parquet \
-		--source-location tests/data/single_geometry.geojson \
-		--target-location tests/data \
+		--source-location=tests/data/single_geometry.geojson \
+		--target-location=tests/data \
 		--name-field=name \
 		--overwrite
 
 geometry-geojson-provenance:
 	csdr provenance geometry \
-		--dataset-url=tests/data/single_geometry.parquet \
-		--dataset-type=geoparquet \
+		--geometry-url=tests/data/single_geometry.parquet \
+		--geometry-type=geoparquet \
 		--id=65243c8f-355d-4b36-bd96-72de8c6f1bff \
 		--source-metadata-url=https://thing.com \
 		--post-to-database \

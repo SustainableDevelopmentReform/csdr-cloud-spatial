@@ -145,5 +145,5 @@ I assume json file is read because db is optional.
   pytest # simple as that.
   pytest -s tests/test_io.py # for a specific test file. Also print output (-s).
   pytest --pdb tests/test_io.py # This opens a debugger on error.
-  pytest --pdb -k test_get_file_name_from_url -s tests/test_io.py
+  pytest --pdb -k test_split_path_and_file_name_from_url -s tests/test_io.py
 ```

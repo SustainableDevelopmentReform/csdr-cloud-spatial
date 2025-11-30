@@ -1,12 +1,11 @@
-from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
 
 from csdr.io import (
-    get_file_name_from_url,
     get_store_with_prefix_from_url,
     get_url_from_store,
+    split_path_and_file_name_from_url,
     # TODO: There are many more io.py functions to test
 )
 
@@ -36,21 +35,21 @@ def test_get_store_with_prefix_from_url(url: str, expected_store_type: str, aws_
         raise AssertionError(f"Unknown store type: {expected_store_type}")
 
 
-def test_get_file_name_from_url() -> None:
-    assert get_file_name_from_url("s3://bucket-name/prefix/to/file.txt") == "file.txt"
-    assert get_file_name_from_url("s3://bucket-name/file.txt") == "file.txt"
+def test_split_path_and_file_name_from_url() -> None:
+    assert split_path_and_file_name_from_url("s3://bucket-name/prefix/to/file.txt") == ("s3://bucket-name/prefix/to", "file.txt")
+    assert split_path_and_file_name_from_url("s3://bucket-name/file.txt") == ("s3://bucket-name", "file.txt")
     assert (
-        get_file_name_from_url("s3://bucket-name/prefix/to/long.file.name.txt")
-        == "long.file.name.txt"
+        split_path_and_file_name_from_url("s3://bucket-name/prefix/to/long.file.name.txt")
+        == ("s3://bucket-name/prefix/to", "long.file.name.txt")
     )
     assert (
-        get_file_name_from_url("s3://bucket-name/prefix/to/file.parquet/file.txt")
-        == "file.txt"
+        split_path_and_file_name_from_url("s3://bucket-name/prefix/to/file.parquet/file.txt")
+        == ("s3://bucket-name/prefix/to/file.parquet", "file.txt")
     )
     # Http and local paths
-    assert get_file_name_from_url("https://example.com/path/to/file.txt") == "file.txt"
-    assert get_file_name_from_url("/tmp/file.txt") == "file.txt"
-    assert get_file_name_from_url("/tmp/path/to/file.txt") == "file.txt"
+    assert split_path_and_file_name_from_url("https://example.com/path/to/file.txt") == ("https://example.com/path/to", "file.txt")
+    assert split_path_and_file_name_from_url("/tmp/file.txt") == ("/tmp", "file.txt")
+    assert split_path_and_file_name_from_url("/tmp/path/to/file.txt") == ("/tmp/path/to", "file.txt")
 
 
 @pytest.mark.parametrize(

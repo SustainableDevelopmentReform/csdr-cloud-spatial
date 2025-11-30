@@ -3,13 +3,13 @@ from datetime import UTC, datetime
 from io import BytesIO
 from json import load
 
-from obstore.store import HTTPStore, LocalStore, S3Store
+from obstore.store import ObjectStore
 
 from csdr.io import (
     get_file_info,
-    get_file_name_from_url,
     get_store_with_prefix_from_url,
     get_url_from_store,
+    split_path_and_file_name_from_url,
 )
 
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
@@ -25,7 +25,7 @@ def get_image_state() -> dict[str, str]:
 
 def get_provenance(
     id: str,
-    store: HTTPStore | S3Store | LocalStore,
+    store: ObjectStore,
     file_name: str,
     data_url: str,
     data_type: str,
@@ -81,8 +81,8 @@ def read_provenance(url: str) -> dict[str, str | int]:
     This function reads a provenance JSON file from the given URL (which can be local, S3, or HTTP). It uses the appropriate store to fetch the file, loads the JSON content, and returns it as a Python dictionary.
     It does not read from a database, just from a file.
     """
-    store = get_store_with_prefix_from_url(url)
-    file_name = get_file_name_from_url(url)
+    path, file_name = split_path_and_file_name_from_url(url)
+    store = get_store_with_prefix_from_url(path)
     document = BytesIO(store.get(file_name).bytes())
 
     return load(document)
