@@ -227,6 +227,7 @@ def list_geometries(
 
     ids_list = gdf["csdr-id"].tolist()
 
+    # TODO: use write_json utility function?
     if out_file is not None:
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         with open(out_file, "w") as f:
