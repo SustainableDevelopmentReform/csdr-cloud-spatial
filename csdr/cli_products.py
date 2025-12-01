@@ -312,8 +312,8 @@ def process_geometry(
     target_path = get_product_path(
         product_id,
         variable_name,
-        geometry_id=geometry_id,
         datetime=datetime,
+        geometry_id=geometry_id,
     )
     target_url = f"{target_location.rstrip('/')}/{target_path}"
     logging.info(f"target_url: {target_url}")
@@ -463,8 +463,8 @@ def process_all_geometries_dask(
             path = get_product_path(
                 product_id,
                 variable_name,
-                datetime,
-                geometry_id,
+                datetime=datetime,
+                geometry_id=geometry_id,
             )
 
             # Dask does not natively parallelize async functions. We can wrap the process_geometry call in a sync function and use dask.delayed to parallelize it if needed.
@@ -497,11 +497,8 @@ def consolidate_product(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being consolidated (UUID)"
     ),
-    run_id: str = typer.Option(
-        ..., help="ID of the product run"
-    ),
     location: str = typer.Option(
-        "./cache/products/gmw-v4-eez/0-0-1", help="Location to read the product files from"
+        "./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id", help="Location to read the product files from"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
@@ -518,14 +515,10 @@ def consolidate_product(
     ),
 ) -> None:
     logging.info(f"Consolidating product {product_id} from {location}")
-    logging.info(f"run_id {run_id}")
     location = location.rstrip("/")
-
     store = get_store_with_prefix_from_url(location)
-
-    path = get_product_path(product_id, variable_name, run_id, datetime)
+    path = get_product_path(product_id, variable_name, datetime=datetime)
     logging.info(f"path {path}")
-
     url = f"{location}/{path}"
     logging.info(f"Looking for product files in {url}")
 
