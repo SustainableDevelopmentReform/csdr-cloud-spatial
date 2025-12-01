@@ -289,10 +289,10 @@ product-gmw-v4-eez-process-geometry-local:
 product-gmw-v4-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=f7cf7d28-9e39-4e3c-8102-705fc3eb40a0 \
-		--run-id=test-product-run-id \
+		--run-id=test-product-gmw-v3-eez-run-id \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-run-id \
+		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
@@ -379,30 +379,31 @@ product-gmw-v4-eez-provenance-s3-db:
 
 # Lists the same geometries as GMW v4 EEZ but for seagrass product
 product-gmw-v3-eez-list-geometries-local:
-	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
-# 	make product-gmw-v4-eez-list-geometries-local
+	csdr products list-geometries \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/tmp/geometries_list.json
 
-product-gmw-v3-eez-process-geometry-s3:
+product-gmw-v3-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--run-id=test-product-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v3/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
+		--run-id=test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime-string-match=1996 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
+		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
 		--overwrite
 
 product-gmw-v3-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--run-id=test-product-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--run-id=test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
+		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
 		--datetime-string-match=1996 \
@@ -415,8 +416,8 @@ product-gmw-v3-eez-process-all-geometries-dask-local:
 product-gmw-v3-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove
 # 		--datetime=2024-01-01 # No datetime because there are many
@@ -424,10 +425,10 @@ product-gmw-v3-eez-consolidate-local:
 product-gmw-v3-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--product-url=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id/mangrove/ae9b3100-611b-4841-97f0-d63c3dda0637.parquet \
-		--run-id=test-product-run-id \
+		--product-url=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id/mangrove/ae9b3100-611b-4841-97f0-d63c3dda0637.parquet \
+		--run-id=test-product-gmw-v3-eez-run-id \
 		--dataset-run-id=d97e1dd1-a9eb-481b-9e17-30fdc1fe6838 \
-		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite
 
@@ -436,44 +437,39 @@ product-gmw-v3-eez-provenance-local-db:
 
 # Lists the same geometries as GMW v4 EEZ but for seagrass product
 product-seagrass-eez-list-geometries-local:
-	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
-# 	make product-gmw-v4-eez-list-geometries-local
+	csdr products list-geometries \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/tmp/geometries_list.json
 
-# TODO: Do we need to get many years like we do for v3 GMW? Seagrass has 2017-2024.
-
-# ac14cbdb-a20c-55e3-bfab-d7e0d79b3c6d Fiji (small, contains seagrass) # Runs slow because there is a lot of overlap.
-# 605efc56-2be3-53ef-b5e4-c1c9127dcbae Antarctica (large, no seagrass)
-# f2f4dcaf-fcc8-592c-acea-b5b71eecc147 PNG (small, contains seagrass)
-# a20afc29-221e-5c5c-8ccb-7aa05b7a7b4a Japan (small, no seagrass). Japan runs slower because the bboxes overlap, even though there is no intersection.
-# f87e98e9-2786-56f1-ab4a-7ddbee9414bd Myanmar runs quickly because bboxes do not overlap.
+# We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
 # Seagress: STAC-Parquet is 4326, but STAC items are 3832.
 # EEZ is 4326.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--run-id=test_run_id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--run-id=test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_run_id \
+		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
-		--datetime-string-match="2024" \
+		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
-		--geometry-id=a20afc29-221e-5c5c-8ccb-7aa05b7a7b4a \
+		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
 # We need to call this for 2017-2024 to process all seagrass data
 product-seagrass-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--run-id=test_local_dask_run_id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--run-id=test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
+		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
-		--datetime-string-match="2022" \
-		--load-kwargs="resolution=500,crs=epsg:3832" \
+		--datetime-string-match="2024" \
+		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--overwrite \
 		--use-dask \
 		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
@@ -481,18 +477,18 @@ product-seagrass-eez-process-all-geometries-dask-local:
 product-seagrass-eez-consolidate-local:
 	csdr products consolidate \
 			--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-			--location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
-			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
+			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 			--variable-name=seagrass			
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
-		--run-id=test_local_dask_run_id \
+		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+		--run-id=test-product-seagrass-eez-run-id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
-		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite
 
