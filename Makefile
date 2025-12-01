@@ -176,6 +176,29 @@ dataset-seagrass-provenance-s3:
 		--overwrite
 
 
+# Dataset ACA - reef extent
+dataset-aca-extract-local:
+	csdr aca extract \
+		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/raw \
+		--target-location=./cache/datasets/aca/0-0-1/data \
+		--overwrite
+
+dataset-aca-index-local:
+	csdr aca index \
+		--source-location=./cache/datasets/aca/0-0-1/data \
+		--target-location=./cache/datasets/aca/0-0-1 \
+		--overwrite
+
+dataset-aca-provenance-local-db:
+	csdr provenance dataset \
+		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
+		--dataset-url=./cache/datasets/aca/0-0-1/reefextent.parquet \
+		--source-url="https://allencoralatlas.org/atlas/" \
+		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
+		--dataset-type=geoparquet \
+		--post-to-database \
+		--overwrite
+
 ### GEOMETRIES ###
 
 # Geometry EEZ

@@ -5,6 +5,7 @@ import typer
 
 from csdr import get_version
 from csdr.cli_conversion import conversion_app
+from csdr.cli_dataset_aca import aca_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
 from csdr.cli_datasets import dataset_app
@@ -40,10 +41,14 @@ app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
 ## Datasets
 # GMW
-app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW dataset.")
+app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW datasets.")
 # Seagrass, including from DEP
 app.add_typer(
     seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
+)
+# ACA
+app.add_typer(
+    aca_app, name="aca", help="Cache and process ACA dataset."
 )
 
 # EEZ

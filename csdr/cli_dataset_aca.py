@@ -28,8 +28,8 @@ def find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
     for i, batch in enumerate(store.list(chunk_size=1000)):
         logging.info(f"Batch number {i} of {len(batch)} files...")
         for item in batch:
-            if regex.search(item["path"]): # TODO: Validate path attribute
-                list_of_matching_files.append(item)
+            if regex.search(item["path"]):
+                list_of_matching_files.append(item["path"]) # Just append the path string, not the whole item
 
     logging.info(f"Found {len(list_of_matching_files)} matching items.")
 
@@ -44,30 +44,25 @@ async def unzip_single_zip(
     semaphore: asyncio.Semaphore,
 ) -> None:
     async with semaphore:
-        # filename = os.path.basename(zip_path_and_file_name) # Remove nested path. Keep only zip file name and extension
         target_path_and_file_name = "reefextent/reefextent.gpkg"
-        path_without_extension = os.path.splitext(zip_path_and_file_name)[0]
-        # unzip_dir = os.path.splitext(filename)[0] # Remove .zip extension
-        # output_dir = f"{target_store}/{unzip_dir}" # TODO: Validate this.
-        # target_store}/{filename
-        # source = source_store + zip_path_and_file_name
-        # target = target_store + filename
+        source_file_name = os.path.basename(zip_path_and_file_name) # Remove nested path folders (if any). Keep only zip file name and extension
+        path_without_extension = os.path.splitext(source_file_name)[0] # Remove .zip extension
         if exists(target_store, target_path_and_file_name) and not overwrite:
-            logging.info(f"Skipping {zip_path_and_file_name}; output exists at {target_store} and overwrite is off.")
+            logging.info(f"Skipping {zip_path_and_file_name}; output exists at target store and overwrite is off.")
             return
-        # logging.info(f"Unzipping {zip_path_and_file_name} to {output_dir} (overwrite={'on' if overwrite else 'off'}) ...")
+        logging.info(f"Unzipping {zip_path_and_file_name} to target store (overwrite={'on' if overwrite else 'off'}) ...")
         zip_bytes = BytesIO(source_store.get(zip_path_and_file_name).bytes())
-        with ZipFile(zip_bytes) as z:
-            for source_file_name in z.namelist(): # Iterate through each file in the zip
-                if source_file_name.endswith("/"):
+        with ZipFile(zip_bytes) as zip_item:
+            for zip_source_file_name in zip_item.namelist(): # Iterate through each file in the zip
+                if zip_source_file_name.endswith("/"): # Skip directories
                     continue
-                data = z.read(source_file_name)
-                target_path = f"{path_without_extension}/{source_file_name}"
+                data = zip_item.read(zip_source_file_name)
+                target_path = f"{path_without_extension}/{zip_source_file_name}" # Add the original zip file name (without .zip) as a folder prefix
                 if exists(target_store, target_path) and not overwrite:
                     logging.info(f"Skipping file {target_path}, already exists and overwrite is off.")
                     continue
                 target_store.put(target_path, data)
-        # logging.info(f"Finished unzipping {zip_path_and_file_name} to {output_dir}")
+        logging.info(f"Finished unzipping {zip_path_and_file_name} to target store.")
 
 
 async def run_extract_aca(
@@ -76,20 +71,23 @@ async def run_extract_aca(
     overwrite: bool,
     max_concurrent: int,
 ) -> None:
+    logging.info("Finding zip files to extract...")
     source_store = get_store_with_prefix_from_url(source_location)
     target_store = get_store_with_prefix_from_url(target_location)
-    all_zips = find_matching_files(source_store, "*.zip")
-    logging.info(f"Found {len(all_zips)} zip files to extract from {source_location}")
+    all_zip_file_paths = find_matching_files(source_store, r"\.zip$") # Match all .zip files
+    logging.info(f"Found {len(all_zip_file_paths)} zip files to extract from {source_location}")
+
+    logging.info("Unzipping zip files...")
     semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [
         unzip_single_zip(
-            zip_path_and_file_name=z,
+            zip_path_and_file_name=zip_file_path,
             source_store=source_store,
             target_store=target_store,
             overwrite=overwrite,
             semaphore=semaphore,
         )
-        for z in all_zips
+        for zip_file_path in all_zip_file_paths
     ]
     await asyncio.gather(*tasks)
     logging.info("Completed unzipping all region zips.")
