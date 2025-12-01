@@ -256,9 +256,7 @@ geometry-eez-provenance-s3-db:
 # 3. Consolidate - consolidates the processed geometries.
 # 4. Provenance - generates provenance information for the product.
 
-# How do we have the run id here? Maybe we make it and then pass it to the app when we make the product
 # Product GMW EEZ V4 List Geometries
-# This run ID is just for testing. It will actually to be passed from the workflow
 product-gmw-v4-eez-list-geometries-local:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
@@ -285,7 +283,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--variable-value=1.0 \
 		--datetime=2024-01-01 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=605efc56-2be3-53ef-b5e4-c1c9127dcbae \
+		--geometry-id=1cd8d5a6-8ba2-537a-9706-a6413e025b03 \
 		--overwrite
 
 product-gmw-v4-eez-process-geometry-s3:
@@ -302,21 +300,6 @@ product-gmw-v4-eez-process-geometry-s3:
 		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
 		--overwrite
 # 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-
-# V3!
-product-gmw-v3-eez-process-geometry-s3:
-	csdr products process-geometry \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v3/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw_v3_eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--datetime-string-match=1996 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
-		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
-		--overwrite
 
 
 # Process all geometries with Dask. The workflow does not use this but it is helpful for developing with Dask locally
@@ -354,8 +337,7 @@ product-gmw-v4-eez-process-all-geometries-dask-local:
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test_local_dask_run_id \
-		--location=./cache/products/gmw-v4-eez/0-0-1/runs/abc \
+		--location=./cache/products/gmw-v4-eez/0-0-1/runs/test_local_dask_run_id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove \
@@ -364,8 +346,7 @@ product-gmw-v4-eez-consolidate-local:
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
-		--location s3://csdr-public-dev/products/testing/gmw-eez-100m \
+		--location s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test_local_dask_run_id \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--variable-name=mangrove \
@@ -376,7 +357,7 @@ product-gmw-v4-eez-consolidate-s3:
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
@@ -386,7 +367,7 @@ product-gmw-v4-eez-provenance-local-db:
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/2024-01-01/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=b7e2e2b2-2e7a-4e7e-8e2a-7e2e2b2e7e2a \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
@@ -394,7 +375,61 @@ product-gmw-v4-eez-provenance-s3-db:
 		--overwrite
 
 
+### Product GMW v3 by EEZ ###
 
+# Lists the same geometries as GMW v4 EEZ but for seagrass product
+product-gmw-v3-eez-list-geometries-local:
+	echo "Not doing this again because it is the same geometries as GMW v4 EEZ."
+# 	make product-gmw-v4-eez-list-geometries-local
+
+product-gmw-v3-eez-process-geometry-s3:
+	csdr products process-geometry \
+		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
+		--run-id=test-product-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v3/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime-string-match=1996 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--geometry-id=197afcdf-b98b-5e5c-bd04-0e0a8cbe8386 \
+		--overwrite
+
+product-gmw-v3-eez-process-all-geometries-dask-local:
+	csdr products process-all-geometries-dask \
+		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
+		--run-id=test-product-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
+		--variable-name=mangrove \
+		--variable-value=1.0 \
+		--datetime-string-match=1996 \
+		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--overwrite \
+		--use-dask \
+		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
+# 		--datetime-string-match=2020 \
+
+product-gmw-v3-eez-consolidate-local:
+	csdr products consolidate \
+		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
+		--location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--variable-name=mangrove
+# 		--datetime=2024-01-01 # No datetime because there are many
+
+product-gmw-v3-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
+		--product-url=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id/mangrove/ae9b3100-611b-4841-97f0-d63c3dda0637.parquet \
+		--run-id=test-product-run-id \
+		--dataset-run-id=d97e1dd1-a9eb-481b-9e17-30fdc1fe6838 \
+		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--post-to-database \
+		--overwrite
 
 
 ### Product Seagrass EEZ v4 ###
@@ -446,7 +481,6 @@ product-seagrass-eez-process-all-geometries-dask-local:
 product-seagrass-eez-consolidate-local:
 	csdr products consolidate \
 			--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-			--run-id=test_local_dask_run_id \
 			--location=./cache/products/seagrass-eez/0-0-1/runs/test_local_dask_run_id \
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
