@@ -1,8 +1,8 @@
+import logging
 from json import dumps
 from typing import Literal
 
 import typer
-import logging
 from requests.exceptions import HTTPError
 from toolz import get_in
 from typer import Typer
@@ -103,6 +103,7 @@ def _meta_provenance(
                 f"Failed to post provenance to database. Response was: \n{dumps(response.json(), indent=2)}",
                 exc_info=True,
             )
+            raise
         logging.info(
             f"Wrote provenance to database \n {dumps(response.json(), indent=2)}"
         )
@@ -273,6 +274,7 @@ def write_product_provenance(
     if run_id is not None:
         extra_info_dict["productRunId"] = run_id
 
+    # Post to product_run table. Get ID (created if none was provided).
     run_id_created = _meta_provenance(
         id=product_id,
         type="product",
@@ -309,6 +311,7 @@ def write_product_provenance(
                         f"Failed to post product output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
                         exc_info=True,
                     )
+                    raise
                 else:
                     logging.info(
                         f"Posted product output for variable {variable} timePoint {timePoint}: {response.status_code}"

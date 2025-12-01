@@ -90,7 +90,7 @@ async def cache_single_source(
         _ = await dest.put_async(target_zip_name, source.get(url.path))
         logging.info(f"File cached successfully, downloaded to {target_url}")
 
-        return f"{target_location}{target_zip_name}"
+        return f"{target_location}/{target_zip_name}"
 
 
 async def run_cache_gmw(
@@ -110,7 +110,7 @@ async def run_cache_gmw(
     tasks = [
         cache_single_source(
             source_location,
-            target_location,
+            target_location.rstrip("/"),
             target_path,
             (source_location.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
             overwrite,
@@ -124,7 +124,6 @@ async def run_cache_gmw(
 
     # Strip out nulls if source file was not found
     results = [file for file in results if file is not None]
-
     if out_file is not None:
         with open(out_file, "w") as f:
             json.dump(results, f, indent=4)
@@ -408,6 +407,7 @@ async def run_index_gmw(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the GMW STAC files
+    # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
 
     result_location = get_url_from_store_filename(dest, out_filename)

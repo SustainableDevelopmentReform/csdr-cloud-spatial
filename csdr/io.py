@@ -175,12 +175,14 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
 
 
 async def get_stac_item_dicts_from_store(
-    store: S3Store, s3_prefix: str | None = None
+    store: S3Store | LocalStore | HTTPStore, s3_prefix: str | None = None
 ) -> list[dict[str, Any]]:
     list_of_stac_files = []
 
-    for batch in store.list(s3_prefix):
-        # A batch contains 50 files
+    logging.info("Listing STAC items in store recursively")
+    
+    for i, batch in enumerate(store.list(s3_prefix, chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
+        logging.info(f"Batch number {i} of {len(batch)} files...")
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
                 list_of_stac_files.append(stac_file)
@@ -189,7 +191,7 @@ async def get_stac_item_dicts_from_store(
 
     # Use semaphore to limit concurrent requests to prevent S3 from timing out. Otherwise it would request all concurrently and sometimes time out.
     semaphore = asyncio.Semaphore(1000)
-    async def _fetch_item(store: S3Store, stac_file: dict) -> dict:
+    async def _fetch_item(store: S3Store | LocalStore | HTTPStore, stac_file: dict) -> dict:
         async with semaphore:
             obj = await store.get_async(stac_file["path"])
             data = BytesIO(obj.bytes())
