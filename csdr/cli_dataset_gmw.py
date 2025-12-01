@@ -30,7 +30,6 @@ gmw_app = typer.Typer()
 async def cache_single_source(
     source_url: str,
     target_location: str,
-    target_path: str,
     target_zip_name: str,
     overwrite: bool,
     semaphore: asyncio.Semaphore,
@@ -58,11 +57,6 @@ async def cache_single_source(
 
         target_store = None
         target_store = get_store_with_prefix_from_url(target_location)
-        target_zip_name = (
-            f"{target_path}/{target_zip_name}"
-            if target_path is not None
-            else target_zip_name
-        )
         target_url = f"{target_location}/{target_zip_name}"
         logging.info(f"Target URL for caching is {target_url}")
 
@@ -93,7 +87,6 @@ async def cache_single_source(
 async def run_cache_gmw(
     source_locations: list[str],
     target_location: str,
-    target_path: str,
     overwrite: bool,
     max_concurrent: int,
     out_file: str,
@@ -108,7 +101,6 @@ async def run_cache_gmw(
         cache_single_source(
             source_location,
             target_location.rstrip("/"),
-            target_path,
             (source_location.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
             overwrite,
             semaphore,
@@ -121,6 +113,7 @@ async def run_cache_gmw(
 
     # Strip out nulls if source file was not found
     results = [file for file in results if file is not None]
+    # TODO: use write_json utility function?
     if out_file is not None:
         with open(out_file, "w") as f:
             json.dump(results, f, indent=4)
@@ -152,22 +145,12 @@ def cache_gmw(
         help="Tempfile to write list of target locations (otherwise print to console)",
     ),
 ) -> None:
-    logging.info("Starting GMW caching process...")
-    target_path = None
-    # Handle S3 target path
-    if target_location.startswith("s3://"):
-        target_path = urlparse(target_location).path.lstrip("/").rstrip("/")
-
-    # Get list of source_locations
-    source_locations = source_locations.split(",")
-
     logging.info("Starting async GMW caching process...")
-
+    source_locations_list = source_locations.split(",") # Get list of source_locations
     asyncio.run(
         run_cache_gmw(
-            source_locations,
+            source_locations_list,
             target_location,
-            target_path,
             overwrite,
             max_concurrent,
             out_file,
