@@ -459,8 +459,6 @@ product-seagrass-eez-process-geometry-local:
 		--overwrite
 
 # We need to call this for 2017-2024 to process all seagrass data
->>>>>>> c30ff28 (Working seagrass eez product for many years)
->>>>>>> 6240af9 (Working seagrass eez product for many years)
 product-seagrass-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -470,8 +468,8 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
-		--datetime-string-match="2024" \
-		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--datetime-string-match="2022" \
+		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
 		--use-dask \
 		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
