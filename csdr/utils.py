@@ -283,9 +283,11 @@ def xarray_calculate_area(
     if value is not None:
         data = data.where(data == value)
 
-        
-    # TODO: Does this handle CRS differences correctly? Area calculation depends on CRS. It looks like the STAC data is mostly in EPSG:6933, so the geometry should be reprojected to that before masking.
-    # Seagrass data is in EPSG:3832. Either the geometry should be reprojected to that before masking, or everything should be in EPSG:6933 for consistency with other datasets. I think the latter.
+    # Validate that data and geom have the same CRS.
+    target_crs = "EPSG:6933" # For consistency with all datasets and geometries
+    data = data.rio.reproject(target_crs) # TODO: Tweak parameters of reproject: resolution=desired_resolution, method='nearest', resampling=Resampling.bilinear
+    geom = geom.to_crs(target_crs)
+
     # Mask out regions outside the geometry
     masked = mask(data, geom)
 
@@ -336,7 +338,7 @@ def geoparquet_calculate_area(
         data_intersecting.loc[:, "intersection"] = data_intersecting.geometry.intersection(shapely_geom)
         data_intersecting.loc[:, "area"] = data_intersecting["intersection"].area
         total_area = data_intersecting["area"].sum()
-        return float(total_area)
+        return round(float(total_area), 2)
     else:
         logging.info("No spatial intersection found between geometry and dataset geometries after detailed check. Returning area 0.0.")
         return 0.0
