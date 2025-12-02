@@ -20,6 +20,7 @@ from pyarrow import ArrowInvalid
 
 # Store always includes prefix for all store types.
 
+# exists just works for files, not directories.
 def exists(store: ObjectStore, file_name: str) -> bool:
     # store includes prefix, but not file_name.
     try:

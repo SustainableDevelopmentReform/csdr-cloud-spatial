@@ -181,7 +181,8 @@ dataset-aca-extract-local:
 	csdr aca extract \
 		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/raw \
 		--target-location=./cache/datasets/aca/0-0-1/data \
-		--overwrite
+		--no-overwrite
+# 		--overwrite
 
 dataset-aca-index-local:
 	csdr aca index \
