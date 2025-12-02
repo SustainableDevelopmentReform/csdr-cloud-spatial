@@ -303,25 +303,35 @@ def geoparquet_calculate_area(
     datetime_string_match: str | None = None,
 ) -> float:
     # Filter data by variable and datetime_string_match
-    # TODO: Implement filtering logic for datetime_string_match. It isn't needed for reef extent seeing it only has one time point.
-    # Filter data by variable and value
-    # import pdb; pdb.set_trace()
-    if variable is not None and value is not None:
-        gdf_filtered = data[data[variable] == value]
-    else:
-        gdf_filtered = data
+    # TODO: Implement filtering logic for datetime_string_match. It isn't needed for reef extent seeing it only has one time point. It would need to point to a column which contains datetimes or similar.
 
+    if variable is not None and value is not None:
+        filtered_data = data[data[variable] == value]
+        logging.info(f"Filtering GeoDataFrame where column '{variable}' == '{value}'. There were {len(data)} rows before filtering and {len(filtered_data)} rows after filtering.")
+        data = filtered_data
+    else:
+        logging.info(f"No variable/value filtering applied to GeoDataFrame because there was none inputted. There are still {len(data)} rows.")
+
+    # Need to convert geom to shapely geometry for geopandas intersection
+    shapely_geom = geom.geom
+    data_intersecting = data[data.intersects(shapely_geom)]
     # TODO: Check handling of CRS here. Reproject geom to gdf crs if needed.
-    # TODO: Check handling of multipolygons.
+    # TODO: Check handling of multipolygons. Maybe geopandas handles this automatically in intersection.
     # TODO: If type of geom or data not polygon, raise error.
-    
-    # Spatial intersection between geometry and data
-    gdf_intersected = gdf_filtered[gdf_filtered.intersects(geom)]
-    if not gdf_intersected.empty:
+    # TODO: Is this first check needed? We already know the bounding boxes intersect. It could handle countries where there is no actual intersection even though the bboxes do.
+    # First check there is any spatial intersection between geometry and data
+    data_intersecting = data[data.intersects(shapely_geom)]
+    # Second, if there is intersection, calculate area
+    # import pdb; pdb.set_trace()
+    if not data_intersecting.empty:
         # Calculate area of intersection geometries
-        gdf_intersected["intersection"] = gdf_intersected.geometry.intersection(geom)
-        gdf_intersected["area"] = gdf_intersected["intersection"].area
-        total_area = gdf_intersected["area"].sum()
+        data_intersecting.loc[:, "intersection"] = data_intersecting.geometry.intersection(shapely_geom)
+
+        # TODO: Change CRS to ensure area calculation is correct. Use a projected CRS suitable for area calculation.
+        data_intersecting = data_intersecting.to_crs("EPSG:6933") #  World Cylindrical Equal Area
+        data_intersecting.loc[:, "area"] = data_intersecting["intersection"].area
+
+        total_area = data_intersecting["area"].sum()
         return float(total_area)
     else:
         return 0.0

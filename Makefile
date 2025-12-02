@@ -563,7 +563,7 @@ product-aca-reef-extent-eez-process-geometry-local:
 		--variable-name=class \
 		--variable-value=Reef \
 		--datetime=2022 \
-		--geometry-id=b1b00b2e-2739-5215-a18c-eb72c5798034 \
+		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 # 		--load-kwargs="resolution=100,crs=epsg:3832" \
 
