@@ -298,7 +298,7 @@ def xarray_calculate_area(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )
 
-    return float(count) * one_pixel_area
+    return round(float(count) * one_pixel_area, 2)
 
 
 def geoparquet_calculate_area(

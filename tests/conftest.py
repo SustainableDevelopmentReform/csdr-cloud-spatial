@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import boto3
+import geopandas as gdf
 import moto
 import pytest
 from geopandas import GeoDataFrame
@@ -25,6 +26,11 @@ def sample_polygon() -> polygon:
             json.load(f)["features"][0]["geometry"]["coordinates"][0], crs="EPSG:4326"
         )
         return geom
+
+
+@pytest.fixture
+def sample_gdf_polygons() -> gdf.GeoDataFrame:
+    return gdf.GeoDataFrame.from_file(DATA_DIR / "many_geometries.geojson")
 
 
 @pytest.fixture
