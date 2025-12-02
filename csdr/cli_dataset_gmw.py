@@ -55,7 +55,6 @@ async def cache_single_source(
         source_meta = source.head(url.path)
         size = source_meta.get("size", None)
 
-        target_store = None
         target_store = get_store_with_prefix_from_url(target_location)
         target_url = f"{target_location}/{target_zip_name}"
         logging.info(f"Target URL for caching is {target_url}")

@@ -63,17 +63,14 @@ def write_json(
 def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> ObjectStore:
-    # https://developmentseed.org/obstore/latest/api/store/#obstore.store.from_url
     if url.startswith("s3://"):
-        # S3, Http, and file URLs (that start with "file://")
         return from_url(url, credential_provider=Boto3CredentialProvider(), **kwargs) # S3 doesn't support mkdir
     elif url.startswith("http://") or url.startswith("https://"):
         return from_url(url) # Can't have any configuration for HTTPStore
     elif url.startswith("file://"):
-        # Can't have a credential provider for local
-        return from_url(url, mkdir=mkdir, **kwargs)
+        return from_url(url, mkdir=mkdir, **kwargs) # Can't have a credential provider for local
     else:
-        # File URLs that don't start with "file://"
+        # File URLs that don't start with "file://" need it prepended for from_url and to be made absolute
         abs_url = os.path.abspath(url)
         return from_url(f"file://{abs_url}", mkdir=mkdir, **kwargs)
 
