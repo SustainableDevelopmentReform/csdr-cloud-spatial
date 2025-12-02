@@ -132,6 +132,7 @@ async def _run_index_buildings(
         logging.info(f"Reading {path} ...")
         # Get a file-like object from obstore, read it into a GeoDataFrame, append gdf to list.
         bytes_obj = source_store.get(path).bytes()
+        # TODO: Use io.read_geospatial_file
         df = pd.read_parquet(BytesIO(bytes_obj))
         dfs.append(df)
     if not dfs:

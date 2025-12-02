@@ -1,35 +1,20 @@
-import pandas as pd
 import logging
+
+import pandas as pd
 from odc.geo.geom import Geometry
 
+from csdr.io import read_geospatial_file
 from csdr.provenance import read_provenance
 from csdr.utils import (
     check_for_any_intersection,
+    geoparquet_calculate_area,
     load_xarray_stacgeoparquet,
     open_stacgeoparquet,
     xarray_calculate_area,
 )
 
 
-def get_area_from_dataset_geometry(
-    dataset_provenance_url: str,
-    geometry: Geometry,
-    variable: str,
-    value: float,
-    datetime_string_match: str | None = None,
-    load_kwargs: dict = {},
-) -> float:
-    """Calculate the area of the dataset within the given geometry."""
-    logging.info(f"Loading dataset from {dataset_provenance_url}")
-    provenance = read_provenance(dataset_provenance_url)
-    dataset_url = provenance.get("dataUrl")
-    dataset_type = provenance.get("dataType")
-
-    if dataset_type != "stac-geoparquet":
-        raise ValueError(
-            f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' is supported."
-        )
-
+def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
     # Get the STAC items (just metadata, not the data itself, so dask chunking not needed yet)
     items = open_stacgeoparquet(dataset_url)
     logging.info(f"Dataset has {len(items)} STAC items.")
@@ -73,6 +58,44 @@ def get_area_from_dataset_geometry(
     return total_area
 
 
+def _get_area_from_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
+    # Load vector dataset from parquet
+    dataset_gdf = read_geospatial_file(dataset_url, **load_kwargs)
+    # Check for bbox intersection for each dataset item against geometry
+    any_intersection = check_for_any_intersection(geometry, dataset_gdf)
+    if not any_intersection:
+        logging.info("No spatial intersection between geometry and dataset. Returning area 0.0.")
+        return 0.0
+    else:
+        logging.info("Spatial intersection found between geometry and dataset bounding boxes. Proceeding with area calculation.")
+    total_area = geoparquet_calculate_area(dataset_gdf, geometry, variable=variable, value=value, datetime_string_match=datetime_string_match)
+    return total_area
+
+
+def _get_area_from_dataset_geometry(
+    dataset_provenance_url: str,
+    geometry: Geometry,
+    variable: str,
+    value: float,
+    datetime_string_match: str | None = None,
+    load_kwargs: dict = {},
+) -> float:
+    """Calculate the area of the dataset within the given geometry."""
+    logging.info(f"Loading dataset from {dataset_provenance_url}")
+    provenance = read_provenance(dataset_provenance_url)
+    dataset_url = provenance.get("dataUrl")
+    dataset_type = provenance.get("dataType")
+
+    if dataset_type == "stac-geoparquet":
+        return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
+    elif dataset_type == "geoparquet":
+        return _get_area_from_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
+    else:
+        raise ValueError(
+            f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
+        )
+
+
 def process_variables_for_geometry(
     geometry: Geometry,
     variables: list[str],
@@ -92,7 +115,7 @@ def process_variables_for_geometry(
             total_area = 0.0
             logging.info(f"Amount of single geometries: {len(geoms)}")
             for geom in geoms:
-                area = get_area_from_dataset_geometry(
+                area = _get_area_from_dataset_geometry(
                     dataset_provenance_url,
                     geom,
                     datetime_string_match=datetime_string_match,
@@ -104,7 +127,7 @@ def process_variables_for_geometry(
             results["sum-area-by-value"] = total_area
             logging.info(f"Total area by value: {total_area}")
         else:
-            logging.warning(f"Unknown variable requested: {var}")
+            logging.error(f"Unknown variable requested: {var}")
     return results
 
 

@@ -550,6 +550,9 @@ product-aca-reef-extent-eez-list-geometries-local:
 
 # I think there is only one year of ACA reef extent data, so no need for datetime string match. It is 2022 I believe.
 # This is different to other products because the geometry and dataset are both vector (parquet), rather than the dataset being raster.
+# geometry: Nauru: 1d7022dd-e6de-50b5-bee5-687df14be0a2 - has reef areas
+# geometry: South Sudan: b1b00b2e-2739-5215-a18c-eb72c5798034 - does not have reef areas
+
 product-aca-reef-extent-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
@@ -557,12 +560,12 @@ product-aca-reef-extent-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
-		--variable-name=reefextent \
-		--variable-value=1 \
+		--variable-name=class \
+		--variable-value=Reef \
 		--datetime=2022 \
-		--load-kwargs="resolution=100,crs=epsg:3832" \
-		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
+		--geometry-id=b1b00b2e-2739-5215-a18c-eb72c5798034 \
 		--overwrite
+# 		--load-kwargs="resolution=100,crs=epsg:3832" \
 
 product-aca-reef-extent-eez-consolidate-local:
 	csdr products consolidate \
@@ -583,7 +586,7 @@ product-aca-reef-extent-eez-provenance-local-db:
 		--overwrite
 
 
-# Product buildings by EEZ? Does this make sense? We could do count of buildings near another dataset i.e. mangroves, per EEZ. This is not a normal dataset as we use them so far.
+# Product buildings by EEZ? Does this make sense? I don't think so. We could do count of buildings near another dataset i.e. mangroves, per EEZ. This is not a normal dataset as we use them so far.
 # product-aca-reef-extent-eez-process-geometry-local:
 # 	csdr products process-geometry \
 

@@ -8,9 +8,9 @@ from contextlib import contextmanager
 from typing import Any, TypedDict, cast
 
 import boto3
+import geopandas as gpd
 import requests
 from affine import Affine
-from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
 from odc.geo.geom import BoundingBox, Geometry
 from odc.geo.xr import mask
@@ -295,6 +295,39 @@ def xarray_calculate_area(
     return float(count) * one_pixel_area
 
 
+def geoparquet_calculate_area(
+    data: gpd.GeoDataFrame,
+    geom: Geometry,
+    variable: str | None = None,
+    value: int | float | None = None,
+    datetime_string_match: str | None = None,
+) -> float:
+    # Filter data by variable and datetime_string_match
+    # TODO: Implement filtering logic for datetime_string_match. It isn't needed for reef extent seeing it only has one time point.
+    # Filter data by variable and value
+    # import pdb; pdb.set_trace()
+    if variable is not None and value is not None:
+        gdf_filtered = data[data[variable] == value]
+    else:
+        gdf_filtered = data
+
+    # TODO: Check handling of CRS here. Reproject geom to gdf crs if needed.
+    # TODO: Check handling of multipolygons.
+    # TODO: If type of geom or data not polygon, raise error.
+    
+    # Spatial intersection between geometry and data
+    gdf_intersected = gdf_filtered[gdf_filtered.intersects(geom)]
+    if not gdf_intersected.empty:
+        # Calculate area of intersection geometries
+        gdf_intersected["intersection"] = gdf_intersected.geometry.intersection(geom)
+        gdf_intersected["area"] = gdf_intersected["intersection"].area
+        total_area = gdf_intersected["area"].sum()
+        return float(total_area)
+    else:
+        return 0.0
+    
+
+    
 # Make a UUID
 def make_uuid(thing: str) -> str:
     namespace = uuid.uuid5(
@@ -330,7 +363,7 @@ def suppress_rust_output() -> Generator[None, None, None]:
         os.close(stderr_fd)
 
 
-def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
+def get_geom_from_gdf(gdf: gpd.GeoDataFrame, geometry_id: str) -> Geometry:
     features = gdf[gdf["csdr-id"] == geometry_id]
     if len(features) == 0:
         raise ValueError(f"Geometry ID {geometry_id} not found in GeoDataFrame.")
@@ -341,30 +374,45 @@ def get_geom_from_gdf(gdf: GeoDataFrame, geometry_id: str) -> Geometry:
     # Convert to ODC geometry
     return Geometry(feature.geometry, crs=gdf.crs)
 
-def check_for_any_intersection(geometry: Geometry, stac_items: ItemCollection) -> bool:
-    # make geometry bbox
-    geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
-    # Check CRS's match between geometry and stac items. Essential for intersection test.
-    # TODO: Find a way to reproject data near the antimeridian robustly. Use a global CRS. Split geometries at the antimeridian before reprojecting. Check for validity after reprojection.
-    geom_epsg = geom_bbox.crs.epsg
-    stac_epsg = stac_items[0].properties.get("proj:code")
-    stac_epsg_number = int(stac_epsg.replace("EPSG:",""))
-    if geom_epsg != stac_epsg_number:
-        logging.warning("CRS mismatch between geometry and STAC items. Reprojecting...")
-        geom_bbox = geom_bbox.to_crs(stac_epsg)
-    # Intersect geometry bbox with each STAC item bbox
-    # If any intersect, return true
-    # Else, return false
-    for item in stac_items:
-        # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
-        # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
-        # This code needs to handle coords that do not follow the right hand rule.
-        # Bad : [[8.0, -1.0], [9.0, -1.0], [9.0, 0.0], [8.0, 0.0], [8.0, -1.0]]
-        # Good: [[8.0, -1.0], [8.0, 0.0], [9.0, 0.0], [9.0, -1.0], [8.0, -1.0]]
-        # Need to make the polygon because some of the proj:geometry values are not valid for future steps.
-        # proj:geometry could be better because it is either the bbox or the footprint of valid data (more accurate than just bbox).
-        item_bbox = BoundingBox(*item.properties.get("proj:bbox"), stac_epsg).polygon # This assumes all items have the same CRS
 
-        if geom_bbox.intersects(item_bbox):
-            return True
-    return False
+def check_for_any_intersection(geometry: Geometry, dataset: ItemCollection | gpd.GeoDataFrame) -> bool:
+    # dataset parameter is either ItemCollection for raster or GeoDataFrame for vector
+    if isinstance(dataset, ItemCollection):
+        logging.info("Checking for intersection between geometry and STAC items...")
+        # make geometry bbox
+        geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
+        # Check CRS's match between geometry and stac items. Essential for intersection test.
+        # TODO: Find a way to reproject data near the antimeridian robustly. Use a global CRS. Split geometries at the antimeridian before reprojecting. Check for validity after reprojection.
+        geom_epsg = geom_bbox.crs.epsg
+        stac_epsg = dataset[0].properties.get("proj:code")
+        stac_epsg_number = int(stac_epsg.replace("EPSG:",""))
+        if geom_epsg != stac_epsg_number:
+            logging.warning("CRS mismatch between geometry and STAC items. Reprojecting...")
+            geom_bbox = geom_bbox.to_crs(stac_epsg)
+        # Intersect geometry bbox with each STAC item bbox
+        # If any intersect, return true
+        # Else, return false
+        for item in dataset:
+            # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
+            # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
+            # This code needs to handle coords that do not follow the right hand rule.
+            # Bad : [[8.0, -1.0], [9.0, -1.0], [9.0, 0.0], [8.0, 0.0], [8.0, -1.0]]
+            # Good: [[8.0, -1.0], [8.0, 0.0], [9.0, 0.0], [9.0, -1.0], [8.0, -1.0]]
+            # Need to make the polygon because some of the proj:geometry values are not valid for future steps.
+            # proj:geometry could be better because it is either the bbox or the footprint of valid data (more accurate than just bbox).
+            item_bbox = BoundingBox(*item.properties.get("proj:bbox"), stac_epsg).polygon # This assumes all items have the same CRS
+
+            if geom_bbox.intersects(item_bbox):
+                return True
+        return False
+    elif isinstance(dataset, gpd.GeoDataFrame):
+        logging.info("Checking for intersection between geometry and GeoDataFrame...")
+        for idx, row in dataset.iterrows():
+            item_geometry = Geometry(row.geometry, crs=dataset.crs)
+            item_bbox = item_geometry.boundingbox.polygon
+            if geometry.boundingbox.polygon.intersects(item_bbox):
+                return True
+        return False
+    else:
+        logging.warning("Dataset type not recognized for intersection check.")
+        raise ValueError("Dataset type not recognized for intersection check.")
