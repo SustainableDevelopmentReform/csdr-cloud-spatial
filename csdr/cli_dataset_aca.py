@@ -120,20 +120,18 @@ async def _run_index_aca(
     overwrite: bool,
 ) -> None:
     target_store = get_store_with_prefix_from_url(target_location)
-    target_file_name = "reefextent/reefextent.parquet"
+    target_file_name = "reefextent.parquet"
     if exists(target_store, target_file_name) and not overwrite:
         logging.info(f"Skipping index: {target_file_name} already exists and overwrite is off.")
         return
     source_store = get_store_with_prefix_from_url(source_location)
     logging.info(f"Searching for all reefextent.gpkg under {source_location} ...")
     gpkg_paths = _find_matching_files(source_store, "reefextent.gpkg")
-    gpkg_paths = [p for p in gpkg_paths if target_file_name in p] # Filter out the old output. Don't want to include that in the input.
     logging.info(f"Found {len(gpkg_paths)} reefextent.gpkg files to merge into {target_file_name}")
     dfs = []
     for path in gpkg_paths:
         logging.info(f"Reading {path} ...")
         # Get a file-like object from obstore, read it into a GeoDataFrame, append gdf to list.
-        # TODO: Do this async and with semaphore
         bytes_obj = source_store.get(path).bytes()
         gdf = gpd.read_file(BytesIO(bytes_obj))
         dfs.append(gdf)
