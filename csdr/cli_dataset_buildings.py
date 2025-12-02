@@ -35,25 +35,28 @@ def _find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
 
 
 async def _download_parquet_file(source_location: str, country_iso: str, target_store: ObjectStore, overwrite: bool, semaphore: asyncio.Semaphore) -> None:
+    # semaphore limits number of concurrent downloads
     async with semaphore:
         # Get file and write to target_store
-        file_name = f"country_iso={country_iso}/{country_iso}.parquet"
-        if exists(target_store, file_name):
+        source_file_name = f"country_iso={country_iso}/{country_iso}.parquet"
+        target_file_name = f"{country_iso}.parquet"
+        if exists(target_store, target_file_name):
             if not overwrite:
-                logging.info(f"Skipping {file_name}; output exists at target store and overwrite is off.")
+                logging.info(f"Skipping {target_file_name}; output exists at target store and overwrite is off.")
                 return
             else:
-                logging.info(f"Overwrite is on. Re-downloading {file_name} ...")
-        url = f"{source_location.rstrip('/')}/{file_name}"
+                logging.info(f"Overwrite is on. Re-downloading {source_file_name} ...")
+        url = f"{source_location.rstrip('/')}/{source_file_name}"
         logging.info(f"Fetching {url} ...")
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=3000) # 3000 seconds (50 minutes)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     logging.error(f"Failed to fetch {url}: HTTP {resp.status}")
                     return
                 data = await resp.read()
-        logging.info(f"Writing {file_name} to target store ...")
-        await target_store.put_async(file_name, data)
+        logging.info(f"Writing {target_file_name} to target store ...")
+        await target_store.put_async(target_file_name, data)
 
 
 async def _run_extract_buildings(

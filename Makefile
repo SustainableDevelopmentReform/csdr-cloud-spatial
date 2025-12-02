@@ -205,8 +205,8 @@ dataset-buildings-extract-local:
 	csdr buildings extract \
 		--source-location=https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country \
 		--target-location=./cache/datasets/buildings/0-0-1/data \
-		--no-overwrite
-# 		--overwrite
+		--no-overwrite \
+		--max-concurrent=16
 
 dataset-buildings-index-local:
 	csdr buildings index \
@@ -216,7 +216,7 @@ dataset-buildings-index-local:
 
 dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
-		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
+		--id=608e20ef-b074-47aa-a0f7-c0eb5437d28b \
 		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
 		--source-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
