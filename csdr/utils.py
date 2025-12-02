@@ -283,6 +283,9 @@ def xarray_calculate_area(
     if value is not None:
         data = data.where(data == value)
 
+        
+    # TODO: Does this handle CRS differences correctly? Area calculation depends on CRS. It looks like the STAC data is mostly in EPSG:6933, so the geometry should be reprojected to that before masking.
+    # Seagrass data is in EPSG:3832. Either the geometry should be reprojected to that before masking, or everything should be in EPSG:6933 for consistency with other datasets. I think the latter.
     # Mask out regions outside the geometry
     masked = mask(data, geom)
 
@@ -311,33 +314,34 @@ def geoparquet_calculate_area(
         data = filtered_data
     else:
         logging.info(f"No variable/value filtering applied to GeoDataFrame because there was none inputted. There are still {len(data)} rows.")
+    
+    # Change CRS to ensure area calculation is correct. Use a projected CRS suitable for area calculation.
 
-    # Need to convert geom to shapely geometry for geopandas intersection
-    shapely_geom = geom.geom
-    data_intersecting = data[data.intersects(shapely_geom)]
-    # TODO: Check handling of CRS here. Reproject geom to gdf crs if needed.
+    # Need to reproject and convert geom to shapely geometry for geopandas intersection
+    target_crs = "EPSG:6933"  # World Cylindrical Equal Area
+    shapely_geom = geom.to_crs(target_crs).geom
+    data = data.to_crs(target_crs)
+
     # TODO: Check handling of multipolygons. Maybe geopandas handles this automatically in intersection.
     # TODO: If type of geom or data not polygon, raise error.
-    # TODO: Is this first check needed? We already know the bounding boxes intersect. It could handle countries where there is no actual intersection even though the bboxes do.
+
     # First check there is any spatial intersection between geometry and data
+    # TODO: Is this first check needed? We already know the bounding boxes intersect. It could handle countries where there is no actual intersection even though the bboxes do.
     data_intersecting = data[data.intersects(shapely_geom)]
     # Second, if there is intersection, calculate area
-    # import pdb; pdb.set_trace()
     if not data_intersecting.empty:
+        logging.info(f"Found {len(data_intersecting)} intersecting geometries between dataset and input geometry. Calculating area of intersection.")
         # Calculate area of intersection geometries
+        data_intersecting = data_intersecting.copy()
         data_intersecting.loc[:, "intersection"] = data_intersecting.geometry.intersection(shapely_geom)
-
-        # TODO: Change CRS to ensure area calculation is correct. Use a projected CRS suitable for area calculation.
-        data_intersecting = data_intersecting.to_crs("EPSG:6933") #  World Cylindrical Equal Area
         data_intersecting.loc[:, "area"] = data_intersecting["intersection"].area
-
         total_area = data_intersecting["area"].sum()
         return float(total_area)
     else:
+        logging.info("No spatial intersection found between geometry and dataset geometries after detailed check. Returning area 0.0.")
         return 0.0
-    
 
-    
+
 # Make a UUID
 def make_uuid(thing: str) -> str:
     namespace = uuid.uuid5(

@@ -491,7 +491,7 @@ product-seagrass-eez-list-geometries-local:
 		--out-file=./cache/tmp/geometries_list.json
 
 # We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
-# Seagress: STAC-Parquet is 4326, but STAC items are 3832.
+# Seagrass: STAC-Parquet is 4326, but STAC items are 3832.
 # EEZ is 4326.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
