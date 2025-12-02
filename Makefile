@@ -541,6 +541,53 @@ product-seagrass-eez-provenance-local-db:
 		--post-to-database \
 		--overwrite
 
+
+# Product ACA Reef Extent by EEZ
+product-aca-reef-extent-eez-list-geometries-local:
+	csdr products list-geometries \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/tmp/geometries_list.json
+
+# I think there is only one year of ACA reef extent data, so no need for datetime string match. It is 2022 I believe.
+# This is different to other products because the geometry and dataset are both vector (parquet), rather than the dataset being raster.
+product-aca-reef-extent-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=5926571e-a088-419d-a966-24557866ce90 \
+		--run-id=test-product-reef-extent-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
+		--target-location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
+		--variable-name=reefextent \
+		--variable-value=1 \
+		--datetime=2022 \
+		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
+		--overwrite
+
+product-aca-reef-extent-eez-consolidate-local:
+	csdr products consolidate \
+			--product-id=5926571e-a088-419d-a966-24557866ce90 \
+			--location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
+			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
+			--variable-name=reefextent
+
+product-aca-reef-extent-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=5926571e-a088-419d-a966-24557866ce90 \
+		--product-url=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id/reefextent/5926571e-a088-419d-a966-24557866ce90.parquet \
+		--run-id=test-product-reef-extent-eez-run-id \
+		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
+		--geometries-run-id=test-run-id \
+		--post-to-database \
+		--overwrite
+
+
+# Product buildings by EEZ? Does this make sense? We could do count of buildings near another dataset i.e. mangroves, per EEZ. This is not a normal dataset as we use them so far.
+# product-aca-reef-extent-eez-process-geometry-local:
+# 	csdr products process-geometry \
+
+
 ### OTHER ###
 
 # Test GeoJSON
