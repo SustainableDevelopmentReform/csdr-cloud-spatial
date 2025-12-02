@@ -3,6 +3,7 @@ import logging
 import re
 from io import BytesIO
 
+import aiohttp
 import pandas as pd
 import typer
 from obstore.store import ObjectStore
@@ -33,7 +34,7 @@ def _find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
     return list_of_matching_files
 
 
-async def _download_parquet_file(source_store: ObjectStore, country_iso: str, target_store: ObjectStore, overwrite: bool, semaphore: asyncio.Semaphore) -> None:
+async def _download_parquet_file(source_location: str, country_iso: str, target_store: ObjectStore, overwrite: bool, semaphore: asyncio.Semaphore) -> None:
     async with semaphore:
         # Get file and write to target_store
         file_name = f"country_iso={country_iso}/{country_iso}.parquet"
@@ -43,9 +44,16 @@ async def _download_parquet_file(source_store: ObjectStore, country_iso: str, ta
                 return
             else:
                 logging.info(f"Overwrite is on. Re-downloading {file_name} ...")
-        source_store.get(file_name)
-        logging.info(f"Downloading {file_name} to target store ...")
-        await target_store.put_async(file_name, source_store.get(file_name)) # Do this async so it doesn't block other downloads.
+        url = f"{source_location.rstrip('/')}/{file_name}"
+        logging.info(f"Fetching {url} ...")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    logging.error(f"Failed to fetch {url}: HTTP {resp.status}")
+                    return
+                data = await resp.read()
+        logging.info(f"Writing {file_name} to target store ...")
+        await target_store.put_async(file_name, data)
 
 
 async def _run_extract_buildings(
@@ -55,19 +63,19 @@ async def _run_extract_buildings(
     max_concurrent: int,
 ) -> None:
     logging.info("Scraping source coop for all parquet files...")
-    source_url = "https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/"
-    logging.info(f"Root: {source_url}...")
-    source_store = get_store_with_prefix_from_url(source_location)
     target_store = get_store_with_prefix_from_url(target_location)
 
     countries_to_extract = []
-    countries_to_extract = ["AFG", "AGO", "ALB", "AND", "ARE", "ARG", "ARM", "ATG", "AUS"] # TODO: Get all dynamically from source_store listing
+    # TODO: fetch https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country HTML and get all <a> links that have title like "country_iso=AFG"
+    # Example: <a title="country_iso=AFG" class="ObjectBrowser_item__v_6Zb" data-focused="true" href="/vida/google-microsoft-open-buildings/geoparquet/by_country/country_iso=AFG" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0px; flex: 1 1 0%; opacity: 1; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg><span class="rt-Text" style="font-family: var(--code-font-family); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0px; flex: 1 1 0%;">country_iso=AFG</span></a>
+    # countries_to_extract = ["AFG", "AGO", "ALB", "AND" , "ARE", "ARG", "ARM", "ATG", "AUS"] # TODO: Get all dynamically from source_store listing
+    countries_to_extract = ["AFG", "AUS"] # TODO: Get all dynamically from source_store listing
     logging.info(f"Found {len(countries_to_extract)} country files to extract from {source_location}. Extracting...")
 
     semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [
         _download_parquet_file(
-            source_store=source_store,
+            source_location=source_location,
             country_iso=country_iso,
             target_store=target_store,
             overwrite=overwrite,
@@ -86,8 +94,8 @@ async def _run_extract_buildings(
 @buildings_app.command("extract")
 def extract_buildings(
     source_location: str = typer.Option(
-        "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/",
-        help="HTTP url containing parquet files to extract (e.g. https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/)"
+        "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country",
+        help="HTTP url containing parquet files to extract (e.g. https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country)"
     ),
     target_location: str = typer.Option(
         ...,

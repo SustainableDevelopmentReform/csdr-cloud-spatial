@@ -192,13 +192,38 @@ dataset-aca-index-local:
 
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
-		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
+		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
 		--dataset-url=./cache/datasets/aca/0-0-1/reefextent.parquet \
 		--source-url="https://allencoralatlas.org/atlas/" \
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
 		--post-to-database \
 		--overwrite
+
+# Dataset MS Buildings
+dataset-buildings-extract-local:
+	csdr buildings extract \
+		--source-location=https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country \
+		--target-location=./cache/datasets/buildings/0-0-1/data \
+		--no-overwrite
+# 		--overwrite
+
+dataset-buildings-index-local:
+	csdr buildings index \
+		--source-location=./cache/datasets/buildings/0-0-1/data \
+		--target-location=./cache/datasets/buildings/0-0-1 \
+		--overwrite
+
+dataset-buildings-provenance-local-db:
+	csdr provenance dataset \
+		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
+		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
+		--source-url="https://source.coop/vida/google-microsoft-open-buildings" \
+		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
+		--dataset-type=geoparquet \
+		--post-to-database \
+		--overwrite
+
 
 ### GEOMETRIES ###
 
