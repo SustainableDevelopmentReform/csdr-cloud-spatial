@@ -10,6 +10,7 @@ from typing import Any, TypedDict, cast
 import boto3
 import geopandas as gpd
 import requests
+import rioxarray  # DO NOT REMOVE: Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
 from affine import Affine
 from odc.geo.geobox import GeoBox, GeoboxTiles
 from odc.geo.geom import BoundingBox, Geometry
