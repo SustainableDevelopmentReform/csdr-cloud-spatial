@@ -1,5 +1,6 @@
 from odc.geo.geom import polygon
 from pystac import ItemCollection
+import geopandas as gpd
 
 from csdr.utils import (
     geoparquet_calculate_area,
@@ -38,7 +39,7 @@ def test_intersection_raster(
 
 
 def test_intersection_vector(
-    sample_polygon: polygon, sample_gdf_polygons: gdf.GeoDataFrame
+    sample_polygon: polygon, sample_gdf_polygons: gpd.GeoDataFrame
 ) -> None:
     # sample_polygon is in EPSG:4326.
     # sample_gdf_polygons is also EPSG:4326.
