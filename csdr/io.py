@@ -20,6 +20,7 @@ from pyarrow import ArrowInvalid
 
 # Store always includes prefix for all store types.
 
+# exists just works for files, not directories.
 def exists(store: ObjectStore, file_name: str) -> bool:
     # store includes prefix, but not file_name.
     try:
@@ -136,6 +137,7 @@ async def get_stac_item_dicts_from_store(
 
     logging.info("Listing STAC items in store recursively")
 
+    # TODO: There is a function find_matching_files in cli_dataset_aca.py that could be moved here and used instead of this part of get_stac_item_dicts_from_store.
     for i, batch in enumerate(store.list(chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
         logging.info(f"Batch number {i} of {len(batch)} files...")
         for stac_file in batch:

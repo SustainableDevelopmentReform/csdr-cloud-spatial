@@ -75,6 +75,7 @@ def convert_vector(
 
         # Read and process vector file
         logging.info(f"Reading {vector_file_path}")
+        # TODO: Use io.read_geospatial_file
         gdf = gpd.read_file(vector_file_path)
 
         # Determine source CRS
@@ -125,6 +126,7 @@ def validate(
 
     try:
         # Read the GeoParquet file
+        # TODO: Use io.read_geospatial_file
         gdf = gpd.read_parquet(input_file)
 
         # Fail if no geometry column

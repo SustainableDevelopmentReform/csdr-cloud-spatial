@@ -11,7 +11,7 @@ from zipfile import ZipFile
 
 import typer
 import xarray as xr
-from obstore.store import HTTPStore, LocalStore, S3Store
+from obstore.store import HTTPStore, ObjectStore
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
@@ -164,7 +164,7 @@ async def process_single_file(
     out_cog_name: str,
     zip_file: ZipFile,
     target_location: str,
-    target_store: S3Store | LocalStore,
+    target_store: ObjectStore,
     overwrite: bool,
     semaphore: asyncio.Semaphore,
 ) -> None:

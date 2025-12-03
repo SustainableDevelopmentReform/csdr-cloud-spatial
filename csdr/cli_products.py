@@ -302,7 +302,11 @@ def process_geometry(
     target_location = target_location.rstrip("/") # Remove trailing slash if present
 
     # Validate parameters
-    variable_value_float = float(variable_value) if variable_value is not None else None
+    try:
+        variable_value = float(variable_value) if variable_value is not None else None # If variable_value can be converted to float, do so.
+    except ValueError:
+        # Else it is a string, leave it as is.
+        logging.info(f"variable_value is not parseable as a float so keeping it as a string: '{variable_value}'")
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )
@@ -340,7 +344,7 @@ def process_geometry(
             dataset_provenance_url,
             datetime_string_match=datetime_string_match,
             variable_name=variable_name,
-            variable_value=variable_value_float,
+            variable_value=variable_value,
             load_kwargs=load_kwargs,
         )
         logging.info(f"Results for geometry {geometry_id}: {results}")
@@ -432,7 +436,11 @@ def process_all_geometries_dask(
     )
     logging.info(f"Run ID: {run_id}")
 
-    variable_value_float = float(variable_value) if variable_value is not None else None
+    try:
+        variable_value = float(variable_value) if variable_value is not None else None # If variable_value can be converted to float, do so.
+    except ValueError:
+        # Else it is a string, leave it as is.
+        logging.info(f"variable_value is not parseable as a float so keeping it as a string: '{variable_value}'")
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )
@@ -477,7 +485,7 @@ def process_all_geometries_dask(
                 dataset_provenance_url=dataset_provenance_url,
                 datetime_string_match=datetime_string_match,
                 variable_name=variable_name,
-                variable_value=variable_value_float,
+                variable_value=variable_value,
                 load_kwargs=load_kwargs,
                 product_id=product_id,
                 geometry_provenance_url=geometry_provenance_url,

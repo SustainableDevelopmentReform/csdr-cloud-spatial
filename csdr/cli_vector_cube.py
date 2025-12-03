@@ -114,10 +114,12 @@ def zonal_stats(
         # Handle S3 vs local paths automatically via geopandas
         logging.info(f"Reading GeoParquet geometries from: {geoparquet_path}")
         if geoparquet_path.startswith("s3://"):
+            # TODO: Use io.read_geospatial_file
             gdf_orig = gpd.read_parquet(
                 geoparquet_path,
             )
         else:
+            # TODO: Use io.read_geospatial_file
             gdf_orig = gpd.read_parquet(geoparquet_path)
 
         # Filter out rows without geoms (important for zonal_stats)

@@ -1,5 +1,7 @@
 # CSDR Cloud Spatial Data Repository
 
+Please note that this documentation is outdated. DVC is an artifact of a previous version. We have pivoted away from DVC.
+
 ## Quickstart
 
 - Create Python environment with GDAL and install the dependencies

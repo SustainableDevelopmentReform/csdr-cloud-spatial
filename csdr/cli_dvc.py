@@ -185,6 +185,7 @@ def generate_product_json_files(
         f"Generating product JSON files for: {pipeline_base_path}, {product_out_path}"
     )
     try:
+        # TODO: Use io.read_geospatial_file
         product_gdf = gpd.read_parquet(
             product_out_path,
         )
