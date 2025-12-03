@@ -276,9 +276,6 @@ def process_geometry(
     variable_value: str | None = typer.Option(
         None, help="Value of the variable to use for calculations (if applicable)"
     ),
-    # dataset_type: Literal["stac-geoparquet", "parquet"] = typer.Option( # This could be used to differentiate between geoparquet (vector) and stac-geoparquet (raster) datasets
-    #     "stac-geoparquet", help="Value of the variable to use for calculations (if applicable)"
-    # ),
     load_kwargs: dict[str, str] = typer.Option(
         {},
         "--load-kwargs",
@@ -305,12 +302,11 @@ def process_geometry(
     target_location = target_location.rstrip("/") # Remove trailing slash if present
 
     # Validate parameters
-    # TODO: Bring over changes from process_geometry to process_all_geometries
     try:
         variable_value = float(variable_value) if variable_value is not None else None # If variable_value can be converted to float, do so.
     except ValueError:
         # Else it is a string, leave it as is.
-        logging.info(f"variable_value is not parseable as a float '{variable_value}'")
+        logging.info(f"variable_value is not parseable as a float so keeping it as a string: '{variable_value}'")
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )
@@ -444,7 +440,7 @@ def process_all_geometries_dask(
         variable_value = float(variable_value) if variable_value is not None else None # If variable_value can be converted to float, do so.
     except ValueError:
         # Else it is a string, leave it as is.
-        logging.info(f"variable_value is not parseable as a float '{variable_value}'")
+        logging.info(f"variable_value is not parseable as a float so keeping it as a string: '{variable_value}'")
     datetime = _validate_parameters(
         variables_to_extract, datetime, datetime_string_match
     )

@@ -318,18 +318,13 @@ def geoparquet_calculate_area(
     else:
         logging.info(f"No variable/value filtering applied to GeoDataFrame because there was none inputted. There are still {len(data)} rows.")
     
-    # Change CRS to ensure area calculation is correct. Use a projected CRS suitable for area calculation.
-
     # Need to reproject and convert geom to shapely geometry for geopandas intersection
     target_crs = "EPSG:6933"  # World Cylindrical Equal Area
     shapely_geom = geom.to_crs(target_crs).geom
     data = data.to_crs(target_crs)
 
-    # TODO: Check handling of multipolygons. Maybe geopandas handles this automatically in intersection.
-    # TODO: If type of geom or data not polygon, raise error.
-
     # First check there is any spatial intersection between geometry and data
-    # TODO: Is this first check needed? We already know the bounding boxes intersect. It could handle countries where there is no actual intersection even though the bboxes do.
+    # We already know the bounding boxes intersect. This step handles countries where there is no actual intersection even though the bboxes do.
     data_intersecting = data[data.intersects(shapely_geom)]
     # Second, if there is intersection, calculate area
     if not data_intersecting.empty:
