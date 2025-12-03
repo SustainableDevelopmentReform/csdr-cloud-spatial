@@ -60,7 +60,7 @@ async def cache_single_source(
                 logging.info(
                     f"File already exists at target location with matching size of {size}. Skipping download."
                 )
-                return f"{target_location}{target_zip_name}"
+                return target_url
             else:
                 logging.info(
                     f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
