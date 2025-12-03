@@ -67,7 +67,7 @@ def get_store_with_prefix_from_url(
     if url.startswith("s3://"):
         return from_url(url, credential_provider=Boto3CredentialProvider(), **kwargs) # S3 doesn't support mkdir
     elif url.startswith("http://") or url.startswith("https://"):
-        return from_url(url) # Can't have any configuration for HTTPStore
+        return from_url(url, **kwargs)
     elif url.startswith("file://"):
         return from_url(url, mkdir=mkdir, **kwargs) # Can't have a credential provider for local
     else:
