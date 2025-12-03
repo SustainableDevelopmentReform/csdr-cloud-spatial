@@ -135,3 +135,15 @@ Where is the geometry run provenance read?
 Is the DB version or the file version used?
 Why is there this redundancy?
 I assume json file is read because db is optional.
+
+
+### Run tests locally
+```sh
+  source .venv/bin/activate
+  # uv pip install --editable .
+  uv pip install --editable '.[dev]' # for the dev dependencies too
+  pytest # simple as that.
+  pytest -s tests/test_io.py # for a specific test file. Also print output (-s).
+  pytest --pdb tests/test_io.py # This opens a debugger on error.
+  pytest --pdb -k test_split_path_and_file_name_from_url -s tests/test_io.py
+```

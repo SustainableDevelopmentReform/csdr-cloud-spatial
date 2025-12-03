@@ -17,9 +17,9 @@ from csdr.geometries import (
 )
 from csdr.io import (
     exists,
-    get_dataset_name_from_url,
-    get_store_for_url,
+    get_store_with_prefix_from_url,
     read_geospatial_file,
+    split_path_and_file_name_from_url,
     write_json,
 )
 from csdr.products import parse_outputs
@@ -33,8 +33,8 @@ ALLOWED_PROVENANCE_TYPES = ["dataset", "geometry", "product"]
 def _meta_provenance(
     id: str,
     type: Literal["dataset", "geometry", "product"],
-    dataset_url: str, # Update this name to be more generic (not always a dataset)?
-    dataset_type: str, # Update this name to be more generic (not always a dataset)?
+    data_url: str,
+    data_type: str, # TODO: make this a Literal[...]
     overwrite: bool,
     post_to_database: bool,
     source_url: str | None = None,
@@ -49,8 +49,8 @@ def _meta_provenance(
     Args:
         id (str): ID of the dataset or geometry or product.
         type (Literal): "dataset" or "geometry" or "product".
-        dataset_url (str): URL of the dataset or geometry or product.
-        dataset_type (str): Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.
+        data_url (str): URL of the dataset or geometry or product.
+        data_type (str): Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.
         overwrite (bool): If true, overwrite existing provenance file.
         post_to_database (bool): If true, post the provenance to the database.
         source_url (str | None): URL of the original source data.
@@ -60,11 +60,11 @@ def _meta_provenance(
     Returns:
         None or str: If posting to database, returns the run ID.
     """
-    store = get_store_for_url(dataset_url)
-    dataset_name = get_dataset_name_from_url(store, dataset_url)
+    path, file_name = split_path_and_file_name_from_url(data_url)
+    store = get_store_with_prefix_from_url(path)
 
     if source_url is None:
-        source_url = dataset_url
+        source_url = data_url
 
     if type not in ALLOWED_PROVENANCE_TYPES:
         raise ValueError(f"Type must be one of {ALLOWED_PROVENANCE_TYPES}")
@@ -73,16 +73,16 @@ def _meta_provenance(
     provenance = get_provenance(
         id=id,
         store=store,
-        path=dataset_name,
-        data_url=dataset_url,
-        data_type=dataset_type,
+        file_name=file_name,
+        data_url=data_url,
+        data_type=data_type,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
         extra_info_dict=extra_info_dict,
     )
 
     # Write json next to the input dataset/geometry/product
-    target_file = f"{dataset_name}.provenance.json" # Name includes the input file extension e.g. "EEZ_land_union_v4_202410.parquet.provenance.json"
+    target_file = f"{file_name}.provenance.json" # Name includes the input file extension e.g. "EEZ_land_union_v4_202410.parquet.provenance.json"
 
     if exists(store, target_file) and not overwrite:
         logging.warning(f"Provenance file already exists: {target_file}")
@@ -90,7 +90,7 @@ def _meta_provenance(
         logging.info("Either provenance file doesn't exist or it does and overwrite is on.")
         write_json(store, target_file, provenance)
         logging.info(
-            f"Wrote provenance for {dataset_name} to: {dataset_url}.provenance.json"
+            f"Wrote provenance for {file_name} to: {data_url}.provenance.json"
         )
 
     if post_to_database:
@@ -143,10 +143,10 @@ def write_dataset_provenance(
     dataset_run_id =_meta_provenance(
         id=id,
         type="dataset",
-        dataset_url=dataset_url,
+        data_url=dataset_url,
+        data_type=dataset_type,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
-        dataset_type=dataset_type,
         overwrite=overwrite,
         post_to_database=post_to_database,
     )
@@ -164,13 +164,13 @@ def write_geometry_provenance(
         None,
         help="Run ID to associate geometry outputs with",
     ),
-    dataset_url: str = typer.Option(..., help="URL that points to the geometry"), # this is actually the geometry source, but calling it dataset could be good for standardisation between geometry/dataset/product. on the other hand calling it the geometry source is clearer.
-    pmtiles_url: str | None = typer.Option(
-        None, help="URL that points to the PMTiles file for the geometry (optional)"
-    ),
-    dataset_type: str = typer.Option(
+    geometry_url: str = typer.Option(..., help="URL that points to the geometry"),
+    geometry_type: str = typer.Option(
         "not-set",
         help="Type of geometry, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
+    ),
+    pmtiles_url: str | None = typer.Option(
+        None, help="URL that points to the PMTiles file for the geometry (optional)"
     ),
     source_metadata_url: str = typer.Option(
         ...,
@@ -196,7 +196,7 @@ def write_geometry_provenance(
         50, help="Batch size for posting geometry outputs in bulk"
     ),
 ) -> None:
-    logging.info(f"Getting provenance for geometry: {dataset_url}")
+    logging.info(f"Getting provenance for geometry: {geometry_url}")
 
     if run_id is not None:
         logging.info(f"Run ID '{run_id}' was provided.")
@@ -213,27 +213,26 @@ def write_geometry_provenance(
     run_id_created = _meta_provenance(
         id=id,
         type="geometry",
-        dataset_url=dataset_url,
+        data_url=geometry_url,
         source_url=source_url,
         source_metadata_url=source_metadata_url,
-        dataset_type=dataset_type,
+        data_type=geometry_type,
         overwrite=overwrite,
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
     )
-    logging.info(f"Wrote provenance for geometry: {dataset_url}")
+    logging.info(f"Wrote provenance for geometry: {geometry_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
     logging.info(f"Consolidated geometry run ID: {consolidated_run_id}")
     if post_geometry_outputs:
         if post_geometry_in_bulk:
             logging.info("Posting geometry outputs to database in bulk...")
             post_bulk_geometry_outputs_to_database(
-                dataset_url, run_id=consolidated_run_id, batch_size=batch_size
+                geometry_url, run_id=consolidated_run_id, batch_size=batch_size
             )
         else:
             logging.info("Posting geometry outputs to database one at a time...")
-            post_geometry_outputs_to_database(dataset_url, run_id=consolidated_run_id)
-
+            post_geometry_outputs_to_database(geometry_url, run_id=consolidated_run_id)
 
 @provenance_app.command("product")
 def write_product_provenance(
@@ -278,8 +277,8 @@ def write_product_provenance(
     run_id_created = _meta_provenance(
         id=product_id,
         type="product",
-        dataset_url=product_url,
-        dataset_type="parquet",
+        data_url=product_url,
+        data_type="parquet",
         overwrite=overwrite,
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,

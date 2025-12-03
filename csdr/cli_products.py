@@ -1,5 +1,5 @@
-import asyncio
 import json
+import logging
 import os
 import sys
 from typing import Any
@@ -8,15 +8,12 @@ import dateutil
 import pandas as pd
 import typer
 from dask.distributed import Client
-import logging
 from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
 
 from csdr.io import (
     exists,
-    get_prefix,
-    get_store_for_url,
-    get_url_from_store_filename,
+    get_store_with_prefix_from_url,
     read_dict,
     read_geospatial_file,
     write_gdf_to_parquet,
@@ -135,7 +132,7 @@ def _process_geometry(
     """Process a single geometry and return True if processed, False if skipped."""
     if exists(target_store, path) and not overwrite:
         logging.info(
-            f"Product already exists at {get_url_from_store_filename(target_store, path)}, skipping processing for geometry {geometry_id}."
+            f"Product already exists at {target_store}/{path}, skipping processing for geometry {geometry_id}."
         )
         return False
     
@@ -230,6 +227,7 @@ def list_geometries(
 
     ids_list = gdf["csdr-id"].tolist()
 
+    # TODO: use write_json utility function?
     if out_file is not None:
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         with open(out_file, "w") as f:
@@ -310,25 +308,17 @@ def process_geometry(
     )
 
     # Get paths for writing result JSON
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
     # this path includes the filename (because geometry_id is provided to get_product_path)
     target_path = get_product_path(
         product_id,
         variable_name,
-        geometry_id=geometry_id,
         datetime=datetime,
+        geometry_id=geometry_id,
     )
-
-    # TODO: refactor writing path/file code into a function. Same logic in cli_geometry_eez.py
-
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            target_path = f"{prefix}/{target_path}"
-    target_url = get_url_from_store_filename(target_store, target_path)
+    target_url = f"{target_location.rstrip('/')}/{target_path}"
     logging.info(f"target_url: {target_url}")
+    logging.info(f"geometry_id: '{geometry_id}'")
 
     if exists(target_store, target_path) and not overwrite:
             logging.info(f"Product already exists at {target_url}, skipping processing.")
@@ -448,7 +438,7 @@ def process_all_geometries_dask(
     )
 
     # Get paths for writing result JSONs
-    target_store = get_store_for_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location)
     # this path includes the filename (because geometry_id is provided to get_product_path)
     target_path = get_product_path(
         product_id,
@@ -456,13 +446,7 @@ def process_all_geometries_dask(
         datetime=datetime,
     )
 
-    # TODO: make this S3 prefix code a function.
-    if type(target_store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(target_location)
-        if prefix is not None:
-            target_path = f"{prefix}/{target_path}"
-    target_url = get_url_from_store_filename(target_store, target_path)
+    target_url = f"{target_store}/{target_path}"
     logging.info(f"target_url: {target_url}")
 
     # Load geometry data
@@ -480,8 +464,8 @@ def process_all_geometries_dask(
             path = get_product_path(
                 product_id,
                 variable_name,
-                datetime,
-                geometry_id,
+                datetime=datetime,
+                geometry_id=geometry_id,
             )
 
             # Dask does not natively parallelize async functions. We can wrap the process_geometry call in a sync function and use dask.delayed to parallelize it if needed.
@@ -514,11 +498,8 @@ def consolidate_product(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being consolidated (UUID)"
     ),
-    run_id: str = typer.Option(
-        ..., help="ID of the product run"
-    ),
     location: str = typer.Option(
-        "./cache/products/gmw-v4-eez/0-0-1", help="Location to read the product files from"
+        "./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id", help="Location to read the product files from"
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
@@ -535,26 +516,11 @@ def consolidate_product(
     ),
 ) -> None:
     logging.info(f"Consolidating product {product_id} from {location}")
-    logging.info(f"run_id {run_id}")
-
-    store = get_store_for_url(location)
-
-    # TODO: standardise target path logic with other functions
-    path = get_product_path(
-        product_id,
-        variable_name,
-        datetime
-    )
+    location = location.rstrip("/")
+    store = get_store_with_prefix_from_url(location)
+    path = get_product_path(product_id, variable_name, datetime=datetime)
     logging.info(f"path {path}")
-
-    # TODO: make this S3 prefix code a function.
-    if type(store) is S3Store:
-        # S3Store needs the full path including prefix
-        prefix = get_prefix(location)
-        if prefix is not None:
-            path = f"{prefix}/{path}"
-
-    url = get_url_from_store_filename(store, path)
+    url = f"{location}/{path}"
     logging.info(f"Looking for product files in {url}")
 
     # Get a list of all the json files in the product directory
@@ -608,5 +574,5 @@ def consolidate_product(
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
-    out_url = get_url_from_store_filename(store, output_file)
-    logging.info(f"Wrote consolidated product data to {out_url}")
+    target_url = f"{location}/{output_file}"
+    logging.info(f"Wrote consolidated product data to {target_url}")

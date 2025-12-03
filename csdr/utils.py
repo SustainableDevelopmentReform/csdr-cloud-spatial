@@ -9,7 +9,6 @@ from typing import Any, TypedDict, cast
 
 import boto3
 import requests
-import rustac
 from affine import Affine
 from geopandas import GeoDataFrame
 from odc.geo.geobox import GeoBox, GeoboxTiles
@@ -17,9 +16,10 @@ from odc.geo.geom import BoundingBox, Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
+from rustac import read
 from xarray import DataArray, Dataset
 
-from csdr.io import get_dataset_name_from_url, get_store_for_url
+from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
 
 class Event(TypedDict):
@@ -217,14 +217,14 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", str(e)
 
 
-def open_stacgeoparquet(path: str) -> ItemCollection:
+def open_stacgeoparquet(url: str) -> ItemCollection:
     """Opens a STAC GeoParquet file and returns an ItemCollection."""
 
-    store = get_store_for_url(path)
-    filepath = get_dataset_name_from_url(store, path)
+    path, file_name = split_path_and_file_name_from_url(url)
+    store = get_store_with_prefix_from_url(path, mkdir=False)
 
     async def _read_stac_items_async() -> ItemCollection:
-        return await rustac.read(filepath, store=store)
+        return await read(file_name, store=store)
     
     # Check if we're already in an event loop (e.g., Jupyter notebook)
     # Does Argo/Dask also have an event loop running?

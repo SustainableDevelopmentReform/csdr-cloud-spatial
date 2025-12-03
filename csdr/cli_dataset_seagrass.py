@@ -3,15 +3,13 @@ import asyncio
 import logging
 
 import typer
-from obstore.store import S3Store
 from rasterio import Env
 from rustac import write
 
 from csdr.io import (
     exists,
-    get_prefix,
     get_stac_item_dicts_from_store,
-    get_store_for_url,
+    get_store_with_prefix_from_url,
 )
 from csdr.utils import suppress_rust_output
 
@@ -21,22 +19,17 @@ seagrass_app = typer.Typer()
 async def run_index_dep_seagrass(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
-    store = get_store_for_url(source_location, region="us-west-2")
-    s3_prefix = get_prefix(source_location)
+    store = get_store_with_prefix_from_url(source_location, region="us-west-2")
 
-    dest = get_store_for_url(target_location)
-    out_filename = "dep_s2_seagrass.parquet"
-
-    # TODO: make this S3 prefix code a function.
-    if type(dest) is S3Store:
-        dest_s3_prefix = get_prefix(target_location)
-        if dest_s3_prefix is not None:
-            out_filename = f"{dest_s3_prefix}/{out_filename}"
-
+    target_store = get_store_with_prefix_from_url(target_location)
+    target_filename = "dep_s2_seagrass.parquet"
+    target_url = f"{target_location}/{target_filename}"
+    logging.info(f"Target URL for DEP Seagrass parquet: {target_url}")
+    
     # Check for existing geoparquet file
-    if exists(dest, out_filename) and not overwrite:
+    if exists(target_store, target_filename) and not overwrite:
         logging.info(
-            f"Parquet file already exists at {out_filename}, skipping indexing."
+            f"Parquet file already exists at {target_filename}, skipping indexing."
         )
         return
     else:
@@ -47,20 +40,15 @@ async def run_index_dep_seagrass(
 
     # Find all the the DEP Seagrass STAC files
     with Env(AWS_REGION="us-west-2"):
-        item_dicts = await get_stac_item_dicts_from_store(store, s3_prefix)
+        item_dicts = await get_stac_item_dicts_from_store(store)
 
     logging.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_location}/{out_filename}"
+        f"Writing {len(item_dicts)} STAC items to parquet at {target_url}"
     )
     with suppress_rust_output():
-        await write(out_filename, item_dicts, store=dest)
+        await write(target_filename, item_dicts, store=target_store)
 
-    logging.info("Parquet write completed.")
-
-    if target_location.startswith("s3://"):
-        logging.info(f"Finished writing to s3://{dest.config['bucket']}/{out_filename}")
-    else:
-        logging.info(f"Finished writing to {target_location}/{out_filename}")
+    logging.info(f"Finished writing parquet file to {target_url}")
 
 
 # Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.
