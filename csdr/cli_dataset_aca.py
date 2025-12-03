@@ -137,8 +137,8 @@ async def _run_index_aca(
         gdf = gpd.read_file(BytesIO(bytes_obj))
         dfs.append(gdf)
     if not dfs:
-        logging.warning("No GPKG files found, nothing to merge.")
-        return
+        logging.error("No GPKG files found, nothing to merge.")
+        raise ValueError("No GPKG files found to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
     with BytesIO() as f:
