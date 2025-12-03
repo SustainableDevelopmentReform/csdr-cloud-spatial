@@ -170,7 +170,7 @@ async def process_single_file(
         out_stac_url = f"{target_location}/{out_stac_name}"
 
         if exists(target_store, out_stac_name) and not overwrite:
-            logging.info(f"STAC doc already exists for {out_stac_url}, skipping.")
+            logging.info(f"STAC doc already exists for {out_stac_url}, skipping because overwrite is disabled.")
             return
         else:
             if overwrite:
