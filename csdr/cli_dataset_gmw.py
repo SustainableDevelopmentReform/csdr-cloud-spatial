@@ -6,12 +6,11 @@ import sys
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import urlparse
 from zipfile import ZipFile
 
 import typer
 import xarray as xr
-from obstore.store import HTTPStore, ObjectStore
+from obstore.store import ObjectStore
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
@@ -21,6 +20,7 @@ from csdr.io import (
     exists,
     get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
 )
 from csdr.utils import suppress_rust_output
 
@@ -38,21 +38,16 @@ async def cache_single_source(
     async with semaphore:
         logging.info(f"Caching GMW from {source_url} to {target_location}...")
 
-        url = urlparse(source_url)
-
-        source = HTTPStore(f"{url.scheme}://{url.netloc}")
+        source_path, source_file_name = split_path_and_file_name_from_url(source_url)
+        source_store = get_store_with_prefix_from_url(source_path)
 
         # Must check this file exists before proceeding
-        source_exists = exists(source, url.path)
-        if not source_exists:
+        if not exists(source_store, source_file_name):
             logging.error(f"Source file does not exist at {source_url}. Cannot extract.")
-            return
-        else:
-            logging.info(
-                f"Source file found at {source_url}, proceeding with extraction."
-            )
+            raise ValueError(f"Source file does not exist at {source_url}.")
+        logging.info(f"Source file found at {source_url}, proceeding with extraction.")
 
-        source_meta = source.head(url.path)
+        source_meta = source_store.head(source_file_name)
         size = source_meta.get("size", None)
 
         target_store = get_store_with_prefix_from_url(target_location)
@@ -77,10 +72,11 @@ async def cache_single_source(
             logging.info(
                 f"File {target_zip_name} does not exist at target location, downloading."
             )
-        _ = await target_store.put_async(target_zip_name, source.get(url.path))
+        source_data = await source_store.get_async(source_file_name)
+        _ = await target_store.put_async(target_zip_name, source_data)
         logging.info(f"File cached successfully, downloaded to {target_url}")
 
-        return f"{target_location}/{target_zip_name}"
+        return target_url
 
 
 async def run_cache_gmw(
@@ -106,13 +102,12 @@ async def run_cache_gmw(
         )
         for source_location in source_locations
     ]
-
     # Execute all tasks concurrently
     results = await asyncio.gather(*tasks)
 
     # Strip out nulls if source file was not found
     results = [file for file in results if file is not None]
-    # TODO: use write_json utility function?
+    # Write temporary file or print.
     if out_file is not None:
         with open(out_file, "w") as f:
             json.dump(results, f, indent=4)
@@ -175,7 +170,7 @@ async def process_single_file(
         out_stac_url = f"{target_location}/{out_stac_name}"
 
         if exists(target_store, out_stac_name) and not overwrite:
-            logging.info(f"STAC doc already exists for {out_stac_url}, skipping.")
+            logging.info(f"STAC doc already exists for {out_stac_url}, skipping because overwrite is disabled.")
             return
         else:
             if overwrite:
