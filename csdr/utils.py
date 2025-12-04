@@ -225,6 +225,10 @@ def open_stacgeoparquet(url: str) -> ItemCollection:
     store = get_store_with_prefix_from_url(path, mkdir=False)
 
     async def _read_stac_items_async() -> ItemCollection:
+        # Here an error occurs. RustacError: Json error: data type Binary not supported in nested map for json writer.
+        # This works locally. Locally is in the except RuntimeError code block below. Also in Argo it was in this block. What is then different?
+        # Also this has worked for the other products (gmw v4 and v3). What is the problemo here? Was ist das Problem?
+        # Check versions of obstore, rustac, pystac, odc-stac etc. in the Argo environment versus local.
         return await read(file_name, store=store)
     
     # Check if we're already in an event loop (e.g., Jupyter notebook)
@@ -236,9 +240,11 @@ def open_stacgeoparquet(url: str) -> ItemCollection:
 
         nest_asyncio.apply()
         item_dict = asyncio.run(_read_stac_items_async())
+        logging.info("Successfully read STAC GeoParquet WITHIN existing event loop.")
     except RuntimeError:
         # No event loop running, safe to use asyncio.run()
         item_dict = asyncio.run(_read_stac_items_async())
+        logging.info("Successfully read STAC GeoParquet WITHOUT existing event loop.")
 
     return ItemCollection.from_dict(item_dict)
 
