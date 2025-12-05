@@ -5,11 +5,9 @@ import pandas as pd
 import sedona.db
 from odc.geo.geom import Geometry
 
-from csdr.io import read_geospatial_file
 from csdr.provenance import read_provenance
 from csdr.utils import (
     check_for_any_intersection,
-    geoparquet_calculate_area,
     load_xarray_stacgeoparquet,
     open_stacgeoparquet,
     xarray_calculate_area,
@@ -60,19 +58,6 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
-def _get_area_from_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
-    # Load vector dataset from parquet
-    dataset_gdf = read_geospatial_file(dataset_url, **load_kwargs)
-    # Check for bbox intersection for each dataset item against geometry
-    any_intersection = check_for_any_intersection(geometry, dataset_gdf)
-    if not any_intersection:
-        logging.info("No spatial intersection between bounding boxes of geometry and dataset. Returning area 0.0.")
-        return 0.0
-    else:
-        logging.info("Spatial intersection found between bounding boxes of geometry and dataset. Proceeding with area calculation.")
-    total_area = geoparquet_calculate_area(dataset_gdf, geometry, variable=variable, value=value, datetime_string_match=datetime_string_match)
-    return total_area
-
 def _get_area_from_geoparquet_sedona(dataset_parquet_url: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
@@ -117,11 +102,6 @@ def _get_area_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
-        # geometry_wkt = (
-        #     # Nauru bbox roughly:
-        #     "POLYGON ((165.52158873158862 0.7565336916904357, 165.52158873158862 -2.2879479496098583, 168.5549585762643 -2.2879479496098583, 168.5549585762643 0.7565336916904357, 165.52158873158862 0.7565336916904357))"
-        # )
-        # return _get_area_from_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
         return _get_area_from_geoparquet_sedona(dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(

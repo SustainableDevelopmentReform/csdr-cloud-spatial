@@ -29,11 +29,6 @@ def sample_polygon() -> polygon:
 
 
 @pytest.fixture
-def sample_gdf_polygons() -> gdf.GeoDataFrame:
-    return gdf.GeoDataFrame.from_file(DATA_DIR / "many_geometries.geojson")
-
-
-@pytest.fixture
 def sample_stacgeoparquet() -> ItemCollection:
     return open_stacgeoparquet(str(GEOPARQUET_PATH))
 
