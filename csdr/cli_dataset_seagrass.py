@@ -52,7 +52,7 @@ async def run_index_dep_seagrass(
 
 
 # Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.
-@seagrass_app.command("index-dep")
+@seagrass_app.command("index")
 def index_dep_seagrass(
     source_location: str = typer.Option(
         ...,

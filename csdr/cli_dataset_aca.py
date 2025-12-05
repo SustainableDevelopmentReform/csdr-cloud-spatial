@@ -26,7 +26,7 @@ def _find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
     logging.info("Listing items in store recursively")
     regex = re.compile(pattern)
     for i, batch in enumerate(store.list(chunk_size=1000)):
-        logging.info(f"Batch number {i} of {len(batch)} files...")
+        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
         for item in batch:
             if regex.search(item["path"]):
                 list_of_matching_files.append(item["path"]) # Append the path string.
@@ -137,8 +137,8 @@ async def _run_index_aca(
         gdf = gpd.read_file(BytesIO(bytes_obj))
         dfs.append(gdf)
     if not dfs:
-        logging.warning("No GPKG files found, nothing to merge.")
-        return
+        logging.error("No GPKG files found, nothing to merge.")
+        raise ValueError("No GPKG files found to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
     with BytesIO() as f:
