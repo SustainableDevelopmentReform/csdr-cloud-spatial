@@ -1,8 +1,10 @@
 import logging
 from datetime import datetime
 
+import duckdb
 import pandas as pd
 import sedona.db
+from obstore.auth.boto3 import Boto3CredentialProvider
 from odc.geo.geom import Geometry
 
 from csdr.provenance import read_provenance
@@ -58,34 +60,87 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
-def _get_area_from_geoparquet_sedona(dataset_parquet_url: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
+# Duck DB needs some help with bbox intersection optimization compared to Sedona which does it out of the box.
+def _get_area_from_geoparquet_duckdb() -> float: # dataset_parquet_url: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:  
+    dataset_parquet_url = "./cache/datasets/aca/0-0-1/reefextent.parquet"
+    geometry_wkt = (
+        #   Nauru bbox roughly:
+        "POLYGON ((165.52158873158862 0.7565336916904357, 165.52158873158862 -2.2879479496098583, 168.5549585762643 -2.2879479496098583, 168.5549585762643 0.7565336916904357, 165.52158873158862 0.7565336916904357))"
+    )
+    import pdb; pdb.set_trace()
+    geometry = Geometry(geometry_wkt, crs="epsg:4326")
+    geometry_bbox = geometry.bbox
+    duckdb.install_extension("spatial")
+    duckdb.load_extension("spatial")
+    # TODO: Also pass credentials
+    # duckdb.sql("SET s3_region='ap-southeast-2';")
+    logging.info(Boto3CredentialProvider())
+    duckdb.sql("""
+        CREATE OR REPLACE SECRET secret (
+            TYPE s3,
+            PROVIDER config,
+            KEY_ID 'AKIAIOSFODNN7EXAMPLE',
+            SECRET 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            REGION 'ap-southeast-2'
+        );
+    """)
+    duckdb.read_parquet(dataset_parquet_url).to_view("dataset") # Fast
+    duckdb.read_parquet("s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet").to_view("dataset_remote") # Works but is extremely slow
+    # ST_READ( spatial_filter_box=geometry_bbox) # This already spatially filters the data by bbox but need to check if this predicate is pushed down.
+
+    # Need to help duckdb with bbox intersection optimization
+    target = duckdb.sql(f"""
+    SELECT * FROM dataset
+    WHERE
+        ST_Intersects(geometry, ST_GeomFromText('{geometry_wkt}')) AND
+        bbox.xmin <= -73.11 AND
+        bbox.ymin <= 44.03 AND
+        bbox.xmax >= -73.21 AND
+        bbox.ymax >= 43.97
+    """).df()
+    # ST_Intersection returns geometries that intersect.
+    return 99.99  # Placeholder value
+
+def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, dataset_parquet_url: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
-    # TODO: Move connection setup outside of this function for efficiency if called multiple times
-    sd = sedona.db.connect()
-
     # Local for development testing
-    sd.read_parquet(
-        dataset_parquet_url
-        # "./cache/datasets/aca/0-0-1/reefextent.parquet"
-        # TODO: Add AWS S3 connection options
-        # options={"aws.skip_signature": True, "aws.region": "ap-southeast-2"},
-    ).to_view("dataset")
+    import pdb; pdb.set_trace()
+    # url can be s3://, https://, or local.
+    try:
+        sd.read_parquet(
+            # dataset_parquet_url
+            # "s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet",
+            # "https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/datasets/aca/0-0-1/reefextent.parquet",
+            "https://files.auspatious.com/EEZ_land_union_v4_202410.parquet",
+            # "./cache/datasets/aca/0-0-1/reefextent.parquet"
+            # We can pass saws.access_key_id, aws.secret_access_key, aws.region, aws.endpoint, aws.skip_signature, aws.nosign, aws.bucket_name, aws.use_ssl, aws.force_path_style
+            options={"aws.skip_signature": True, "aws.region": "ap-southeast-2"}, # TODO: is region a env var we can use instead of hardcoding?
+        ).to_view("dataset2")
 
-    # Calculate area using Sedona SQL (area in square meters after reprojecting to EPSG:6933)
-    # TODO: Add filters for variable, value, and datetime_string_match
-    area_result = sd.sql(f"""
-    SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
-    FROM dataset
-    WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-    """).to_pandas()
-    val = area_result['total_area'][0]
-    if pd.isna(val):
-        return 0.0
-    return round(float(val), 2)
+        # Calculate area using Sedona SQL (area in square meters after reprojecting to EPSG:6933)
+        # TODO: Add filters for variable, value, and datetime_string_match
+        # This part takes a super long time to run when the data is in S3. Super fast when local.
+        # TODO: ST_Transform the geometry to 6933 before calculating area? Or does intersect handle that?
+        area_result = sd.sql(f"""
+        SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
+        FROM dataset2
+        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+        """).to_pandas()
+        area_result = sd.sql(f"""
+        SELECT * FROM dataset2 WHERE "UNION" = 'Algeria'
+        """).to_memtable()
+        val = area_result['total_area'][0]
+        if pd.isna(val):
+            return 0.0
+        return round(float(val), 2)
+    except Exception as e:
+        logging.error(f"Error in Sedona processing: {e}", exc_info=True)
+        raise
 
 
 def _get_area_from_dataset_geometry(
+    sd: sedona.db.SedonaContext,
     dataset_provenance_url: str,
     geometry: Geometry,
     variable: str,
@@ -102,7 +157,8 @@ def _get_area_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
-        return _get_area_from_geoparquet_sedona(dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        # return _get_area_from_geoparquet_duckdb()
+        return _get_area_from_geoparquet_sedona(sd, dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
@@ -119,6 +175,7 @@ def process_variables_for_geometry(
     load_kwargs: dict = {},
 ) -> dict[str, str | float]:
     results = {}
+    sd = sedona.db.connect()
     for var in variables:
         if var == "sum-area-by-value":
             # Explode multipolygon geometries to single polygons
@@ -130,6 +187,7 @@ def process_variables_for_geometry(
             start_time = datetime.now()
             for geom in geoms:
                 area = _get_area_from_dataset_geometry(
+                    sd,
                     dataset_provenance_url,
                     geom,
                     datetime_string_match=datetime_string_match,

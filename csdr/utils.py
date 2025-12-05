@@ -348,6 +348,8 @@ def get_geom_from_gdf(gdf: gpd.GeoDataFrame, geometry_id: str) -> Geometry:
     return Geometry(feature.geometry, crs=gdf.crs)
 
 
+# TODO: Check whether this could be made more performant by using sedona db. The dataset is a stac collection that was made from a STAC geoparquet file. We could load the stac geoparquet into sedona and use that for intersection testing.
+# This could be viable in S3 because the STAC-Geoparquet files are probably small enough.
 def check_for_any_intersection(geometry: Geometry, dataset: ItemCollection) -> bool:
     logging.info("Checking for intersection between geometry and STAC items...")
     # make geometry bbox
