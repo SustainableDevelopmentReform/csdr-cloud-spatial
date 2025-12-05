@@ -39,7 +39,7 @@ async def cache_single_source(
         logging.info(f"Caching GMW from {source_url} to {target_location}...")
 
         source_path, source_file_name = split_path_and_file_name_from_url(source_url)
-        source_store = get_store_with_prefix_from_url(source_path)
+        source_store = get_store_with_prefix_from_url(source_path, client_options={"timeout": "1 hour"}) # Only takes a couple of minutes.
 
         # Must check this file exists before proceeding
         if not exists(source_store, source_file_name):
@@ -60,7 +60,7 @@ async def cache_single_source(
                 logging.info(
                     f"File already exists at target location with matching size of {size}. Skipping download."
                 )
-                return f"{target_location}{target_zip_name}"
+                return target_url
             else:
                 logging.info(
                     f"File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
@@ -73,7 +73,7 @@ async def cache_single_source(
                 f"File {target_zip_name} does not exist at target location, downloading."
             )
         source_data = await source_store.get_async(source_file_name)
-        _ = await target_store.put_async(target_zip_name, source_data)
+        await target_store.put_async(target_zip_name, source_data)
         logging.info(f"File cached successfully, downloaded to {target_url}")
 
         return target_url

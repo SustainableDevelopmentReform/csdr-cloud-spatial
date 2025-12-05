@@ -8,14 +8,14 @@
 cache-gmw-v4-local:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v4/raw \
+		--target-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 cache-gmw-v4-s3:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
@@ -23,14 +23,14 @@ cache-gmw-v4-s3:
 # Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
 extract-gmw-v4-local:
 	csdr gmw extract \
-		--source-location=./cache/datasets/gmw-v4/raw \
+		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
 extract-gmw-v4-s3:
 	csdr gmw extract \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v4/raw \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
 		--overwrite
@@ -71,21 +71,31 @@ provenance-gmw-v4-s3-db:
 
 
 # Dataset GMW v3
-# https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip?download=1,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip?download=1
+# https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
 # One file/year
 cache-gmw-v3-local-single-file:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/raw \
+		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 # Many files/years
+# Not sure if we should use the Zenodo or Auspatious links.
+# https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
+# https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip
 cache-gmw-v3-local-multiple-files:
 	csdr gmw cache \
-		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/raw \
+		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
-		--overwrite
+		--no-overwrite
+
+cache-gmw-v3-s3-multiple-files:
+	csdr gmw cache \
+		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
+		--out-file=/tmp/cached_files.json \
+		--no-overwrite
 
 # Example output of cache: ["./cache/datasets/gmw-v3/raw/gmw_v3_1996_gtiff.zip","./cache/datasets/gmw-v3/raw/gmw_v3_2020_gtiff.zip"]
 # Example output of list-file-names: ["gmw_v3_1996_gtiff.zip", "gmw_v3_2020_gtiff.zip"]
@@ -94,7 +104,7 @@ cache-gmw-v3-local-multiple-files:
 # Local paths must be absolute for STAC hrefs to be correct!!
 extract-gmw-v3-local:
 	csdr gmw extract \
-		--source-location=./cache/datasets/gmw-v3/raw \
+		--source-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
 		--overwrite
@@ -102,7 +112,7 @@ extract-gmw-v3-local:
 
 extract-gmw-v3-s3:
 	csdr gmw extract \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v3/raw \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
 		--overwrite
