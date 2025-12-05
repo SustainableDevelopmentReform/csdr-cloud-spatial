@@ -39,6 +39,7 @@ dependencies = [
     "rio-stac",
     "rioxarray",
     "s3fs",
+    "apache-sedona[db]",
     "scipy",
     "shapely",
     "typer",
