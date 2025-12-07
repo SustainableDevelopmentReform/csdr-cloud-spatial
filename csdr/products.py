@@ -60,15 +60,12 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
-def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_location: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
+def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_location: str, geometry_wkt: str, variable: str | None = None, value: float | None = None, datetime_string_match: str | None = None) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
     # Local for development testing
     # import pdb; pdb.set_trace()
     # url can be s3://, https://, or local.
-
-    path, _file_name = split_path_and_file_name_from_url(parquets_location)
-    partition_path = f"{path}/partition"
 
     # TODO: Add filters for variable, value, and datetime_string_match
 
@@ -76,7 +73,7 @@ def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_locat
 
     start_time = datetime.now()
 
-    sd.read_parquet(partition_path, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
+    sd.read_parquet(parquets_location, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
 
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
     logging.info(f"Time taken to initialise: {total_seconds} seconds")
@@ -99,7 +96,7 @@ def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_locat
 
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
     logging.info(f"Time taken to calculate: {total_seconds} seconds")
-    return area_m2
+    return round(float(area_m2), 2)
 
 
 def _get_area_from_dataset_geometry(
@@ -120,7 +117,9 @@ def _get_area_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
-        return _get_area_from_geoparquet_sedona(sd, dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        path, _file_name = split_path_and_file_name_from_url(dataset_url)
+        partition_path = f"{path}/partition"
+        return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
