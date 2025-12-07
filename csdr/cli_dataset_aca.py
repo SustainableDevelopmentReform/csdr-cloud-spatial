@@ -6,6 +6,7 @@ from io import BytesIO
 from zipfile import ZipFile
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import typer
 from obstore.store import ObjectStore
@@ -13,6 +14,7 @@ from obstore.store import ObjectStore
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
 )
 
 aca_app = typer.Typer()
@@ -114,6 +116,34 @@ def extract_aca(
     logging.info("ACA extraction process completed.")
 
 
+# _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
+# _partition_parquet could be moved to utils if needed for other datasets too.
+def _partition_parquet(parquet_path: str = "cache/datasets/aca/0-0-1/reefextent.parquet", grid_size: int = 10) -> None:
+    path, file_name = split_path_and_file_name_from_url(parquet_path)
+    # Load your global GeoParquet file
+    gdf = gpd.read_parquet(parquet_path)
+
+    grid_size_split = grid_size + 1 # Number of edges is one more than number of intervals
+
+    # Define grid edges
+    lon_edges = np.linspace(-180, 180, grid_size_split)
+    lat_edges = np.linspace(-90, 90, grid_size_split)
+    # Get centroid coordinates
+    gdf['lon'] = gdf.geometry.centroid.x
+    gdf['lat'] = gdf.geometry.centroid.y
+
+    # Assign grid cell indices
+    gdf['lon_bin'] = pd.cut(gdf['lon'], lon_edges, labels=False, include_lowest=True)
+    gdf['lat_bin'] = pd.cut(gdf['lat'], lat_edges, labels=False, include_lowest=True)
+
+    # Create a partition label
+    gdf['partition'] = gdf['lon_bin'].astype(str) + "_" + gdf['lat_bin'].astype(str)
+
+    # Write each partition to a separate Parquet file
+    for partition, group in gdf.groupby('partition'):
+        group.drop(['lon', 'lat', 'lon_bin', 'lat_bin', 'partition'], axis=1).to_parquet(f"{path}/partition/{file_name}_{partition}.parquet")
+
+
 async def _run_index_aca(
     source_location: str,
     target_location: str,
@@ -146,6 +176,9 @@ async def _run_index_aca(
         f.seek(0)
         target_store.put(target_file_name, f.read())
     logging.info("Merge and export to GeoParquet completed.")
+    logging.info("Starting partitioning of the merged GeoParquet ...")
+    _partition_parquet(f"{target_location.rstrip('/')}/{target_file_name}", grid_size=10)
+    logging.info("Partitioning completed.")
 
 
 # ACA Index gets all of the nested reefextent.gpkg files (one per region folder), and merges them into a single reefextent.parquet file at target_location.

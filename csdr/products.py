@@ -6,6 +6,7 @@ import sedona.db
 from obstore.auth.boto3 import Boto3CredentialProvider
 from odc.geo.geom import Geometry
 
+from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
     check_for_any_intersection,
@@ -59,42 +60,46 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
-def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, dataset_parquet_url: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
+def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_location: str, geometry_wkt: str, variable: str, value: float, datetime_string_match: str | None = None) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
     # Local for development testing
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     # url can be s3://, https://, or local.
-    try:
-        sd.read_parquet(
-            # dataset_parquet_url
-            # "s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet",
-            # "https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/datasets/aca/0-0-1/reefextent.parquet",
-            "https://files.auspatious.com/EEZ_land_union_v4_202410.parquet",
-            # "./cache/datasets/aca/0-0-1/reefextent.parquet"
-            # We can pass saws.access_key_id, aws.secret_access_key, aws.region, aws.endpoint, aws.skip_signature, aws.nosign, aws.bucket_name, aws.use_ssl, aws.force_path_style
-            options={"aws.skip_signature": True, "aws.region": "ap-southeast-2"}, # TODO: is region a env var we can use instead of hardcoding?
-        ).to_view("dataset2")
 
-        # Calculate area using Sedona SQL (area in square meters after reprojecting to EPSG:6933)
-        # TODO: Add filters for variable, value, and datetime_string_match
-        # This part takes a super long time to run when the data is in S3. Super fast when local.
-        # TODO: ST_Transform the geometry to 6933 before calculating area? Or does intersect handle that?
-        area_result = sd.sql(f"""
+    path, _file_name = split_path_and_file_name_from_url(parquets_location)
+    partition_path = f"{path}/partition"
+
+    # TODO: Add filters for variable, value, and datetime_string_match
+
+    region = "ap-southeast-2"
+
+    start_time = datetime.now()
+
+    sd.read_parquet(partition_path, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
+
+    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+    logging.info(f"Time taken to initialise: {total_seconds} seconds")
+
+    start_time = datetime.now()
+    area_result = sd.sql(
+        f"""
         SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
-        FROM dataset2
+        FROM reef
         WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-        """).to_pandas()
-        area_result = sd.sql(f"""
-        SELECT * FROM dataset2 WHERE "UNION" = 'Algeria'
-        """).to_memtable()
-        val = area_result['total_area'][0]
-        if pd.isna(val):
-            return 0.0
-        return round(float(val), 2)
-    except Exception as e:
-        logging.error(f"Error in Sedona processing: {e}", exc_info=True)
-        raise
+        """
+    ).to_pandas()
+
+    area_m2 = area_result['total_area'][0]
+    if pd.isna(area_m2):
+        logging.info("No intersected reef geometries found.")
+        return 0.0
+    else:
+        logging.info(f"Total intersected area: {area_m2:.2f} m^2")
+
+    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+    logging.info(f"Time taken to calculate: {total_seconds} seconds")
+    return area_m2
 
 
 def _get_area_from_dataset_geometry(
