@@ -17,7 +17,6 @@ dependencies = [
     "click",
     "dask",
     "distributed",
-    "duckdb",
     "dvc",
     "dvc-s3",
     "fiona",
