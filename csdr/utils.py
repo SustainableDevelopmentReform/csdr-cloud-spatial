@@ -9,7 +9,6 @@ from typing import Any, TypedDict, cast
 
 import boto3
 import geopandas as gpd
-import requests
 import rioxarray  # DO NOT REMOVE: Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
 from affine import Affine
 from odc.geo.geobox import GeoBox, GeoboxTiles
@@ -18,6 +17,8 @@ from odc.geo.xr import mask
 from odc.stac import load
 from pystac import ItemCollection
 from rustac import read
+import rustac
+import obstore
 from xarray import DataArray, Dataset
 
 from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
@@ -213,11 +214,15 @@ def open_stacgeoparquet(url: str) -> ItemCollection:
         # Here an error occurs. RustacError: Json error: data type Binary not supported in nested map for json writer.
         # This works locally. Locally is in the except RuntimeError code block below. Also in Argo it was in this block. What is then different?
         # Also this has worked for the other products (gmw v4 and v3). What is the problemo here? Was ist das Problem?
-        # Check versions of obstore, rustac, pystac, odc-stac etc. in the Argo environment versus local.
+        # Check versions of rustac in the Argo environment versus local.
         return await read(file_name, store=store)
     
+    # Log the rustac version
+    logging.info(f"Using rustac version: {rustac.version()}")
+    logging.info(f"Using rustac version: {obstore.__version__}")
+    
     # Check if we're already in an event loop (e.g., Jupyter notebook)
-    # Does Argo/Dask also have an event loop running?
+    # Locally and in Argo/Dask we are not in an event loop, so we can use asyncio.run() directly.
     try:
         asyncio.get_running_loop()
         # If we're in an event loop, we need to use nest_asyncio
@@ -228,6 +233,8 @@ def open_stacgeoparquet(url: str) -> ItemCollection:
         logging.info("Successfully read STAC GeoParquet WITHIN existing event loop.")
     except RuntimeError:
         # No event loop running, safe to use asyncio.run()
+        # This is what runs locally when running locally.
+        # This is also what runs in Argo.
         item_dict = asyncio.run(_read_stac_items_async())
         logging.info("Successfully read STAC GeoParquet WITHOUT existing event loop.")
 

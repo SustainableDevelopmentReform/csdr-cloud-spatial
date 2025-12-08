@@ -509,6 +509,8 @@ product-seagrass-eez-list-geometries-local:
 # We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
 # Seagrass: STAC-Parquet is 4326, but STAC items are 3832.
 # EEZ is 4326.
+# TODO: Test for error that occurs in Argo.
+# This works locally.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -521,6 +523,23 @@ product-seagrass-eez-process-geometry-local:
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
+		--overwrite
+
+# This works too. Error must be something to do with Argo environment.
+# The read error in Argo is strange because it is reading the exact same file.
+# d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan
+product-seagrass-eez-process-geometry-read-s3-write-local:
+	csdr products process-geometry \
+		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+		--run-id=test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
+		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
+		--variable-name=seagrass \
+		--variable-value=1 \
+		--datetime-string-match="2017" \
+		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--geometry-id=d74a98d8-0679-5f6e-aa03-74ba02b41718 \
 		--overwrite
 
 # We need to call this for 2017-2024 to process all seagrass data
