@@ -81,6 +81,7 @@ def _get_area_from_geoparquet_sedona(
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     sd.read_parquet(parquets_location, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
 
+    # TODO: Remove timing logs later
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
     logging.info(f"Time taken to initialise: {total_seconds} seconds")
 
@@ -100,6 +101,7 @@ def _get_area_from_geoparquet_sedona(
     else:
         logging.info(f"Total intersected area: {area_m2:.2f} m^2")
 
+    # TODO: Remove timing logs later
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
     logging.info(f"Time taken to calculate: {total_seconds} seconds")
     return round(float(area_m2), 2)
@@ -165,6 +167,7 @@ def process_variables_for_geometry(
                 total_area += area
             results["sum-area-by-value"] = total_area
             logging.info(f"Total area by value: {total_area}")
+            # TODO: Remove timing logs later
             total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
             logging.info(f"Total time taken: {total_seconds} seconds")
         else:
