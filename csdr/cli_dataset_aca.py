@@ -100,11 +100,12 @@ def extract_aca(
 
 # _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
 # _partition_parquet could be moved to utils if needed for other datasets too.
-def _partition_parquet(target_store: ObjectStore, gdf: gpd.GeoDataFrame, grid_size: int = 10, overwrite: bool = True) -> None:
+def _partition_parquet(target_store: ObjectStore, gdf: gpd.GeoDataFrame, grid_chunks: int = 10, overwrite: bool = True) -> None:
 
-    # Default size is 20 x 10 grid cells. Large countries will be many partitions, medium and small countries hopefully fit into 1 or 2.
-    grid_size_lon = grid_size * 2 + 1 # Number of edges is one more than number of intervals
-    grid_size_lat = grid_size + 1 # Number of edges is one more than number of intervals
+    # Default size is 20 x 10 grid cells of 18 x 18 degrees. Large countries will be spread over many partitions, medium and small countries hopefully fit into 1 or 2.
+    # Number of edges is one more than number of intervals
+    grid_size_lon = grid_chunks * 2 + 1 # Default is 20 longitude cells each 360 / 20 = 18 degrees wide
+    grid_size_lat = grid_chunks + 1 # Default is 10 latitude cells each 180 / 10 = 18 degrees high
 
     # Define grid edges
     lon_edges = np.linspace(-180, 180, grid_size_lon)
