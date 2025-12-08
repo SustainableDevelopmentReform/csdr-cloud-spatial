@@ -3,7 +3,6 @@ from datetime import datetime
 
 import pandas as pd
 import sedona.db
-from obstore.auth.boto3 import Boto3CredentialProvider
 from odc.geo.geom import Geometry
 
 from csdr.io import split_path_and_file_name_from_url
@@ -60,7 +59,13 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
-def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_location: str, geometry_wkt: str, variable: str | None = None, value: float | None = None, datetime_string_match: str | None = None) -> float:
+def _get_area_from_geoparquet_sedona(
+        sd: sedona.db.context.SedonaContext,
+        parquets_location: str,
+        geometry_wkt: str, variable: str | None = None,
+        value: float | None = None,
+        datetime_string_match: str | None = None
+    ) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
     # Local for development testing
@@ -73,6 +78,7 @@ def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_locat
 
     start_time = datetime.now()
 
+    # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     sd.read_parquet(parquets_location, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
 
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
@@ -100,7 +106,7 @@ def _get_area_from_geoparquet_sedona(sd: sedona.db.SedonaContext, parquets_locat
 
 
 def _get_area_from_dataset_geometry(
-    sd: sedona.db.SedonaContext,
+    sd: sedona.db.context.SedonaContext,
     dataset_provenance_url: str,
     geometry: Geometry,
     variable: str,

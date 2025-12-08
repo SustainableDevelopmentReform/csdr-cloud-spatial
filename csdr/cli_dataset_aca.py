@@ -14,7 +14,7 @@ from obstore.store import ObjectStore
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
-    split_path_and_file_name_from_url,
+    write_gdf_to_parquet,
 )
 
 aca_app = typer.Typer()
@@ -118,16 +118,15 @@ def extract_aca(
 
 # _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
 # _partition_parquet could be moved to utils if needed for other datasets too.
-def _partition_parquet(parquet_path: str = "cache/datasets/aca/0-0-1/reefextent.parquet", grid_size: int = 10) -> None:
-    path, file_name = split_path_and_file_name_from_url(parquet_path)
-    # Load your global GeoParquet file
-    gdf = gpd.read_parquet(parquet_path)
+def _partition_parquet(target_store: ObjectStore, gdf: gpd.GeoDataFrame, grid_size: int = 10, overwrite: bool = True) -> None:
 
-    grid_size_split = grid_size + 1 # Number of edges is one more than number of intervals
+    # Default size is 20 x 10 grid cells. Large countries will be many partitions, medium and small countries hopefully fit into 1 or 2.
+    grid_size_lon = grid_size * 2 + 1 # Number of edges is one more than number of intervals
+    grid_size_lat = grid_size + 1 # Number of edges is one more than number of intervals
 
     # Define grid edges
-    lon_edges = np.linspace(-180, 180, grid_size_split)
-    lat_edges = np.linspace(-90, 90, grid_size_split)
+    lon_edges = np.linspace(-180, 180, grid_size_lon)
+    lat_edges = np.linspace(-90, 90, grid_size_lat)
     # Get centroid coordinates
     gdf['lon'] = gdf.geometry.centroid.x
     gdf['lat'] = gdf.geometry.centroid.y
@@ -139,9 +138,30 @@ def _partition_parquet(parquet_path: str = "cache/datasets/aca/0-0-1/reefextent.
     # Create a partition label
     gdf['partition'] = gdf['lon_bin'].astype(str) + "_" + gdf['lat_bin'].astype(str)
 
+    # Delete all files in partition/ folder first if overwrite is on. Otherwise if partition settings are changed, reading the data will be broken due to duplication in different partition structures.
+    if overwrite:
+        logging.info("Overwrite is on, deleting existing partition files ...")
+        # TODO: Could use _find_matching_files here instead with pattern r"partition/.*\.parquet$"
+        for batch in target_store.list(prefix="partition/", chunk_size=1000):
+            print("Deleting all partition files...")
+            for file_info in batch:
+                file_path = file_info["path"]
+                print(f"Deleting file {file_path}...")
+                target_store.delete(f"{file_path}")
+        logging.info("Deleted all partitioned Parquet files ...")
+    else:
+        logging.info("Overwrite is off, existing partition files will be preserved ...")
+
     # Write each partition to a separate Parquet file
     for partition, group in gdf.groupby('partition'):
-        group.drop(['lon', 'lat', 'lon_bin', 'lat_bin', 'partition'], axis=1).to_parquet(f"{path}/partition/{file_name}_{partition}.parquet")
+        file_name = f"partition/reefextent_{partition}.parquet"
+        file_exists = exists(target_store, file_name)
+        if (file_exists and overwrite) or not file_exists:
+            # Remove columns, then write partitioned file
+            gdf_partition = group.drop(['lon', 'lat', 'lon_bin', 'lat_bin', 'partition'], axis=1)
+            write_gdf_to_parquet(gdf_partition, target_store, file_name)
+        else:
+            logging.info(f"Skipping partition {partition}, already exists and overwrite is off.")
 
 
 async def _run_index_aca(
@@ -177,7 +197,7 @@ async def _run_index_aca(
         target_store.put(target_file_name, f.read())
     logging.info("Merge and export to GeoParquet completed.")
     logging.info("Starting partitioning of the merged GeoParquet ...")
-    _partition_parquet(f"{target_location.rstrip('/')}/{target_file_name}", grid_size=10)
+    _partition_parquet(target_store, merged_gdf, grid_size=10, overwrite=overwrite)
     logging.info("Partitioning completed.")
 
 

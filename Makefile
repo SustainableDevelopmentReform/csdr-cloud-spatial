@@ -200,6 +200,12 @@ dataset-aca-index-local:
 		--target-location=./cache/datasets/aca/0-0-1 \
 		--overwrite
 
+dataset-aca-index-s3:
+	csdr aca index \
+		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
+		--overwrite
+
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
 		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
