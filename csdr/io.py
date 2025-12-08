@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -131,6 +132,24 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
                 raise
 
 
+def find_matching_files(store: ObjectStore, pattern: str, prefix: str | None = None) -> list[str]:
+    """
+    Finds files in the store with a given glob pattern (recursively).
+    """
+    list_of_matching_files = []
+    logging.info("Listing items in store recursively")
+    regex = re.compile(pattern)
+    for i, batch in enumerate(store.list(prefix=prefix, chunk_size=1000)):
+        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
+        for item in batch:
+            if regex.search(item["path"]):
+                list_of_matching_files.append(item["path"]) # Append the path string.
+
+    logging.info(f"Found {len(list_of_matching_files)} matching items.")
+
+    return list_of_matching_files
+
+
 async def get_stac_item_dicts_from_store(
     store: ObjectStore
 ) -> list[dict[str, Any]]:
@@ -138,7 +157,7 @@ async def get_stac_item_dicts_from_store(
 
     logging.info("Listing STAC items in store recursively")
 
-    # TODO: There is a function find_matching_files in cli_dataset_aca.py that could be moved here and used instead of this part of get_stac_item_dicts_from_store.
+    # TODO: There is a function io.find_matching_files that could be used instead of this part of get_stac_item_dicts_from_store.
     for i, batch in enumerate(store.list(chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
         logging.info(f"Batch number {i + 1} of {len(batch)} files...")
         for stac_file in batch:

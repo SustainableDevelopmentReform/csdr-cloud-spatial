@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import re
 from io import BytesIO
 from zipfile import ZipFile
 
@@ -13,29 +12,12 @@ from obstore.store import ObjectStore
 
 from csdr.io import (
     exists,
+    find_matching_files,
     get_store_with_prefix_from_url,
     write_gdf_to_parquet,
 )
 
 aca_app = typer.Typer()
-
-
-def _find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
-    """
-    Finds files in the store with a given glob pattern (recursively).
-    """
-    list_of_matching_files = []
-    logging.info("Listing items in store recursively")
-    regex = re.compile(pattern)
-    for i, batch in enumerate(store.list(chunk_size=1000)):
-        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
-        for item in batch:
-            if regex.search(item["path"]):
-                list_of_matching_files.append(item["path"]) # Append the path string.
-
-    logging.info(f"Found {len(list_of_matching_files)} matching items.")
-
-    return list_of_matching_files
 
 
 async def _unzip_single_zip(
@@ -77,7 +59,7 @@ async def _run_extract_aca(
     # TODO: We could make this much more efficient by somehow just getting the reefextent.gpkg because the whole of Northern Caribbean data is 11.84 GB (unzipped) but the reefextent.gpkg is only 38 MB.
     source_store = get_store_with_prefix_from_url(source_location, client_options={"timeout":"2 hours"}) # timeout is increased because we need to download large files
     target_store = get_store_with_prefix_from_url(target_location)
-    all_zip_file_paths = _find_matching_files(source_store, r"\.zip$") # Match all .zip files
+    all_zip_file_paths = find_matching_files(source_store, r"\.zip$") # Match all .zip files
     logging.info(f"Found {len(all_zip_file_paths)} zip files to extract from {source_location}. Unzipping...")
 
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -141,13 +123,11 @@ def _partition_parquet(target_store: ObjectStore, gdf: gpd.GeoDataFrame, grid_si
     # Delete all files in partition/ folder first if overwrite is on. Otherwise if partition settings are changed, reading the data will be broken due to duplication in different partition structures.
     if overwrite:
         logging.info("Overwrite is on, deleting existing partition files ...")
-        # TODO: Could use _find_matching_files here instead with pattern r"partition/.*\.parquet$"
-        for batch in target_store.list(prefix="partition/", chunk_size=1000):
-            print("Deleting all partition files...")
-            for file_info in batch:
-                file_path = file_info["path"]
-                print(f"Deleting file {file_path}...")
-                target_store.delete(f"{file_path}")
+        partition_files = find_matching_files(target_store, prefix="partition/", pattern=r"\.parquet$")
+        print(f"Deleting {len(partition_files)} partition files...")
+        for file in partition_files:
+            print(f"Deleting file {file}...")
+            target_store.delete(f"{file}")
         logging.info("Deleted all partitioned Parquet files ...")
     else:
         logging.info("Overwrite is off, existing partition files will be preserved ...")
@@ -176,7 +156,7 @@ async def _run_index_aca(
         return
     source_store = get_store_with_prefix_from_url(source_location)
     logging.info(f"Searching for all reefextent.gpkg under {source_location} ...")
-    gpkg_paths = _find_matching_files(source_store, "reefextent.gpkg")
+    gpkg_paths = find_matching_files(source_store, "reefextent.gpkg")
     logging.info(f"Found {len(gpkg_paths)} reefextent.gpkg files to merge into {target_file_name}")
     dfs = []
     for path in gpkg_paths:

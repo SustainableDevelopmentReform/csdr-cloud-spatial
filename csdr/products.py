@@ -124,7 +124,7 @@ def _get_area_from_dataset_geometry(
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
         path, _file_name = split_path_and_file_name_from_url(dataset_url)
-        partition_path = f"{path}/partition"
+        partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
         return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(

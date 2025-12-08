@@ -589,7 +589,7 @@ product-aca-eez-process-geometry-s3:
 		--run-id=test-aca-eez-run-id \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1/runs/test-aca-eez-run-id \
+		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
 		--datetime=2022 \

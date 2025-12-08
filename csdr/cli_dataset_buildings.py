@@ -10,28 +10,11 @@ from obstore.store import ObjectStore
 
 from csdr.io import (
     exists,
+    find_matching_files,
     get_store_with_prefix_from_url,
 )
 
 buildings_app = typer.Typer()
-
-
-def _find_matching_files(store: ObjectStore, pattern: str) -> list[str]:
-    """
-    Finds files in the store with a given glob pattern (recursively).
-    """
-    list_of_matching_files = []
-    logging.info("Listing items in store recursively")
-    regex = re.compile(pattern)
-    for i, batch in enumerate(store.list(chunk_size=1000)):
-        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
-        for item in batch:
-            if regex.search(item["path"]):
-                list_of_matching_files.append(item["path"]) # Append a the path string.
-
-    logging.info(f"Found {len(list_of_matching_files)} matching items.")
-
-    return list_of_matching_files
 
 
 async def _download_parquet_file(source_location: str, country_iso: str, target_store: ObjectStore, overwrite: bool, semaphore: asyncio.Semaphore) -> None:
@@ -125,7 +108,7 @@ async def _run_index_buildings(
         return
     source_store = get_store_with_prefix_from_url(source_location)
     logging.info(f"Searching for all parquet files under {source_location} ...")
-    parquet_paths = _find_matching_files(source_store, r"\.parquet$")
+    parquet_paths = find_matching_files(source_store, r"\.parquet$")
     logging.info(f"Found {len(parquet_paths)} parquet files to merge into {target_file_name}")
     dfs = []
     for path in parquet_paths:
