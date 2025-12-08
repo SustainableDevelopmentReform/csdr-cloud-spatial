@@ -148,21 +148,6 @@ def execute(year: int, tile: tuple[int, int] | None = None) -> str:
     return job_id
 
 
-def download_file(url: str, local_path: str) -> None:
-    """Downloads a file from a URL to a local path."""
-    logging.info(f"Downloading data from {url}...")
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise exception for bad status codes
-        with open(local_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        logging.info(f"Successfully downloaded to {local_path}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error downloading {url}: {e}", exc_info=True)
-        raise
-
-
 def unzip_file(zip_path: str, extract_dir: str) -> None:
     """Unzips a file to a specified directory."""
     logging.info(f"Unzipping {zip_path} to {extract_dir}")
