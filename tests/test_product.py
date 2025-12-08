@@ -1,9 +1,10 @@
+import geopandas as gpd
 from odc.geo.geom import polygon
 from pystac import ItemCollection
-import geopandas as gpd
+import sedona.db
 
+from csdr.products import _get_area_from_geoparquet_sedona
 from csdr.utils import (
-    geoparquet_calculate_area,
     load_xarray_stacgeoparquet,
     xarray_calculate_area,
 )
@@ -38,14 +39,20 @@ def test_intersection_raster(
     # In QGIS I got: 19832115.15. I am happy with this difference of 0.0091%. This could be due to different reprojection methods.
 
 
-def test_intersection_vector(
-    sample_polygon: polygon, sample_gdf_polygons: gpd.GeoDataFrame
-) -> None:
-    # sample_polygon is in EPSG:4326.
-    # sample_gdf_polygons is also EPSG:4326.
-    # These will both be reprojected to EPSG:6933 for area calculation.
-    assert sample_polygon is not None
-    assert sample_gdf_polygons is not None
+def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:
+    sd = sedona.db.connect() 
+    dataset_parquet_url = "tests/data/gmw/gmw.parquet"
 
-    area = geoparquet_calculate_area(sample_gdf_polygons, sample_polygon) # Can add variable, value, and/or datetime_string_match if needed.
-    assert area == 96286273.39 # I have validated this in QGIS.
+    # variable = ""
+    # value = ""
+    # datetime_string_match = ""
+    area = _get_area_from_geoparquet_sedona(
+        sd,
+        dataset_parquet_url,
+        sample_polygon.wkt,
+        # TODO: Test these params once implemented
+        # variable,
+        # value,
+        # datetime_string_match,
+    )
+    assert area == 12308463893.98

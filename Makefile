@@ -200,6 +200,12 @@ dataset-aca-index-local:
 		--target-location=./cache/datasets/aca/0-0-1 \
 		--overwrite
 
+dataset-aca-index-s3:
+	csdr aca index \
+		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
+		--overwrite
+
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
 		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
@@ -553,7 +559,7 @@ product-seagrass-eez-provenance-local-db:
 
 
 # Product ACA Reef Extent by EEZ
-product-aca-reef-extent-eez-list-geometries-local:
+product-aca-eez-list-geometries-local:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries_list.json
@@ -563,29 +569,42 @@ product-aca-reef-extent-eez-list-geometries-local:
 # geometry: Nauru: 1d7022dd-e6de-50b5-bee5-687df14be0a2 - has reef areas
 # geometry: South Sudan: b1b00b2e-2739-5215-a18c-eb72c5798034 - does not have reef areas
  # There is only one year of data. We need to pass datetime anyway so the folder structure is the same as other products.
-product-aca-reef-extent-eez-process-geometry-local:
+product-aca-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--run-id=test-product-reef-extent-eez-run-id \
+		--run-id=test-aca-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
+		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
 		--datetime=2022 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
-# 		--load-kwargs="resolution=100,crs=epsg:3832" \
+
+# 6fb63148-8709-5ad7-a76c-c6599d34befb Japan.
+product-aca-eez-process-geometry-s3:
+	csdr products process-geometry \
+		--product-id=5926571e-a088-419d-a966-24557866ce90 \
+		--run-id=test-aca-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
+		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
+		--variable-name=class \
+		--variable-value=Reef \
+		--datetime=2022 \
+		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
+		--overwrite
 
 # Just one year of data.
  # There is only one year of data. We need to pass datetime anyway so the folder structure is the same as other products.
-product-aca-reef-extent-eez-process-all-geometries-dask-local:
+product-aca-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--run-id=test-product-reef-extent-eez-run-id \
+		--run-id=test-aca-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
+		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
 		--datetime=2022 \
@@ -593,28 +612,29 @@ product-aca-reef-extent-eez-process-all-geometries-dask-local:
 		--use-dask \
 		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
 
-product-aca-reef-extent-eez-consolidate-local:
+product-aca-eez-consolidate-local:
 	csdr products consolidate \
 			--product-id=5926571e-a088-419d-a966-24557866ce90 \
-			--location=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id \
+			--location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 			--variable-name=class
 # 'class' isn't the best variable-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
 
-product-aca-reef-extent-eez-provenance-local-db:
+product-aca-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--product-url=./cache/products/aca-reef-extent-eez/0-0-1/runs/test-product-reef-extent-eez-run-id/class/5926571e-a088-419d-a966-24557866ce90.parquet \
-		--run-id=test-product-reef-extent-eez-run-id \
+		--product-url=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id/class/5926571e-a088-419d-a966-24557866ce90.parquet \
+		--run-id=test-aca-eez-run-id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite
 
 
-# Product buildings by EEZ? Does this make sense? I don't think so. We could do count of buildings near another dataset i.e. mangroves, per EEZ. This is not a normal dataset as we use them so far.
-# product-aca-reef-extent-eez-process-geometry-local:
+# Product buildings by EEZ
+# Count how many buildings per EEZ.
+# product-buildings-eez-process-geometry-local:
 # 	csdr products process-geometry \
 
 

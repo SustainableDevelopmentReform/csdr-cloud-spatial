@@ -6,6 +6,7 @@ from typing import Any
 
 import dateutil
 import pandas as pd
+import sedona.db
 import typer
 from dask.distributed import Client
 from obstore.store import HTTPStore, LocalStore, S3Store
@@ -330,9 +331,22 @@ def process_geometry(
 
     logging.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
-    # Load geometry data
-    gdf, _ = _load_geometry_data(geometry_provenance_url) # GeoDataFrame
-    geometry = get_geom_from_gdf(gdf, geometry_id) # ODC Geometry object. This is just one geometry.
+    # Load geometry data using Sedona so filtering is done before loading into memory
+    # TODO: Make this a function get_geometry_parquet_sedona
+    sd = sedona.db.connect()
+    provenance = read_provenance(geometry_provenance_url)
+    geometry_file_url = provenance.get("dataUrl")
+    aws_region = "ap-southeast-2"  # TODO: Get this from env
+    sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
+    geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
+    if len(geometry) == 0:
+        logging.error(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
+        raise typer.Exit(code=1)
+    if len(geometry) > 1:
+        logging.error(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
+        raise typer.Exit(code=1)
+    geometry = geometry.iloc[0]
+    geometry = Geometry(geometry.geometry, crs=f"EPSG:{geometry.crs}") # ODC Geometry object. This is just one geometry.
 
     # Set up Dask client
     client = _setup_dask_client(use_dask, dask_client_opts)
