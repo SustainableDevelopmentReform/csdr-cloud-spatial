@@ -64,6 +64,7 @@ def write_json(
 def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> ObjectStore:
+    url = url.rstrip("/").lower() # Handle uppercase letters or trailing slash
     if url.startswith("s3://"):
         return from_url(url, credential_provider=Boto3CredentialProvider(), **kwargs) # S3 doesn't support mkdir
     elif url.startswith("http://") or url.startswith("https://"):
