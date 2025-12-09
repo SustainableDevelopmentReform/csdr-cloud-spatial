@@ -204,9 +204,11 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
             PROVIDER config,
             KEY_ID ?,
             SECRET ?,
-            REGION 'ap-southeast-2'
+            REGION 'ap-southeast-2',
+            ENDPOINT 's3.ap-southeast-2.amazonaws.com',
+            SESSION_TOKEN ?
         );
-    """, params=[creds.access_key, creds.secret_key])
+    """, params=[creds.access_key, creds.secret_key, creds.token])
 
     geometry_geojson = geometry.geojson()["geometry"]
     if datetime_string_match is not None:
