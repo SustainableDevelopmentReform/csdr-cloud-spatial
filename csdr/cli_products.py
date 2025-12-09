@@ -336,7 +336,7 @@ def process_geometry(
     sd = sedona.db.connect()
     provenance = read_provenance(geometry_provenance_url)
     geometry_file_url = provenance.get("dataUrl")
-    aws_region = "ap-southeast-2"  # TODO: Get this from env
+    aws_region = "ap-southeast-2"  # TODO: Get this from env/config.
     sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
     geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
     if len(geometry) == 0:

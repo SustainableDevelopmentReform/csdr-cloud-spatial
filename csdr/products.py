@@ -13,16 +13,14 @@ from csdr.utils import (
     xarray_calculate_area,
 )
 
+
 # The _get_area_from_stac_geoparquet function does the following:
 # 1. Loads a STAC-Geoparquet using rustac (filtered by geometry and datetime if provided).
 # 2. If no items found, return 0.0 area immediately.
 # 3. If items found, loads the xarray dataset from the STAC items.
 # 4. Calculates the area where the specified variable equals the given value within the geometry.
-
-# Idea: In open_stacgeoparquet we could use rustac.DuckdbClient to filter the STAC items by bbox first?
-# If using search_to_arrow we need to install rustac[arrow] too. Let's do this to avoid the json error.
-# Then we probably don't need to check for intersection again so check_for_any_intersection can be removed. Use search.bbox or search.intersects and search.datetime. filter or query can be used for the variable/value filter.
 def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
+    """ Calculate the area of the dataset within the given geometry. """
     # Get the STAC items filtered by geometry and datetime
     items = search_stacgeoparquet(dataset_url, geometry, datetime_string_match)
     logging.info(f"Dataset has {len(items)} STAC items that intersect with the given geometry and match the datetime filter.")

@@ -1,8 +1,7 @@
 import logging
 import subprocess
 import uuid
-import zipfile
-from collections.abc import Generator, Iterable
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, TypedDict, cast
@@ -227,8 +226,8 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
-    # bbox: Iterable[float] | None = None, # TODO: Remove.
-    # geom: Geometry | None = None, # TODO: Remove.
+    # bbox: Iterable[float] | None = None,
+    # geom: Geometry | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
     # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
