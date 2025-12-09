@@ -189,11 +189,14 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 # What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely. Might not work with s3 auth.
 def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_match: str | None = None) -> pystac.ItemCollection:
     # Use rusctac.search instead of rustac.read so that we can filter by bbox and datetime before loading anything.
-    client = rustac.DuckdbClient(extensions=["aws"])
+    # client = rustac.DuckdbClient(extensions=["aws"], install_extensions=True, )
+    client = rustac.DuckdbClient()
     # Handle AWS S3 authentication
     session = boto3.Session()
     credentials = session.get_credentials()
     creds = credentials.get_frozen_credentials()
+    client.execute("INSTALL aws;")
+    client.execute("LOAD aws;")
     # TODO: Don't hardcode the region. Get it from boto3 session or environment.
     client.execute("""
         CREATE OR REPLACE SECRET secret (
