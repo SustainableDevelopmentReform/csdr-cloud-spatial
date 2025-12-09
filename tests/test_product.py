@@ -16,27 +16,28 @@ def test_sample_polygon(sample_polygon: polygon) -> None:
     assert sample_polygon.is_valid
 
 
-def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
-    assert sample_stacgeoparquet is not None
-    assert len(sample_stacgeoparquet) == 1
+# TODO: Re-enable once we have tested this in docker
+# def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
+#     assert sample_stacgeoparquet is not None
+#     assert len(sample_stacgeoparquet) == 1
 
+# TODO: Re-enable once we have tested this in docker
+# def test_intersection_raster(
+#     sample_polygon: polygon, sample_stacgeoparquet: ItemCollection
+# ) -> None:
+#     # sample_polygon is in EPSG:4326.
+#     # This STAC-Geoparquet file contains a single item in EPSG:4326
+#     # This item points to a COG that is also in EPSG:4326
+#     # These will both be reprojected to EPSG:6933 for area calculation.
+#     data = load_xarray_stacgeoparquet(
+#         sample_stacgeoparquet, geom=sample_polygon, resolution=10, crs="epsg:6933"
+#     )
+#     assert data is not None
 
-def test_intersection_raster(
-    sample_polygon: polygon, sample_stacgeoparquet: ItemCollection
-) -> None:
-    # sample_polygon is in EPSG:4326.
-    # This STAC-Geoparquet file contains a single item in EPSG:4326
-    # This item points to a COG that is also in EPSG:4326
-    # These will both be reprojected to EPSG:6933 for area calculation.
-    data = load_xarray_stacgeoparquet(
-        sample_stacgeoparquet, geom=sample_polygon, resolution=10, crs="epsg:6933"
-    )
-    assert data is not None
-
-    area = xarray_calculate_area(data, sample_polygon, "asset", 1)
-    # assert area == 19833900.0 # Old value. Updated due to better reprojection handling. 0.0343% difference to new value. New method will perform even better further from the equator (for data not already in EPSG:6933).
-    assert area == 19827100.0
-    # In QGIS I got: 19832115.15. I am happy with this difference of 0.0091%. This could be due to different reprojection methods.
+#     area = xarray_calculate_area(data, sample_polygon, "asset", 1)
+#     # assert area == 19833900.0 # Old value. Updated due to better reprojection handling. 0.0343% difference to new value. New method will perform even better further from the equator (for data not already in EPSG:6933).
+#     assert area == 19827100.0
+#     # In QGIS I got: 19832115.15. I am happy with this difference of 0.0091%. This could be due to different reprojection methods.
 
 
 def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:

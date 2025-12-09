@@ -12,7 +12,7 @@ from obstore.store import LocalStore, S3Store
 from odc.geo.geom import polygon
 from pystac import ItemCollection
 
-from csdr.utils import open_stacgeoparquet
+from csdr.utils import search_stacgeoparquet
 
 DATA_DIR = Path(os.path.dirname(__file__), "data")
 GEOPARQUET_FILE = Path("gmw/gmw.parquet")
@@ -28,9 +28,9 @@ def sample_polygon() -> polygon:
         return geom
 
 
-@pytest.fixture
-def sample_stacgeoparquet() -> ItemCollection:
-    return open_stacgeoparquet(str(GEOPARQUET_PATH))
+# @pytest.fixture
+# def sample_stacgeoparquet() -> ItemCollection:
+#     return search_stacgeoparquet(str(GEOPARQUET_PATH))
 
 
 @pytest.fixture

@@ -236,7 +236,7 @@ def load_xarray_stacgeoparquet(
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load 
-    # Bbox and geom filters are redundant because they are already done in open_stacgeoparquet (upstream function).
+    # Bbox and geom filters are redundant because they are already done in search_stacgeoparquet (upstream function).
     # data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
     data = load(items, **load_kwargs)
 
