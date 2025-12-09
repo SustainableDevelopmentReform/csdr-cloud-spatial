@@ -216,7 +216,7 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
     else:
         dt_filter = None
 
-    stac_items = client.search(dataset_url, intersects=geometry_geojson, datetime=dt_filter)
+    stac_items = client.search(dataset_url, intersects=geometry_geojson, bbox=geometry.boundingbox, datetime=dt_filter)
     item_collection_dict = {
         "type": "FeatureCollection",
         "features": stac_items
