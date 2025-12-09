@@ -13,11 +13,11 @@ from csdr.utils import (
     xarray_calculate_area,
 )
 
-# This function does the following:
-# 1. Loads a STAC-Geoparquet using rustac
-# 2. Checks for any intersection of STAC item bounding boxes with the given geometry. If no intersection, return 0.0 area immediately.
-# 3. If any intersection of bboxes, loads the , 
-# Then 
+# The _get_area_from_stac_geoparquet function does the following:
+# 1. Loads a STAC-Geoparquet using rustac (filtered by geometry and datetime if provided).
+# 2. If no items found, return 0.0 area immediately.
+# 3. If items found, loads the xarray dataset from the STAC items.
+# 4. Calculates the area where the specified variable equals the given value within the geometry.
 
 # Idea: In open_stacgeoparquet we could use rustac.DuckdbClient to filter the STAC items by bbox first?
 # If using search_to_arrow we need to install rustac[arrow] too. Let's do this to avoid the json error.
@@ -28,10 +28,10 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     logging.info(f"Dataset has {len(items)} STAC items that intersect with the given geometry and match the datetime filter.")
 
     if not items or len(items) == 0:
-        logging.info("No spatial intersection between geometry and dataset bounding boxes. Returning area 0.0.")
+        logging.info("No spatial intersection between geometry and dataset bounding boxes (or datetime filter). Returning area 0.0.")
         return 0.0
     else:
-        logging.info("Spatial intersection found between bounding boxes of geometry and dataset. Proceeding with area calculation.")
+        logging.info("Spatial intersection found between bounding boxes of geometry and dataset (and datetime filter). Proceeding with area calculation.")
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
@@ -41,7 +41,6 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     # Load the dataset as xarray from the STAC items. Filters are not needed because they are applied in search_stacgeoparquet.
     data = load_xarray_stacgeoparquet(
         items,
-        geom=geometry, # Not neeeded.
         **load_kwargs,
     )
 
