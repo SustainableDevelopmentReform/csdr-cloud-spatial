@@ -145,21 +145,6 @@ def execute(year: int, tile: tuple[int, int] | None = None) -> str:
     return job_id
 
 
-def unzip_file(zip_path: str, extract_dir: str) -> None:
-    """Unzips a file to a specified directory."""
-    logging.info(f"Unzipping {zip_path} to {extract_dir}")
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_dir)
-        logging.info(f"Successfully unzipped to {extract_dir}")
-    except zipfile.BadZipFile:
-        logging.error(f"Error: {zip_path} is not a valid zip file or is corrupted.")
-        raise
-    except Exception as e:
-        logging.error(f"Error unzipping {zip_path}: {e}", exc_info=True)
-        raise
-
-
 def run_command(command: list[str]) -> tuple[bool, str, str]:
     """Runs a shell command and returns success status, stdout, and stderr."""
     try:
