@@ -1,27 +1,23 @@
-import asyncio
 import logging
 import subprocess
 import uuid
 import zipfile
 from collections.abc import Generator, Iterable
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any, TypedDict, cast
 
 import boto3
 import geopandas as gpd
+import pystac
 import rioxarray  # DO NOT REMOVE: Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
+import rustac
 from affine import Affine
 from odc.geo.geobox import GeoBox, GeoboxTiles
-from odc.geo.geom import BoundingBox, Geometry
+from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
-from pystac import ItemCollection
-from rustac import read
-import rustac
-import obstore
 from xarray import DataArray, Dataset
-
-from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
 
 class Event(TypedDict):
@@ -204,50 +200,182 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", str(e)
 
 
-def open_stacgeoparquet(url: str) -> ItemCollection:
-    """Opens a STAC GeoParquet file and returns an ItemCollection."""
+def open_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_match: str | None = None) -> pystac.ItemCollection:
+    """Opens a STAC GeoParquet file, filters the items, reads to Arrow, and returns an ItemCollection."""
 
-    path, file_name = split_path_and_file_name_from_url(url)
-    store = get_store_with_prefix_from_url(path, mkdir=False)
-
-    async def _read_stac_items_async() -> ItemCollection:
-        # Here an error occurs. RustacError: Json error: data type Binary not supported in nested map for json writer.
-        # This works locally. Locally is in the except RuntimeError code block below. Also in Argo it was in this block. What is then different?
-        # Also this has worked for the other products (gmw v4 and v3). What is the problemo here? Was ist das Problem?
-        # Check versions of rustac in the Argo environment versus local.
-        return await read(file_name, store=store)
+    client = rustac.DuckdbClient(extensions=["aws"])
+    # Handle AWS S3 authentication
+    session = boto3.Session()
+    credentials = session.get_credentials()
+    creds = credentials.get_frozen_credentials()
+    # TODO: Don't hardcode the region. Get it from boto3 session or environment.
+    client.execute("""
+        CREATE OR REPLACE SECRET secret (
+            TYPE s3,
+            PROVIDER config,
+            KEY_ID ?,
+            SECRET ?,
+            REGION 'ap-southeast-2'
+        );
+    """, params=[creds.access_key, creds.secret_key])
     
-    # Log the rustac version
-    logging.info(f"Using rustac version: {rustac.version()}")
-    logging.info(f"Using rustac version: {obstore.__version__}")
+    # collections = client.get_collections(dataset_url)
+    # logging.info(f"Found {len(collections)} collections: {collections}")
+
+    # What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely.
+    # Or use rusctac.search instead of rustac.read so that we can filter by bbox and datetime directly.
+    # Or use rustac.duckdb.search instead of rustac.duckdb.search_to_arrow so that we can pass the output directly to pystac.ItemCollection.from_dict.
+
+    geometry_geojson = geometry.geojson()["geometry"]
+    # table = client.search_to_arrow(dataset_url)
+    if datetime_string_match is not None:
+        # Make single year into date range for filtering
+        # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z' # This works.
+        year = int(datetime_string_match)
+        start = datetime(year, 1, 1, 0, 0, 0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+        end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+        dt_filter = f"{start}/{end}"
+    else:
+        dt_filter = None
+
+    stac_table = client.search_to_arrow(dataset_url, intersects=geometry_geojson, datetime=dt_filter)
+    stac_df = gpd.GeoDataFrame.from_arrow(stac_table)
+    logging.info(f"Found {len(stac_df)} STAC-GeoParquet items that intersect the geometry and match the datetime filter.")
+    # import pdb; pdb.set_trace()
+    stac_dict = stac_df.to_dict(orient="records")
+    # item_collection_dict = {
+    #     "type": "FeatureCollection",
+    #     "features": stac_dict
+    # }
+    # return pystac.ItemCollection.from_dict(item_collection_dict)
+
+    # # Problematic fields:
+    # Feature 0 field 'stac_extensions' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+    # Feature 0 field 'proj:transform' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+    # Feature 0 field 'proj:bbox' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+    # Feature 0 field 'links' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+    # Feature 0 field 'proj:shape' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+    #     (Pdb) print(stac_df.dtypes)
+    # type                                            object
+    # stac_version                                    object
+    # stac_extensions                                 object
+    # id                                              object
+    # proj:transform                                  object
+    # proj:bbox                                       object
+    # links                                           object
+    # assets                                          object
+    # collection                                      object
+    # datetime           datetime64[us, Australia/Melbourne]
+    # start_datetime     datetime64[us, Australia/Melbourne]
+    # end_datetime       datetime64[us, Australia/Melbourne]
+    # created            datetime64[us, Australia/Melbourne]
+    # proj:epsg                                        int64
+    # proj:shape                                      object
+    # bbox                                            object
+    # geometry                                      geometry
+    # proj:geometry                                   object
+    # dtype: object
+
+    # import numpy as np
+    # import pandas as pd
+    # def clean_value(val):
+    #     if isinstance(val, np.ndarray):
+    #         return val.tolist()
+    #     if isinstance(val, (pd.Timestamp, pd.DatetimeTZDtype)):
+    #         return val.isoformat() if hasattr(val, 'isoformat') else str(val)
+    #     if hasattr(val, 'tolist') and not isinstance(val, (str, bytes)):
+    #         return val.tolist()
+    #     if hasattr(val, 'item') and not isinstance(val, (str, bytes)):
+    #         return val.item()
+    #     return val
+
+    # def clean_row(row):
+    #     cleaned = {k: clean_value(v) for k, v in row.items()}
+    #     # if 'properties' not in cleaned:
+    #     #     cleaned['properties'] = {}
+    #     return cleaned
     
-    # Check if we're already in an event loop (e.g., Jupyter notebook)
-    # Locally and in Argo/Dask we are not in an event loop, so we can use asyncio.run() directly.
-    try:
-        asyncio.get_running_loop()
-        # If we're in an event loop, we need to use nest_asyncio
-        import nest_asyncio
 
-        nest_asyncio.apply()
-        item_dict = asyncio.run(_read_stac_items_async())
-        logging.info("Successfully read STAC GeoParquet WITHIN existing event loop.")
-    except RuntimeError:
-        # No event loop running, safe to use asyncio.run()
-        # This is what runs locally when running locally.
-        # This is also what runs in Argo.
-        item_dict = asyncio.run(_read_stac_items_async())
-        logging.info("Successfully read STAC GeoParquet WITHOUT existing event loop.")
+    # stac_dict = [clean_row(row) for row in stac_df.to_dict(orient="records")]
+    # stac_dict = [{**row, "properties": {**row}} for row in stac_df.to_dict(orient="records")]
+    stac_dict1 = stac_dict[0]
+    # stac_df2 = {
+    #     "type": "FeatureCollection",
+    #     "features": {
+    #         id: stac_dict1["id"],
+    #         type: stac_dict1["type"]
+    #     }
+    # }
 
-    return ItemCollection.from_dict(item_dict)
+    import numpy as np
+
+    def clean_obj(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, dict):
+            return {k: clean_obj(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [clean_obj(v) for v in obj]
+        return obj
+
+    pystac.Item(
+        id=stac_dict1["id"],
+        geometry=stac_dict1["geometry"], # GeoJSON geometry
+        bbox=stac_dict1.get("bbox"),
+        datetime=stac_dict1.get("datetime"),
+        properties=stac_dict1.get("properties", {}), # Doesn't exist, but needed
+        start_datetime=stac_dict1.get("start_datetime"),
+        end_datetime=stac_dict1.get("end_datetime"),
+        stac_extensions=stac_dict1.get("stac_extensions", []).tolist() if hasattr(stac_dict1.get("stac_extensions", []), "tolist") else [],
+        # stac_extensions=[],
+        collection=stac_dict1.get("collection"),
+        assets=clean_obj(stac_dict1.get("assets", {})),
+        extra_fields={},
+        href=""
+    )
+    # item_collection_dict = {
+    #     "type": "FeatureCollection",
+    #     "features": stac_dict
+    # }
+    # # Debug: print types after cleaning
+    # for i, feature in enumerate(item_collection_dict.get("features", [])):
+    #     for k, v in feature.items():
+    #         print(f"Feature {i} field '{k}' type: {type(v)}")
+    # Now build ItemCollection
+    return pystac.ItemCollection.from_dict(item_collection_dict)
+
+    # # Map the fields from the dataframe to pystac Items
+    # from shapely.geometry import mapping
+    # items = []
+    # for _, row in stac_df.iterrows():
+    #     item = pystac.Item(
+    #         id=row['id'],
+    #         geometry=mapping(row['geometry']), # GeoJSON geometry
+    #         bbox=row.get('bbox'),
+    #         datetime=row.get('datetime'),
+    #         properties=row.get('properties', {}), # Doesn't exist, but needed.
+    #         stac_extensions=row.get('stac_extensions', []),
+    #         collection=row.get('collection'),
+    #         assets=row.get('assets', {}),
+    #         start_datetime=row.get('start_datetime', None),
+    #         end_datetime=row.get('end_datetime', None),
+    #         extra_fields={"type": row.get('type', None), "stac_version": row.get('stac_version', None), "proj:epsg": row.get('proj:epsg', None), "proj:transform": row.get('proj:transform', None), "proj:shape": row.get('proj:shape', None), "created": row.get('created', None), "links": row.get('links', None)}
+    #     )
+    #     items.append(item)
+
+    # item_collection = pystac.ItemCollection(items)
+    # return item_collection
 
 
 def load_xarray_stacgeoparquet(
-    items: ItemCollection,
-    bbox: Iterable[float] | None = None,
-    geom: Geometry | None = None,
-    datetime_string_match: str | None = None,
+    items: pystac.ItemCollection,
+    bbox: Iterable[float] | None = None, # TODO: Remove.
+    geom: Geometry | None = None, # TODO: Remove.
+    datetime_string_match: str | None = None, # TODO: Remove.
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
+    # Date filter is redundant because it is already done in open_stacgeoparquet (upstream function).
     # Temporal filter (if parameter is provided)
     if datetime_string_match is not None:
         all_items = items.clone()
@@ -260,7 +388,9 @@ def load_xarray_stacgeoparquet(
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 
+    # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load 
+    # Bbox and geom filters are redundant because they are already done in open_stacgeoparquet (upstream function).
     data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
 
     return data
@@ -344,35 +474,3 @@ def get_geom_from_gdf(gdf: gpd.GeoDataFrame, geometry_id: str) -> Geometry:
 
     # Convert to ODC geometry
     return Geometry(feature.geometry, crs=gdf.crs)
-
-
-# TODO: Check whether this could be made more performant by using sedona db. The dataset is a stac collection that was made from a STAC geoparquet file. We could load the stac geoparquet into sedona and use that for intersection testing.
-# This could be viable in S3 because the STAC-Geoparquet files are probably small enough.
-def check_for_any_intersection(geometry: Geometry, dataset: ItemCollection) -> bool:
-    logging.info("Checking for intersection between geometry and STAC items...")
-    # make geometry bbox
-    geom_bbox = geometry.boundingbox.polygon # make a polygon from the bbox from the detailed geometry
-    # Check CRS's match between geometry and stac items. Essential for intersection test.
-    # TODO: Find a way to reproject data near the antimeridian robustly. Use a global CRS. Split geometries at the antimeridian before reprojecting. Check for validity after reprojection.
-    geom_epsg = geom_bbox.crs.epsg
-    stac_epsg = dataset[0].properties.get("proj:code")
-    stac_epsg_number = int(stac_epsg.replace("EPSG:",""))
-    if geom_epsg != stac_epsg_number:
-        logging.warning("CRS mismatch between geometry and STAC items. Reprojecting...")
-        geom_bbox = geom_bbox.to_crs(stac_epsg)
-    # Intersect geometry bbox with each STAC item bbox
-    # If any intersect, return true
-    # Else, return false
-    for item in dataset:
-        # Either of these work. Either have to nest further or unnest it. I think nesting further is safer.
-        # item_geometry = polygon(item.properties.get("proj:geometry")[0], item.properties.get('proj:code')) # this is either the bbox or the footprint of valid data
-        # This code needs to handle coords that do not follow the right hand rule.
-        # Bad : [[8.0, -1.0], [9.0, -1.0], [9.0, 0.0], [8.0, 0.0], [8.0, -1.0]]
-        # Good: [[8.0, -1.0], [8.0, 0.0], [9.0, 0.0], [9.0, -1.0], [8.0, -1.0]]
-        # Need to make the polygon because some of the proj:geometry values are not valid for future steps.
-        # proj:geometry could be better because it is either the bbox or the footprint of valid data (more accurate than just bbox).
-        item_bbox = BoundingBox(*item.properties.get("proj:bbox"), stac_epsg).polygon # This assumes all items have the same CRS
-
-        if geom_bbox.intersects(item_bbox):
-            return True
-    return False

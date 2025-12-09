@@ -527,7 +527,8 @@ product-seagrass-eez-process-geometry-local:
 
 # This works too. Error must be something to do with Argo environment.
 # The read error in Argo is strange because it is reading the exact same file.
-# d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan
+# d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan (no seagrass)
+# fcff483d-6755-5a58-8cfd-902a0831e998 Nauru (has seagrass)
 product-seagrass-eez-process-geometry-read-s3-write-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -539,7 +540,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--variable-value=1 \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
-		--geometry-id=d74a98d8-0679-5f6e-aa03-74ba02b41718 \
+		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
 		--overwrite
 
 # We need to call this for 2017-2024 to process all seagrass data

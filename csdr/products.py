@@ -8,26 +8,34 @@ from odc.geo.geom import Geometry
 from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
-    check_for_any_intersection,
     load_xarray_stacgeoparquet,
     open_stacgeoparquet,
     xarray_calculate_area,
 )
 
+# This function does the following:
+# 1. Loads a STAC-Geoparquet using rustac
+# 2. Checks for any intersection of STAC item bounding boxes with the given geometry. If no intersection, return 0.0 area immediately.
+# 3. If any intersection of bboxes, loads the , 
+# Then 
 
+# Idea: In open_stacgeoparquet we could use rustac.DuckdbClient to filter the STAC items by bbox first?
+# If using search_to_arrow we need to install rustac[arrow] too. Let's do this to avoid the json error.
+# Then we probably don't need to check for intersection again so check_for_any_intersection can be removed. Use search.bbox or search.intersects and search.datetime. filter or query can be used for the variable/value filter.
 def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
-    # Get the STAC items (just metadata, not the data itself, so dask chunking not needed yet)
-    items = open_stacgeoparquet(dataset_url)
-    logging.info(f"Dataset has {len(items)} STAC items.")
+    # Get the STAC items filtered by geometry and datetime
+    items = open_stacgeoparquet(dataset_url, geometry, datetime_string_match)
+    logging.info(f"Dataset has {len(items)} STAC items that intersect with the given geometry and match the datetime filter.")
+
+    # No longer need to do check_for_any_intersection because open_stacgeoparquet already filters by geometry.
 
     # Performance optimisation to return quickly if no spatial intersection between geometry and dataset bounding boxes. For example landlocked geometries will not have any overlap with coastal/ocean datasets.
     # 1. Spatial intersect bounding boxes. STAC items have bounding boxes in metadata. Geometries are vector parquet, intersect with dataset STAC item bboxes.
     # 3. If no intersect, return 0.0 area immediately (fast!). Else do the actual calculation (because there is potential overlap).
     # STAC Geoparquet has proj:bbox attribute. STAC Geoparquet of Mangroves is sparse. There are 1647 STAC items, each with a bbox. Checking intersection of geometry bbox with these bboxes is very fast.
-    # TODO: make this a param to use or not because if there were less sparse data it could slow processing down potentially?
-    any_intersection = check_for_any_intersection(geometry, items)
-    if not any_intersection:
-        logging.info("No spatial intersection between bounding boxes of geometry and dataset. Returning area 0.0.")
+    # any_intersection = check_for_any_intersection(geometry, items)
+    if not items or len(items) == 0:
+        logging.info("No spatial intersection between geometry and dataset bounding boxes. Returning area 0.0.")
         return 0.0
     else:
         logging.info("Spatial intersection found between bounding boxes of geometry and dataset. Proceeding with area calculation.")
@@ -37,7 +45,7 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
         load_kwargs["chunks"] = {}
     logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
     
-    # Load the dataset
+    # Load the dataset as xarray from the STAC items (filtering by datetime and geometry)
     data = load_xarray_stacgeoparquet(
         items,
         geom=geometry,
@@ -74,7 +82,7 @@ def _get_area_from_geoparquet_sedona(
 
     # TODO: Add filters for variable, value, and datetime_string_match
 
-    region = "ap-southeast-2"
+    region = "ap-southeast-2" # TODO: Get this from env/config.
 
     start_time = datetime.now()
 
