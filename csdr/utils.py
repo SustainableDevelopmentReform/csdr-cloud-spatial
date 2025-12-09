@@ -198,11 +198,13 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         cmd_str = " ".join(command)
         logging.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
         return False, "", str(e)
+    
 
-
-def open_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_match: str | None = None) -> pystac.ItemCollection:
-    """Opens a STAC GeoParquet file, filters the items, reads to Arrow, and returns an ItemCollection."""
-
+# TODO: Test this in dockerised code. Rustac.read was erroring.
+# Other ideas if this doesn't work:
+# What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely. Might not work with s3 auth.
+def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_match: str | None = None) -> pystac.ItemCollection:
+    # Use rusctac.search instead of rustac.read so that we can filter by bbox and datetime before loading anything.
     client = rustac.DuckdbClient(extensions=["aws"])
     # Handle AWS S3 authentication
     session = boto3.Session()
@@ -218,16 +220,8 @@ def open_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_ma
             REGION 'ap-southeast-2'
         );
     """, params=[creds.access_key, creds.secret_key])
-    
-    # collections = client.get_collections(dataset_url)
-    # logging.info(f"Found {len(collections)} collections: {collections}")
-
-    # What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely.
-    # Or use rusctac.search instead of rustac.read so that we can filter by bbox and datetime directly.
-    # Or use rustac.duckdb.search instead of rustac.duckdb.search_to_arrow so that we can pass the output directly to pystac.ItemCollection.from_dict.
 
     geometry_geojson = geometry.geojson()["geometry"]
-    # table = client.search_to_arrow(dataset_url)
     if datetime_string_match is not None:
         # Make single year into date range for filtering
         # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z' # This works.
@@ -238,152 +232,20 @@ def open_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_ma
     else:
         dt_filter = None
 
-    stac_table = client.search_to_arrow(dataset_url, intersects=geometry_geojson, datetime=dt_filter)
-    stac_df = gpd.GeoDataFrame.from_arrow(stac_table)
-    logging.info(f"Found {len(stac_df)} STAC-GeoParquet items that intersect the geometry and match the datetime filter.")
-    # import pdb; pdb.set_trace()
-    stac_dict = stac_df.to_dict(orient="records")
-    # item_collection_dict = {
-    #     "type": "FeatureCollection",
-    #     "features": stac_dict
-    # }
-    # return pystac.ItemCollection.from_dict(item_collection_dict)
-
-    # # Problematic fields:
-    # Feature 0 field 'stac_extensions' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-    # Feature 0 field 'proj:transform' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-    # Feature 0 field 'proj:bbox' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-    # Feature 0 field 'links' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-    # Feature 0 field 'proj:shape' triggers error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-
-    #     (Pdb) print(stac_df.dtypes)
-    # type                                            object
-    # stac_version                                    object
-    # stac_extensions                                 object
-    # id                                              object
-    # proj:transform                                  object
-    # proj:bbox                                       object
-    # links                                           object
-    # assets                                          object
-    # collection                                      object
-    # datetime           datetime64[us, Australia/Melbourne]
-    # start_datetime     datetime64[us, Australia/Melbourne]
-    # end_datetime       datetime64[us, Australia/Melbourne]
-    # created            datetime64[us, Australia/Melbourne]
-    # proj:epsg                                        int64
-    # proj:shape                                      object
-    # bbox                                            object
-    # geometry                                      geometry
-    # proj:geometry                                   object
-    # dtype: object
-
-    # import numpy as np
-    # import pandas as pd
-    # def clean_value(val):
-    #     if isinstance(val, np.ndarray):
-    #         return val.tolist()
-    #     if isinstance(val, (pd.Timestamp, pd.DatetimeTZDtype)):
-    #         return val.isoformat() if hasattr(val, 'isoformat') else str(val)
-    #     if hasattr(val, 'tolist') and not isinstance(val, (str, bytes)):
-    #         return val.tolist()
-    #     if hasattr(val, 'item') and not isinstance(val, (str, bytes)):
-    #         return val.item()
-    #     return val
-
-    # def clean_row(row):
-    #     cleaned = {k: clean_value(v) for k, v in row.items()}
-    #     # if 'properties' not in cleaned:
-    #     #     cleaned['properties'] = {}
-    #     return cleaned
-    
-
-    # stac_dict = [clean_row(row) for row in stac_df.to_dict(orient="records")]
-    # stac_dict = [{**row, "properties": {**row}} for row in stac_df.to_dict(orient="records")]
-    stac_dict1 = stac_dict[0]
-    # stac_df2 = {
-    #     "type": "FeatureCollection",
-    #     "features": {
-    #         id: stac_dict1["id"],
-    #         type: stac_dict1["type"]
-    #     }
-    # }
-
-    import numpy as np
-
-    def clean_obj(obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, dict):
-            return {k: clean_obj(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [clean_obj(v) for v in obj]
-        return obj
-
-    pystac.Item(
-        id=stac_dict1["id"],
-        geometry=stac_dict1["geometry"], # GeoJSON geometry
-        bbox=stac_dict1.get("bbox"),
-        datetime=stac_dict1.get("datetime"),
-        properties=stac_dict1.get("properties", {}), # Doesn't exist, but needed
-        start_datetime=stac_dict1.get("start_datetime"),
-        end_datetime=stac_dict1.get("end_datetime"),
-        stac_extensions=stac_dict1.get("stac_extensions", []).tolist() if hasattr(stac_dict1.get("stac_extensions", []), "tolist") else [],
-        # stac_extensions=[],
-        collection=stac_dict1.get("collection"),
-        assets=clean_obj(stac_dict1.get("assets", {})),
-        extra_fields={},
-        href=""
-    )
-    # item_collection_dict = {
-    #     "type": "FeatureCollection",
-    #     "features": stac_dict
-    # }
-    # # Debug: print types after cleaning
-    # for i, feature in enumerate(item_collection_dict.get("features", [])):
-    #     for k, v in feature.items():
-    #         print(f"Feature {i} field '{k}' type: {type(v)}")
-    # Now build ItemCollection
+    stac_items = client.search(dataset_url, intersects=geometry_geojson, datetime=dt_filter)
+    item_collection_dict = {
+        "type": "FeatureCollection",
+        "features": stac_items
+    }
     return pystac.ItemCollection.from_dict(item_collection_dict)
-
-    # # Map the fields from the dataframe to pystac Items
-    # from shapely.geometry import mapping
-    # items = []
-    # for _, row in stac_df.iterrows():
-    #     item = pystac.Item(
-    #         id=row['id'],
-    #         geometry=mapping(row['geometry']), # GeoJSON geometry
-    #         bbox=row.get('bbox'),
-    #         datetime=row.get('datetime'),
-    #         properties=row.get('properties', {}), # Doesn't exist, but needed.
-    #         stac_extensions=row.get('stac_extensions', []),
-    #         collection=row.get('collection'),
-    #         assets=row.get('assets', {}),
-    #         start_datetime=row.get('start_datetime', None),
-    #         end_datetime=row.get('end_datetime', None),
-    #         extra_fields={"type": row.get('type', None), "stac_version": row.get('stac_version', None), "proj:epsg": row.get('proj:epsg', None), "proj:transform": row.get('proj:transform', None), "proj:shape": row.get('proj:shape', None), "created": row.get('created', None), "links": row.get('links', None)}
-    #     )
-    #     items.append(item)
-
-    # item_collection = pystac.ItemCollection(items)
-    # return item_collection
 
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
     bbox: Iterable[float] | None = None, # TODO: Remove.
     geom: Geometry | None = None, # TODO: Remove.
-    datetime_string_match: str | None = None, # TODO: Remove.
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
-    # Date filter is redundant because it is already done in open_stacgeoparquet (upstream function).
-    # Temporal filter (if parameter is provided)
-    if datetime_string_match is not None:
-        all_items = items.clone()
-        items = []
-        for item in all_items:
-            if datetime_string_match in item.datetime.isoformat():
-                items.append(item)
-
     # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
