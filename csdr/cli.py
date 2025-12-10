@@ -6,6 +6,7 @@ import typer
 from csdr import get_version
 from csdr.cli_conversion import conversion_app
 from csdr.cli_dataset_aca import aca_app
+from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
@@ -50,6 +51,10 @@ app.add_typer(
 # ACA
 app.add_typer(
     aca_app, name="aca", help="Cache and process ACA dataset."
+)
+# ACE
+app.add_typer(
+    ace_app, name="ace", help="Cache and process ACE dataset."
 )
 # MS Buildings
 app.add_typer(
