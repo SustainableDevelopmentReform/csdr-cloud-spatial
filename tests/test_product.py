@@ -1,7 +1,7 @@
 import geopandas as gpd
+import sedona.db
 from odc.geo.geom import polygon
 from pystac import ItemCollection
-import sedona.db
 
 from csdr.products import _get_area_from_geoparquet_sedona
 from csdr.utils import (
@@ -16,10 +16,11 @@ def test_sample_polygon(sample_polygon: polygon) -> None:
     assert sample_polygon.is_valid
 
 
-# TODO: Re-enable once we have tested this in docker
-# def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
-#     assert sample_stacgeoparquet is not None
-#     assert len(sample_stacgeoparquet) == 1
+def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
+    assert sample_stacgeoparquet is not None
+    assert len(sample_stacgeoparquet) == 2
+    assert sample_stacgeoparquet[0].id =='dep_s2_seagrass_047_017_2022'
+    assert sample_stacgeoparquet[1].id =='dep_s2_seagrass_047_018_2022'
 
 # TODO: Re-enable once we have tested this in docker
 # def test_intersection_raster(

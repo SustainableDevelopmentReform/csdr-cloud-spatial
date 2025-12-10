@@ -509,8 +509,6 @@ product-seagrass-eez-list-geometries-local:
 # We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
 # Seagrass: STAC-Parquet is 4326, but STAC items are 3832.
 # EEZ is 4326.
-# TODO: Test for error that occurs in Dcokerised code (so it occurs in Argo).
-# This works locally.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -525,8 +523,6 @@ product-seagrass-eez-process-geometry-local:
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
-# This works locally too. Error must be something to do with dockerised environment.
-# The read error in Docker is strange because it is reading the exact same file in S3.
 # d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan (no seagrass)
 # fcff483d-6755-5a58-8cfd-902a0831e998 Nauru (has seagrass)
 product-seagrass-eez-process-geometry-read-s3-write-local:

@@ -1,3 +1,4 @@
+import json
 import logging
 import subprocess
 import uuid
@@ -184,12 +185,8 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", str(e)
     
 
-# TODO: Test this in dockerised code. Rustac.read was erroring.
-# Other ideas if this doesn't work:
 # What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely. Might not work with s3 auth.
-def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_match: str | None = None) -> pystac.ItemCollection:
-    # Use rusctac.search instead of rustac.read so that we can filter by bbox and datetime before loading anything.
-    # client = rustac.DuckdbClient(extensions=["aws"], install_extensions=True, )
+def search_stacgeoparquet(dataset_url: str, geometry: Geometry | None = None, datetime_string_match: str | None = None) -> pystac.ItemCollection:
     client = rustac.DuckdbClient()
     # Handle AWS S3 authentication
     session = boto3.Session()
@@ -210,10 +207,16 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
         );
     """, params=[creds.access_key, creds.secret_key, creds.token])
 
-    geometry_geojson = geometry.geojson()["geometry"]
+    if geometry is not None:
+        geometry_geojson = geometry.geojson()["geometry"]
+        geometry_bbox = geometry.boundingbox
+    else:
+        geometry_geojson = None
+        geometry_bbox = None
+
     if datetime_string_match is not None:
         # Make single year into date range for filtering
-        # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z' # This works.
+        # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z'
         year = int(datetime_string_match)
         start = datetime(year, 1, 1, 0, 0, 0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
         end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
@@ -221,7 +224,8 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
     else:
         dt_filter = None
 
-    stac_items = client.search(dataset_url, intersects=geometry_geojson, bbox=geometry.boundingbox, datetime=dt_filter)
+    stac_items = client.search(dataset_url, intersects=geometry_geojson, bbox=geometry_bbox, datetime=dt_filter)
+
     item_collection_dict = {
         "type": "FeatureCollection",
         "features": stac_items
@@ -231,8 +235,6 @@ def search_stacgeoparquet(dataset_url: str, geometry: Geometry, datetime_string_
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
-    # bbox: Iterable[float] | None = None,
-    # geom: Geometry | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
     # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
@@ -240,8 +242,8 @@ def load_xarray_stacgeoparquet(
         load_kwargs["chunks"] = {}
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
-    # ODC STAC load 
-    # Bbox and geom filters are redundant because they are already done in search_stacgeoparquet (upstream function).
+    # ODC STAC load
+    # Can add bbox and geom filters to load but they are already done in search_stacgeoparquet (upstream function).
     # data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
     data = load(items, **load_kwargs)
 

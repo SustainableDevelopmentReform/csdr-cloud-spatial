@@ -3,13 +3,12 @@ import os
 from pathlib import Path
 
 import boto3
-import geopandas as gdf
 import moto
 import pytest
 from geopandas import GeoDataFrame
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
-from odc.geo.geom import polygon
+from odc.geo.geom import Geometry, polygon
 from pystac import ItemCollection
 
 from csdr.utils import search_stacgeoparquet
@@ -28,9 +27,69 @@ def sample_polygon() -> polygon:
         return geom
 
 
-# @pytest.fixture
-# def sample_stacgeoparquet() -> ItemCollection:
-#     return search_stacgeoparquet(str(GEOPARQUET_PATH))
+@pytest.fixture
+def sample_stacgeoparquet() -> ItemCollection:
+    geom = Geometry(
+        {
+        "coordinates": [
+          [
+            [
+              164.3284453487322,
+              -20.073723461580713
+            ],
+            [
+              164.4405930322742,
+              -20.113937083898392
+            ],
+            [
+              164.5629359597732,
+              -19.972186102407235
+            ],
+            [
+              164.27543008014896,
+              -19.837979915917785
+            ],
+            [
+              164.04501756669157,
+              -19.90126272785693
+            ],
+            [
+              163.95122132227402,
+              -20.033499522652647
+            ],
+            [
+              163.98588515173293,
+              -20.257472686481478
+            ],
+            [
+              163.87577651698274,
+              -20.32249852915392
+            ],
+            [
+              164.0368613715243,
+              -20.400875702031172
+            ],
+            [
+              164.1673708770649,
+              -20.39896981440674
+            ],
+            [
+              164.19386812848228,
+              -20.21346916116923
+            ],
+            [
+              164.19182907969048,
+              -20.117766414011058
+            ],
+            [
+              164.3284453487322,
+              -20.073723461580713
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      }, crs="EPSG:4326")
+    return search_stacgeoparquet(str(DATA_DIR / "dep_s2_seagrass.parquet"), geom, "2022")
 
 
 @pytest.fixture
