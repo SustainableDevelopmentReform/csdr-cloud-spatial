@@ -8,7 +8,7 @@ import pytest
 from geopandas import GeoDataFrame
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
-from odc.geo.geom import Geometry, polygon
+from odc.geo.geom import polygon
 from pystac import ItemCollection
 
 from csdr.utils import search_stacgeoparquet
