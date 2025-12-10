@@ -523,6 +523,22 @@ product-seagrass-eez-process-geometry-local:
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
+# d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan (no seagrass)
+# fcff483d-6755-5a58-8cfd-902a0831e998 Nauru (has seagrass)
+product-seagrass-eez-process-geometry-read-s3-write-local:
+	csdr products process-geometry \
+		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
+		--run-id=test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
+		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
+		--variable-name=seagrass \
+		--variable-value=1 \
+		--datetime-string-match="2017" \
+		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
+		--overwrite
+
 # We need to call this for 2017-2024 to process all seagrass data
 product-seagrass-eez-process-all-geometries-dask-local:
 	csdr products process-all-geometries-dask \

@@ -46,6 +46,7 @@ async def run_index_dep_seagrass(
         f"Writing {len(item_dicts)} STAC items to parquet at {target_url}"
     )
     with suppress_rust_output():
+        # TODO: experiment with parquet_compression options for rustac write
         await write(target_filename, item_dicts, store=target_store)
 
     logging.info(f"Finished writing parquet file to {target_url}")
