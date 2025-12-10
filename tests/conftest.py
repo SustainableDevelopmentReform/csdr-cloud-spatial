@@ -36,6 +36,8 @@ def sample_polygon2() -> polygon:
         return geom
 
 
+# Can't use gmw.parquet here because it errors "rustac.RustacError: External error: General error: Invalid byte order"
+# TODO: Consolidate test data to reduce data.
 @pytest.fixture
 def sample_stacgeoparquet(sample_polygon2: polygon) -> ItemCollection:
     return search_stacgeoparquet(str(DATA_DIR / "dep_s2_seagrass.parquet"), sample_polygon2, "2022")
