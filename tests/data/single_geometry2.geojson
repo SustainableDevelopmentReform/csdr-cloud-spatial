@@ -1,6 +1,6 @@
 {
     "type": "FeatureCollection",
-    "name": "single_geometry",
+    "name": "single_geometry2",
     "crs": {
         "type": "name",
         "properties": {
