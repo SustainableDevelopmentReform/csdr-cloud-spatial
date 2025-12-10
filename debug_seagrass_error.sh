@@ -52,6 +52,8 @@ print(f'Found {len(items)} items')
 # # The issue seems to be the binary data type in the parquet file. Although it worked locally on the same file.
 
 
+docker build -f Dockerfile.minimal -t csdr-test-2 .
+docker run --rm csdr-test-2
 
 Here are some similar sounding issues:
 https://github.com/apache/datafusion/issues/83#issuecomment-1497323407

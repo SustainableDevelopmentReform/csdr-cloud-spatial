@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /code
+# Only copy the minimal CLI
+COPY test.py ./test.py
+
+# Install system dependencies (minimal)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsqlite3-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies
+RUN pip install --upgrade uv && uv pip install --system rustac
+
+# Default command: run the minimal CLI
+CMD ["python", "test.py"]
