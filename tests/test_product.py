@@ -1,4 +1,3 @@
-import geopandas as gpd
 import sedona.db
 from odc.geo.geom import polygon
 from pystac import ItemCollection
@@ -23,22 +22,20 @@ def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
     assert sample_stacgeoparquet[1].id =='dep_s2_seagrass_047_018_2022'
 
 
-# def test_intersection_raster(
-#     sample_polygon2: polygon, sample_stacgeoparquet: ItemCollection
-# ) -> None:
-#     # sample_polygon is in EPSG:4326.
-#     # This STAC-Geoparquet file contains a single item in EPSG:4326
-#     # This item points to a COG that is also in EPSG:4326
-#     # These will both be reprojected to EPSG:6933 for area calculation.
-#     data = load_xarray_stacgeoparquet(
-#         sample_stacgeoparquet, geom=sample_polygon2, resolution=10, crs="epsg:6933"
-#     )
-#     assert data is not None
+def test_intersection_raster(
+    sample_polygon2: polygon, sample_stacgeoparquet: ItemCollection
+) -> None:
+    # sample_polygon is in EPSG:4326.
+    # This STAC-Geoparquet file contains a single item in EPSG:4326
+    # Seagrass COGs are in 3832.
+    data = load_xarray_stacgeoparquet(
+        sample_stacgeoparquet, geom=sample_polygon2, resolution=10, crs="epsg:3832" # 6933
+    )
+    assert data is not None
 
-#     area = xarray_calculate_area(data, sample_polygon2, "asset", 1)
-#     # assert area == 19833900.0 # Old value. Updated due to better reprojection handling. 0.0343% difference to new value. New method will perform even better further from the equator (for data not already in EPSG:6933).
-#     assert area == 19827100.0
-#     # In QGIS I got: 19832115.15. I am happy with this difference of 0.0091%. This could be due to different reprojection methods.
+    # This reprojects to 6933 internally for area calculation.
+    area = xarray_calculate_area(data, sample_polygon2, "seagrass", 1)
+    assert area == 10391947.0
 
 
 def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:
