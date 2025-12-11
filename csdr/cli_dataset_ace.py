@@ -23,6 +23,7 @@ ace_app = typer.Typer()
 # s3://dea-public-data/derivative/ga_s2_coastalecosystems_cyear_3_v1/AU
 # https://data.dea.ga.gov.au/?prefix=derivative/ga_s2_coastalecosystems_cyear_3_v1/AU/2021--P1Y/
 # So we search the STAC collection and index it to a STAC-Geoparquet file.
+# Actually they are here but I think the rustac.search_to method is nicest: https://dep-public-data.s3.us-west-2.amazonaws.com/dep_s2_seagrass/0-2-0/012/049/2021/dep_s2_seagrass_012_049_2021.stac-item.json"
 
 async def run_index_aus_coastal_ecosystems(
     source_stac_url: str, target_location: str, overwrite: bool = True
