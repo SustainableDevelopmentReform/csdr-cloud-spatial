@@ -12,6 +12,7 @@ from csdr.cli_dataset_seagrass import seagrass_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
+from csdr.cli_geometry_acsc2 import acsc2_app
 from csdr.cli_geometry_eez import eez_app
 from csdr.cli_helpers import helpers_app
 from csdr.cli_products import products_app
@@ -56,6 +57,9 @@ app.add_typer(
     buildings_app, name="buildings", help="Cache and process buildings dataset."
 )
 
+## Geometries
+# ACSC2
+app.add_typer(acsc2_app, name="acsc2", help="Cache and process the Australian Coastal Sediment Compartments - Secondary Compartments dataset.")
 # EEZ
 app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
 
