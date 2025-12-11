@@ -372,6 +372,33 @@ geometry-cwa-provenance-local-db:
 		--post-geometry-outputs \
 		--overwrite
 
+# Geometry Australian States and Territories
+geometry-aus-states-cache-local:
+	csdr aus-states cache \
+		--target-location=./cache/geometries/aus-states/0-0-1/raw \
+		--overwrite
+geometry-aus-states-convert-local:
+	csdr convert zip-to-parquet \
+		--name-field STE_NAME21 \
+		--source-zip-location=./cache/geometries/aus-states/0-0-1/raw/STE_2021_AUST_SHP_GDA2020.zip \
+		--source-internal-path-name=STE_2021_AUST_GDA2020.shp \
+		--target-location=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id \
+		--create-pmtiles
+geometry-aus-states-provenance-local-db:
+	csdr provenance geometry \
+		--id=60a638c0-2823-4614-a405-d26a2c1f30d2 \
+		--run-id=aus-states-test-run-id2 \
+		--geometry-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.parquet \
+		--pmtiles-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.pmtiles \
+		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \
+		--source-metadata-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files#metadata-for-digital-boundary-files" \
+		--geometry-type=geoparquet \
+		--post-to-database \
+		--post-geometry-outputs \
+		--no-post-geometry-in-bulk \
+		--overwrite
+# Don't use bulk posting because there are few geometries, but they are large (NSW geojson is 15MB).
+
 ### PRODUCTS ###
 
 # Product GMW EEZ V4.

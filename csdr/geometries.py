@@ -12,7 +12,12 @@ from csdr.io import read_geospatial_file
 from csdr.utils import CSDRException, make_uuid
 
 
-def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict:
+def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict | None:
+    if not gdf_row.geometry:
+        # This occurs for example in the ABS Australian States dataset where there are some null geometries
+        logging.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
+        return None  # Skip if geometry is None or empty
+    
     poly = Geometry(gdf_row.geometry, crs=crs)
     properties = gdf_row.drop(labels=["geometry"]).to_dict()
 
@@ -28,7 +33,7 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict:
 
     geometry_output = {
         "id": properties.get("csdr-id"),
-        "geometry": poly.geojson()["geometry"],
+        "geometry": poly.geojson(simplify=0)["geometry"], # Ensure when converting to geojson it doesn't simplify the geometry. By default it simplifies large geometries.
         "name": properties.get("csdr-name"),
         "description": properties.get("description", ""),
         "metadata": properties.get("metadata", {}),
@@ -88,7 +93,9 @@ def post_bulk_geometry_outputs_to_database(
 
     for _, row in gpd.iterrows():
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
-        outputs.append(geometry_output)
+        if geometry_output is not None:
+            # Only append if geometry_output is not None
+            outputs.append(geometry_output)
 
     if batch_size is None or batch_size <= 0:
         batch_size = len(outputs)
@@ -125,6 +132,9 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
     successes = 0
     for _, row in gpd.iterrows():
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
+        if geometry_output is None:
+            errors += 1
+            continue # Skip geometry if geometry_output is None (handle null geometries)
         geometry_output["geometriesRunId"] = run_id
         response = post_geometry_output(geometry_output)
         try:
