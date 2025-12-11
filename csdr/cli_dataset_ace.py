@@ -1,50 +1,34 @@
 # Geoscience Australia Sentinel-2 Coastal Ecosystems Calendar Year Collection 3
-import logging
-
-import typer
-
-ace_app = typer.Typer()
-
-# Steps:
-# 1. Index this STAC: # https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1
-# Index writes for each of Intertidal, Mangrove, Saltmarsh, Intertidal Seagrass: To S3 as STAC-Geoparquet files.
-# Just like Seagrass, just one step: Index.
-# Just one datetime?
-
-# https://data.dea.ga.gov.au/derivative/ga_s2_coastalecosystems_cyear_3_v1/AU/2021--P1Y/ga_s2_coastalecosystems_cyear_3_v1-0-0_AU_2021--P1Y_final_classification.tif
-# https://data.dea.ga.gov.au/derivative/ga_s2_coastalecosystems_cyear_3_v1/AU/2022--P1Y/ga_s2_coastalecosystems_cyear_3_v1-0-0_AU_2022--P1Y_final_classification.tif
-
-# mangrove_prob
-# saltmarsh_prob
-# seagrass_prob
-
-
-
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import logging
 
 import typer
-from rasterio import Env
-from rustac import write
+from rustac import search_to
 
 from csdr.io import (
     exists,
-    get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
 )
 from csdr.utils import suppress_rust_output
 
+ace_app = typer.Typer()
+
+# One STAC collection: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1
+# Containing two STAC items:
+# 2021: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1/items/830cf127-61c4-465a-92a5-8fc65188a9d7
+# 2022: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1/items/19eb5a11-986f-4e09-acc7-c9669bb7147a
+
+# Can't grab these STAC Item jsons from s3 like seagrass index does. They do not exist there.
+# s3://dea-public-data/derivative/ga_s2_coastalecosystems_cyear_3_v1/AU
+# https://data.dea.ga.gov.au/?prefix=derivative/ga_s2_coastalecosystems_cyear_3_v1/AU/2021--P1Y/
+# So we search the STAC collection and index it to a STAC-Geoparquet file.
 
 async def run_index_aus_coastal_ecosystems(
-    source_location: str, target_location: str, overwrite: bool = True
+    source_stac_url: str, target_location: str, overwrite: bool = True
 ) -> None:
-    store = get_store_with_prefix_from_url(source_location, region="us-west-2")
-    target_store = get_store_with_prefix_from_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location, mkdir=True)
 
-    # for item in ["Intertidal", "Mangrove", "Saltmarsh", "Intertidal Seagrass"]:
-    # logging.info(f"Indexing ACE class: {item}")
-    # target_filename = f"ace_{item}.parquet"
     target_filename = "ace.parquet"
 
     target_url = f"{target_location}/{target_filename}"
@@ -62,16 +46,15 @@ async def run_index_aus_coastal_ecosystems(
         else:
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
-    # Find all the the item STAC files
-    with Env(AWS_REGION="us-west-2"):
-        item_dicts = await get_stac_item_dicts_from_store(store)
-
-    logging.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_url}"
-    )
     with suppress_rust_output():
-        # TODO: experiment with parquet_compression options for rustac write
-        await write(target_filename, item_dicts, store=target_store)
+        # Use rustac search_to to get all items from the ACE STAC collection and write to parquet
+        items = await search_to(
+            target_filename,
+            source_stac_url,
+            collections=["ga_s2_coastalecosystems_cyear_3_v1"],
+            store=target_store,
+        )
+    logging.info(f"Retrieved {items} items from STAC collection and wrote them to {target_filename}.")
 
     logging.info(f"Finished writing parquet file to {target_url}")
 
@@ -79,7 +62,7 @@ async def run_index_aus_coastal_ecosystems(
 # Read all STAC items from ACE bucket path and index them into a single STAC-Geoparquet file using rustac.
 @ace_app.command("index")
 def index_aus_coastal_ecosystems(
-    source_location: str = typer.Option(
+    source_stac_url: str = typer.Option(
         ...,
         help="S3 path to the bucket with ACE STAC documents.",
     ),
@@ -90,5 +73,5 @@ def index_aus_coastal_ecosystems(
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
     logging.info("Starting ACE indexing process...")
-    asyncio.run(run_index_aus_coastal_ecosystems(source_location, target_location, overwrite))
+    asyncio.run(run_index_aus_coastal_ecosystems(source_stac_url, target_location, overwrite))
     logging.info("ACE indexing process completed.")

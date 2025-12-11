@@ -186,6 +186,23 @@ dataset-seagrass-provenance-s3:
 		--overwrite
 
 
+# Dataset ACE - Australian Coastal Ecosystems
+dataset-ace-index-local:
+	csdr ace index \
+		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
+		--target-location=./cache/datasets/ace/0-0-1 \
+		--overwrite
+dataset-ace-provenance-local:
+	csdr provenance dataset \
+		--id=19e30180-8512-4cce-b280-fa17bb014578 \
+		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
+		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
+		--source-metadata-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
+		--dataset-type=stac-geoparquet \
+		--post-to-database \
+		--overwrite
+
+
 # Dataset ACA - reef extent
 dataset-aca-extract-local:
 	csdr aca extract \
