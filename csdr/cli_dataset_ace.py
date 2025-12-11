@@ -59,7 +59,7 @@ async def run_index_aus_coastal_ecosystems(
     logging.info(f"Finished writing parquet file to {target_url}")
 
 
-# Read all STAC items from ACE bucket path and index them into a single STAC-Geoparquet file using rustac.
+# Read all STAC items from ACE STAC Catalog and index them into a single STAC-Geoparquet file using rustac.
 @ace_app.command("index")
 def index_aus_coastal_ecosystems(
     source_stac_url: str = typer.Option(
