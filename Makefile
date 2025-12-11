@@ -386,8 +386,8 @@ geometry-aus-states-convert-local:
 		--create-pmtiles
 geometry-aus-states-provenance-local-db:
 	csdr provenance geometry \
-		--id=60a638c0-2823-4614-a405-d26a2c1f30d2 \
-		--run-id=aus-states-test-run-id2 \
+		--id=0b9b8e1a-d20a-41c2-843d-1f2b47d6a512 \
+		--run-id=aus-states-test-run-id \
 		--geometry-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.parquet \
 		--pmtiles-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.pmtiles \
 		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \

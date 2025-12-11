@@ -33,7 +33,8 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict | None
 
     geometry_output = {
         "id": properties.get("csdr-id"),
-        "geometry": poly.geojson(simplify=0)["geometry"], # Ensure when converting to geojson it doesn't simplify the geometry. By default it simplifies large geometries.
+        # Simplifying 0.0005 all ABS Aus State geometries post to DB. At 0.00005 WA and TAS fail due to being too large for the API.
+        "geometry": poly.geojson(simplify=0.0005)["geometry"], # .geojson() simplifies large geometries by default. Be careful.
         "name": properties.get("csdr-name"),
         "description": properties.get("description", ""),
         "metadata": properties.get("metadata", {}),
@@ -134,6 +135,7 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
         if geometry_output is None:
             errors += 1
+            logging.warning(f"Skipping geometry output {row.get('id')} with null geometry.")
             continue # Skip geometry if geometry_output is None (handle null geometries)
         geometry_output["geometriesRunId"] = run_id
         response = post_geometry_output(geometry_output)
@@ -144,12 +146,14 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
                 f"Failed to post geometry output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
                 exc_info=True,
             )
+            logging.error(f"Failed to post geometry output {geometry_output.get('id')} to database.")
             errors += 1
         else:
             successes += 1
             logging.info(
                 f"Wrote geometry output to database \n {dumps(response.json(), indent=2)}"
             )
+            logging.info(f"Wrote geometry output {geometry_output.get('id')} to database.")
     logging.info(
         f"Posted {successes} geometry outputs to database with {errors} errors."
     )
