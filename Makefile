@@ -287,7 +287,7 @@ geometry-eez-provenance-local:
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
 		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
-		--run-id=test-run-id \
+		--run-id=eez-test-run-id \
 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
@@ -310,7 +310,32 @@ geometry-eez-provenance-s3-db:
 		--post-geometry-outputs \
 		--overwrite
 
+# Australian Coastal Sediment Compartments - Secondary Compartments
+geometry-acsc2-cache-local:
+	csdr acsc2 cache \
+		--target-location=./cache/geometries/acsc2/0-0-1/raw \
+		--overwrite
 
+geometry-acsc2-convert-local:
+	csdr convert zip-to-parquet \
+		--name-field name \
+		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/acsc2.zip \
+		--source-internal-path-name=Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.shp \
+		--target-location=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id \
+		--create-pmtiles
+
+geometry-acsc2-provenance-local-db:
+	csdr provenance geometry \
+		--id=7dcfe227-d2f2-4581-aba3-41aba0da3f4c \
+		--run-id=acsc2-test-run-id \
+		--geometry-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet \
+		--pmtiles-url=.cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.pmtiles \
+		--source-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/explore" \
+		--source-metadata-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/about" \
+		--geometry-type=geoparquet \
+		--post-to-database \
+		--post-geometry-outputs \
+		--overwrite
 
 ### PRODUCTS ###
 

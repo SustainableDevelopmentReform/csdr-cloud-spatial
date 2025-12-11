@@ -62,19 +62,16 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    
     source_path, source_zip_name = split_path_and_file_name_from_url(source_zip_location)
     source_store = get_store_with_prefix_from_url(source_path)
 
+    # Check if source zip exists
     if not exists(source_store, source_zip_name):
         logging.error(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
-        raise typer.Exit(code=1)
-    else:
-        logging.info(
-            f"Source zip file found at {source_zip_location}, proceeding with extraction."
-        )
+        raise typer.Exit(code=1) # Exit with error
+    logging.info(f"Source zip file found at {source_zip_location}, proceeding with extraction.")
 
     target_location = target_location.rstrip("/")
 
@@ -88,15 +85,22 @@ def convert_zipfile_to_parquet(
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
         logging.warning(
-            f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
+            f"Target parquet file already exists at {target_url} and overwrite is off. Use --overwrite to replace. Exiting successfully."
         )
-        raise typer.Exit(code=0)
+        raise typer.Exit(code=0) # Exit successfully, nothing to do
+    logging.info("Target parquet file does not exist or overwrite is on, proceeding with extraction.")
 
     # Pull the whole zip into memory
     zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
+    zip_bytes.seek(0) # Ensure pointer is at start
 
-    # Use Fiona's in-memory ZIP reader (works with bytes and includes all sidecar files)
     with ZipMemoryFile(zip_bytes) as z:
+        files_in_zip = z.listdir()
+        logging.info(f"Files in zip: {files_in_zip}")
+        logging.info(f"Requested internal path: {source_internal_path_name}")
+        if source_internal_path_name not in files_in_zip:
+            logging.info("ERROR: source_internal_path_name does not match any file in the zip!")
+            raise ValueError("Internal path not found in zip file.")
         # Open the shapefile within the ZIP
         with z.open(source_internal_path_name) as src:
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)

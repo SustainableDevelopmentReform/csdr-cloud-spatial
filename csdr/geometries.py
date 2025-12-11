@@ -1,9 +1,8 @@
-import json
+import logging
 from datetime import datetime
 from json import dumps
 
 from geopandas import GeoDataFrame
-import logging
 from odc.geo.geom import Geometry
 from pandas import Series
 from requests.exceptions import HTTPError
@@ -17,7 +16,7 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict:
     poly = Geometry(gdf_row.geometry, crs=crs)
     properties = gdf_row.drop(labels=["geometry"]).to_dict()
 
-    # Clean data, replace NaN with something that works in JSON
+    # Clean data, replace NaN with None so that it works in JSON
     for key, value in properties.items():
         if value != value:  # NaN check
             properties[key] = None
