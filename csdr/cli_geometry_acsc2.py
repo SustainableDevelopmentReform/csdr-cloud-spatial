@@ -60,7 +60,7 @@ def cache_acsc2(
         default="https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1",
     ),
     target_location: str = typer.Option(
-        help=f"Local or remote path (like './cache/geometries/acsc2/0-0-1/raw' or s3://files.auspatious.com/csdr/geometries/acsc2/0-0-1/raw) to store the cached {geometry_name} file.",
+        help=f"Local or remote path (like './cache/geometries/acsc2/0-0-1/raw' or s3://csdr-public-dev/geometries/acsc2/0-0-1/raw) to store the cached {geometry_name} file.",
         default="./cache/geometries/acsc2/0-0-1/raw",
     ),
     overwrite: bool = typer.Option(

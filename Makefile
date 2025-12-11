@@ -286,7 +286,7 @@ geometry-eez-provenance-local:
 
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
-		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
+		--id=65427160-c63c-4c24-a4ac-7013940fae9e \
 		--run-id=eez-test-run-id \
 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
@@ -326,7 +326,7 @@ geometry-acsc2-convert-local:
 
 geometry-acsc2-provenance-local-db:
 	csdr provenance geometry \
-		--id=7dcfe227-d2f2-4581-aba3-41aba0da3f4c \
+		--id=452a546e-681e-4187-b3d3-8190a317862c \
 		--run-id=acsc2-test-run-id \
 		--geometry-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet \
 		--pmtiles-url=.cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.pmtiles \
