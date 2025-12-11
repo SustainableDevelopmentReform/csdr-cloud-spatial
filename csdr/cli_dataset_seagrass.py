@@ -19,9 +19,10 @@ seagrass_app = typer.Typer()
 async def run_index_dep_seagrass(
     source_location: str, target_location: str, overwrite: bool = True
 ) -> None:
-    store = get_store_with_prefix_from_url(source_location, region="us-west-2")
+    region = "us-west-2"
+    store = get_store_with_prefix_from_url(source_location, region=region)
 
-    target_store = get_store_with_prefix_from_url(target_location)
+    target_store = get_store_with_prefix_from_url(target_location, mkdir=True)
     target_filename = "dep_s2_seagrass.parquet"
     target_url = f"{target_location}/{target_filename}"
     logging.info(f"Target URL for DEP Seagrass parquet: {target_url}")
@@ -39,12 +40,15 @@ async def run_index_dep_seagrass(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     # Find all the the DEP Seagrass STAC files
-    with Env(AWS_REGION="us-west-2"):
+    with Env(AWS_REGION=region):
         item_dicts = await get_stac_item_dicts_from_store(store)
 
-    logging.info(
-        f"Writing {len(item_dicts)} STAC items to parquet at {target_url}"
-    )
+    count_items = len(item_dicts)
+    if count_items == 0:
+        logging.error("No STAC items found, nothing to index.")
+        exit(1) # Exit with error code
+    logging.info(f"Writing {count_items} STAC items to parquet at {target_url}")
+
     with suppress_rust_output():
         # TODO: experiment with parquet_compression options for rustac write
         await write(target_filename, item_dicts, store=target_store)
