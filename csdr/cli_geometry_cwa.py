@@ -1,6 +1,3 @@
-# Australian Coastal Sediment Compartments - Secondary Compartments
-# UI to download https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/explore
-# URL to download shapefile https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1
 import asyncio
 import logging
 from io import BytesIO
@@ -13,24 +10,24 @@ from csdr.io import (
     get_store_with_prefix_from_url,
 )
 
-acsc2_app = typer.Typer()
+cwa_app = typer.Typer()
 
-geometry_name = "Australian Coastal Sediment Compartments - Secondary Compartments"
+geometry_name = "GA Coastal Waters Areas"
 
 # TODO: Make this a reusable function in csdr.io or csdr.utils so it can be used in other geometry caching CLIs
 # E.g. utils.cache_zipped_shapefile(source_url, target_location, target_file_name, overwrite)
-async def run_cache_acsc2(
+async def run_cache_cwa(
     source_url: str,
     target_location: str,
     overwrite: bool,
 ) -> str:
-    # Downloads the acsc2 zip of shapefile from source_url and stores it at target_location
+    # Downloads the cwa zip of shapefile from source_url and stores it at target_location
     # Source url is http://
     # Target location can be s3:// or local file path
     target_location = target_location.rstrip("/")
     logging.info(f"Caching '{geometry_name}' from '{source_url}' to '{target_location}'...")
     target_path = target_location # This is the path, there is no file name
-    target_file_name = "acsc2.zip"
+    target_file_name = "cwa.zip"
     target_store = get_store_with_prefix_from_url(target_path)
 
     if exists(target_store, target_file_name) and not overwrite:
@@ -52,16 +49,16 @@ async def run_cache_acsc2(
 
 
 # Download zipped shapefile.
-@acsc2_app.command("cache")
-def cache_acsc2(
+@cwa_app.command("cache")
+def cache_cwa(
     source_url: str = typer.Option(
         help=f"URL of the source {geometry_name} zipped shapefile to cache.",
         # TODO: Change CRS?
-        default="https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1",
+        default="https://hub.arcgis.com/api/v3/datasets/37a401e932544c88828a7d099880afb5_1/downloads/data?format=shp&spatialRefId=4283&where=1%3D1",
     ),
     target_location: str = typer.Option(
-        help=f"Local or remote path (like './cache/geometries/acsc2/0-0-1/raw' or s3://csdr-public-dev/geometries/acsc2/0-0-1/raw) to store the cached {geometry_name} file.",
-        default="./cache/geometries/acsc2/0-0-1/raw",
+        help=f"Local or remote path (like './cache/geometries/cwa/0-0-1/raw' or s3://csdr-public-dev/geometries/cwa/0-0-1/raw) to store the cached {geometry_name} file.",
+        default="./cache/geometries/cwa/0-0-1/raw",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
@@ -69,5 +66,5 @@ def cache_acsc2(
 ) -> None:
     logging.info(f"Starting '{geometry_name}' caching process...")
 
-    result_path = asyncio.run(run_cache_acsc2(source_url, target_location, overwrite))
+    result_path = asyncio.run(run_cache_cwa(source_url, target_location, overwrite))
     logging.info(f"'{geometry_name}' caching process completed. Cached to '{result_path}'")
