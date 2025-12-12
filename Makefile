@@ -157,12 +157,12 @@ provenance-gmw-v3-s3-db:
 # Dataset Seagrass
 dataset-seagrass-index-local:
 	csdr seagrass index \
-		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=./cache/datasets/seagrass/0-0-1 \
 		--overwrite
 dataset-seagrass-index-s3:
 	csdr seagrass index \
-		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=s3://csdr-public-dev/datasets/seagrass/0-0-1 \
 		--overwrite
 

@@ -3,12 +3,10 @@ import asyncio
 import logging
 
 import typer
-from rasterio import Env
-from rustac import write
+from rustac import search_to
 
 from csdr.io import (
     exists,
-    get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
 )
 from csdr.utils import suppress_rust_output
@@ -17,16 +15,13 @@ seagrass_app = typer.Typer()
 
 
 async def run_index_dep_seagrass(
-    source_location: str, target_location: str, overwrite: bool = True
+    stac_api_url: str, target_location: str, overwrite: bool = True
 ) -> None:
-    region = "us-west-2"
-    store = get_store_with_prefix_from_url(source_location, region=region)
-
-    target_store = get_store_with_prefix_from_url(target_location, mkdir=True)
     target_filename = "dep_s2_seagrass.parquet"
+    target_store = get_store_with_prefix_from_url(target_location, mkdir=True)
     target_url = f"{target_location}/{target_filename}"
     logging.info(f"Target URL for DEP Seagrass parquet: {target_url}")
-    
+
     # Check for existing geoparquet file
     if exists(target_store, target_filename) and not overwrite:
         logging.info(
@@ -39,19 +34,18 @@ async def run_index_dep_seagrass(
         else:
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
-    # Find all the the DEP Seagrass STAC files
-    with Env(AWS_REGION=region):
-        item_dicts = await get_stac_item_dicts_from_store(store)
+    with suppress_rust_output():
+        count_items = await search_to(
+            target_filename,
+            stac_api_url,
+            collections=["dep_s2_seagrass"],
+            store=target_store,
+        )
 
-    count_items = len(item_dicts)
+    logging.info(f"Written {count_items} STAC items to parquet at {target_url}")
     if count_items == 0:
         logging.error("No STAC items found, nothing to index.")
         exit(1) # Exit with error code
-    logging.info(f"Writing {count_items} STAC items to parquet at {target_url}")
-
-    with suppress_rust_output():
-        # TODO: experiment with parquet_compression options for rustac write
-        await write(target_filename, item_dicts, store=target_store)
 
     logging.info(f"Finished writing parquet file to {target_url}")
 
@@ -59,9 +53,9 @@ async def run_index_dep_seagrass(
 # Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.
 @seagrass_app.command("index")
 def index_dep_seagrass(
-    source_location: str = typer.Option(
+    stac_api_url: str = typer.Option(
         ...,
-        help="S3 path to the bucket with Seagrass STAC documents.",
+        help="URL to the STAC API e.g. https://stac.prod.digitalearthpacific.io",
     ),
     target_location: str = typer.Option(
         ...,
@@ -70,5 +64,5 @@ def index_dep_seagrass(
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
     logging.info("Starting DEP Seagrass indexing process...")
-    asyncio.run(run_index_dep_seagrass(source_location, target_location, overwrite))
+    asyncio.run(run_index_dep_seagrass(stac_api_url, target_location, overwrite))
     logging.info("DEP Seagrass indexing process completed.")
