@@ -157,12 +157,12 @@ provenance-gmw-v3-s3-db:
 # Dataset Seagrass
 dataset-seagrass-index-local:
 	csdr seagrass index \
-		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=./cache/datasets/seagrass/0-0-1 \
 		--overwrite
 dataset-seagrass-index-s3:
 	csdr seagrass index \
-		--source-location=s3://dep-public-data/dep_s2_seagrass/0-2-0 \
+		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=s3://csdr-public-dev/datasets/seagrass/0-0-1 \
 		--overwrite
 
@@ -181,6 +181,23 @@ dataset-seagrass-provenance-s3:
 		--dataset-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
+		--dataset-type=stac-geoparquet \
+		--post-to-database \
+		--overwrite
+
+
+# Dataset ACE - Australian Coastal Ecosystems
+dataset-ace-index-local:
+	csdr ace index \
+		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
+		--target-location=./cache/datasets/ace/0-0-1 \
+		--overwrite
+dataset-ace-provenance-local:
+	csdr provenance dataset \
+		--id=19e30180-8512-4cce-b280-fa17bb014578 \
+		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
+		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
+		--source-metadata-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
