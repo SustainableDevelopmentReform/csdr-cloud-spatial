@@ -35,6 +35,7 @@ async def run_index_dep_seagrass(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     with suppress_rust_output():
+        # TODO: experiment with parquet_compression options for rustac write
         count_items = await search_to(
             target_filename,
             stac_api_url,
