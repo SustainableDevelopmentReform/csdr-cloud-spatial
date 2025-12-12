@@ -1,6 +1,9 @@
+# This is nice. We may want to do a kind of "index in place" process for this, though. Depends how large the data is.
+# I'd like to consider source.coop as a "canonical" data source, and read from there. (I'd also like us to be writing to there, which is a nice future goal.)
+# https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/pull/85#discussion_r2583388386
+
 import asyncio
 import logging
-import re
 from io import BytesIO
 
 import aiohttp
