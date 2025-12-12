@@ -327,7 +327,7 @@ geometry-eez-provenance-s3-db:
 		--post-geometry-outputs \
 		--overwrite
 
-# Australian Coastal Sediment Compartments - Secondary Compartments
+# Geometry Australian Coastal Sediment Compartments - Secondary Compartments
 geometry-acsc2-cache-local:
 	csdr acsc2 cache \
 		--target-location=./cache/geometries/acsc2/0-0-1/raw \
@@ -349,6 +349,32 @@ geometry-acsc2-provenance-local-db:
 		--pmtiles-url=.cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.pmtiles \
 		--source-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/explore" \
 		--source-metadata-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/about" \
+		--geometry-type=geoparquet \
+		--post-to-database \
+		--post-geometry-outputs \
+		--overwrite
+
+# Geometry GA Coastal Waters Areas
+geometry-cwa-cache-local:
+	csdr cwa cache \
+		--source-url="https://hub.arcgis.com/api/v3/datasets/37a401e932544c88828a7d099880afb5_1/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
+		--target-location=./cache/geometries/cwa/0-0-1/raw \
+		--overwrite
+geometry-cwa-convert-local:
+	csdr convert zip-to-parquet \
+		--name-field name \
+		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/cwa.zip \
+		--source-internal-path-name=CW_1970_1980_Areas.shp \
+		--target-location=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id \
+		--create-pmtiles
+geometry-cwa-provenance-local-db:
+	csdr provenance geometry \
+		--id=0d3cea10-b1c2-41d6-8da7-5183f9548d84 \
+		--run-id=cwa-test-run-id \
+		--geometry-url=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id/CW_1970_1980_Areas.parquet \
+		--pmtiles-url=.cache/geometries/cwa/0-0-1/runs/cwa-test-run-id/CW_1970_1980_Areas.pmtiles \
+		--source-url="https://amsis-geoscience-au.hub.arcgis.com/datasets/geoscience-au::coastal-waters-areas-amb2020/explore" \
+		--source-metadata-url="https://amsis-geoscience-au.hub.arcgis.com/datasets/geoscience-au::coastal-waters-areas-amb2020/about" \
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
