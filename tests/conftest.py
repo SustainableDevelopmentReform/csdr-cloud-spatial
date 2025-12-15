@@ -11,7 +11,7 @@ from obstore.store import LocalStore, S3Store
 from odc.geo.geom import polygon
 from pystac import ItemCollection
 
-from csdr.utils import search_stacgeoparquet
+from csdr.utils import read_stacgeoparquet
 
 DATA_DIR = Path(os.path.dirname(__file__), "data")
 GEOPARQUET_FILE = Path("gmw/gmw.parquet")
@@ -26,21 +26,10 @@ def sample_polygon() -> polygon:
         )
         return geom
 
-
-@pytest.fixture
-def sample_polygon2() -> polygon:
-    with open(DATA_DIR / "single_geometry2.geojson") as f:
-        geom = polygon(
-            json.load(f)["features"][0]["geometry"]["coordinates"][0], crs="EPSG:4326"
-        )
-        return geom
-
-
 # Can't use gmw.parquet here because it errors "rustac.RustacError: External error: General error: Invalid byte order"
-# TODO: Consolidate test data to reduce data.
 @pytest.fixture
-def sample_stacgeoparquet(sample_polygon2: polygon) -> ItemCollection:
-    return search_stacgeoparquet(str(DATA_DIR / "dep_s2_seagrass.parquet"), sample_polygon2, "2022")
+def sample_stacgeoparquet() -> ItemCollection:
+    return read_stacgeoparquet(str(GEOPARQUET_PATH))
 
 
 @pytest.fixture

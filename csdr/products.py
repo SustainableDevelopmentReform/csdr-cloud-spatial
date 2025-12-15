@@ -9,36 +9,33 @@ from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
     load_xarray_stacgeoparquet,
-    search_stacgeoparquet,
+    read_stacgeoparquet,
     xarray_calculate_area,
 )
 
 
 # The _get_area_from_stac_geoparquet function does the following:
-# 1. Loads a STAC-Geoparquet using rustac (filtered by geometry and datetime if provided).
-# 2. If no items found, return 0.0 area immediately.
-# 3. If items found, loads the xarray dataset from the STAC items.
+# 1. Loads a STAC-Geoparquet using rustac.
+# 2. If items found, loads the xarray dataset from the STAC items.
 # 4. Calculates the area where the specified variable equals the given value within the geometry.
 def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
     """ Calculate the area of the dataset within the given geometry. """
     # Get the STAC items filtered by geometry and datetime
-    items = search_stacgeoparquet(dataset_url, geometry, datetime_string_match)
-    logging.info(f"Dataset has {len(items)} STAC items that intersect with the given geometry and match the datetime filter.")
+    items = read_stacgeoparquet(dataset_url)
 
     if not items or len(items) == 0:
-        logging.info("No spatial intersection between geometry and dataset bounding boxes (or datetime filter). Returning area 0.0.")
-        return 0.0
-    else:
-        logging.info("Spatial intersection found between bounding boxes of geometry and dataset (and datetime filter). Proceeding with area calculation.")
+        raise ValueError("No STAC items found.")
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
     logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
     
-    # Load the dataset as xarray from the STAC items. Filters are not needed because they are applied in search_stacgeoparquet.
+    # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
     data = load_xarray_stacgeoparquet(
         items,
+        geometry=geometry,
+        datetime_string_match=datetime_string_match,
         **load_kwargs,
     )
 
@@ -49,6 +46,7 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
             f"Variable {variable} not found in dataset. Available: {list(data.data_vars)}"
         )
 
+    # Calculate area. This also does the variable/value filter.
     total_area = xarray_calculate_area(
         data[variable], geometry, variable=variable, value=value
     )
