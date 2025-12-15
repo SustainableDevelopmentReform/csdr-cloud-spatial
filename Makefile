@@ -234,24 +234,23 @@ dataset-aca-provenance-local-db:
 		--overwrite
 
 # Dataset MS Buildings
-dataset-buildings-extract-local:
-	csdr buildings extract \
-		--source-location=https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country \
-		--target-location=./cache/datasets/buildings/0-0-1/data \
-		--no-overwrite \
-		--max-concurrent=16
-
+# Cache is not needed. It would be very heavy to download all country files.
+# dataset-buildings-cache-local:
+# 	csdr buildings cache \
+# 		--source-location=https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/ \
+# 		--target-location=./cache/datasets/buildings/0-0-1/data \
+# 		--no-overwrite \
+# 		--max-concurrent=16
+# Index is done reading each country parquet file using sedona, to just get the bounds.
 dataset-buildings-index-local:
 	csdr buildings index \
-		--source-location=./cache/datasets/buildings/0-0-1/data \
 		--target-location=./cache/datasets/buildings/0-0-1 \
 		--overwrite
-
 dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
-		--id=608e20ef-b074-47aa-a0f7-c0eb5437d28b \
+		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
 		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
-		--source-url="https://source.coop/vida/google-microsoft-open-buildings" \
+		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
 		--post-to-database \
@@ -721,8 +720,19 @@ product-aca-eez-provenance-local-db:
 
 # Product buildings by EEZ
 # Count how many buildings per EEZ.
-# product-buildings-eez-process-geometry-local:
-# 	csdr products process-geometry \
+# TODO: Fix dataset-provenance-url to point to buildings dataset. Currently it is placeholder.
+product-buildings-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+		--run-id=test-buildings-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/AFG.parquet.provenance.json \
+		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--variable-name=class \
+		--variable-value=Reef \
+		--datetime=2022 \
+		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
+		--overwrite
 
 
 ### OTHER ###

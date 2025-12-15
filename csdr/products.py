@@ -54,8 +54,10 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     return total_area
 
 
+# TODO: Generalise this to work for any geoparquet dataset, not just ACA reef.
 def _get_area_from_geoparquet_sedona(
         sd: sedona.db.context.SedonaContext,
+        dataset_url: str,
         parquets_location: str,
         geometry_wkt: str, variable: str | None = None,
         value: float | None = None,
@@ -68,37 +70,89 @@ def _get_area_from_geoparquet_sedona(
 
     # TODO: Add filters for variable, value, and datetime_string_match
 
+    # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     region = "ap-southeast-2" # TODO: Get this from env/config.
 
     start_time = datetime.now()
 
-    # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
-    sd.read_parquet(parquets_location, options={"aws.skip_signature": True, "aws.region": region}).to_view("reef", overwrite=True)
+    if "s3" in parquets_location:
+        # This is for S3 data like the ACA reef dataset.
+        # This is the reef stuff that needs to be generalised.
+        sd.read_parquet(parquets_location, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
+        # TODO: Remove timing logs later
+        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+        logging.info(f"Time taken to initialise: {total_seconds} seconds")
 
-    # TODO: Remove timing logs later
-    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-    logging.info(f"Time taken to initialise: {total_seconds} seconds")
+        start_time = datetime.now()
+        area_result = sd.sql(
+            f"""
+            SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
+            FROM dataset
+            WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+            """
+        ).to_pandas()
 
-    start_time = datetime.now()
-    area_result = sd.sql(
-        f"""
-        SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
-        FROM reef
-        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-        """
-    ).to_pandas()
+        area_m2 = area_result['total_area'][0]
+        if pd.isna(area_m2):
+            logging.info("No intersected dataset geometries found.")
+            return 0.0
+        else:
+            logging.info(f"Total intersected area: {area_m2:.2f} m^2")
 
-    area_m2 = area_result['total_area'][0]
-    if pd.isna(area_m2):
-        logging.info("No intersected reef geometries found.")
-        return 0.0
+        # TODO: Remove timing logs later
+        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+        logging.info(f"Time taken to calculate: {total_seconds} seconds")
+        return round(float(area_m2), 2)
+    
+    elif "source.coop" in parquets_location:
+        import pdb; pdb.set_trace()
+
+        # This is for Source.coop data like the VIDA Buildings dataset.
+        # Buildings steps:
+        # 1. Use sedona to intersect with buildings.parquet index file that we make.
+        # 2. Then know which country parquets to load based on that intersection. Use sedona again to load only those parquets.
+        # 3. Calculate intersected area from those parquets.
+
+
+        # sd.read_parquet("https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/country_iso=AFG/AFG.parquet", options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True) # This works.
+        # # sd.read_parquet("https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/").to_view("dataset", overwrite=True) # This doesn't. Therefore I think we must index. This could be good for provenance anyway.
+        sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
+        intersected_countries = sd.sql(
+            f"""
+            SELECT DISTINCT country_iso
+            FROM index_data
+            WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+            """
+        ).to_pandas()
+
+        # intersected_countries_list = intersected_countries['country_iso'].tolist()
+        intersected_countries_list = ["AFG", "AUS"]
+        total_area_m2 = 0.0
+        for country_iso in intersected_countries_list:
+            country_parquet_url = f"{parquets_location}/country_iso={country_iso}/{country_iso}.parquet"
+            logging.info(f"Reading country parquet: {country_parquet_url}")
+            sd.read_parquet(country_parquet_url).to_view("country_data", overwrite=True)
+            country_area_result = sd.sql(
+                f"""
+                SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS country_total_area
+                FROM country_data
+                WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+                """
+            ).to_pandas()
+            country_area_m2 = country_area_result['country_total_area'][0]
+            if not pd.isna(country_area_m2):
+                total_area_m2 += country_area_m2
+                logging.info(f"Country {country_iso} intersects with area: {country_area_m2:.2f} m^2")
+        
+        logging.info(f"Total intersected area from all countries: {total_area_m2:.2f} m^2")
+        
+        # TODO: Remove timing logs later
+        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+        logging.info(f"Time taken to calculate: {total_seconds} seconds")
+        return round(float(total_area_m2), 2)
+
     else:
-        logging.info(f"Total intersected area: {area_m2:.2f} m^2")
-
-    # TODO: Remove timing logs later
-    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-    logging.info(f"Time taken to calculate: {total_seconds} seconds")
-    return round(float(area_m2), 2)
+        raise ValueError(f"Unsupported parquets location: {parquets_location}")    
 
 
 def _get_area_from_dataset_geometry(
@@ -116,12 +170,22 @@ def _get_area_from_dataset_geometry(
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
 
+    # For buildings dataset, we want to read from https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/ This has partition per country: /country_iso=AGO/AGO.parquet
+    # TODO: This is just for testing the buildings product. If this works we need to add this into the provenance for that dataset.
+    dataset_url = "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/"
+    dataset_name = "buildings"
+
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
-        path, _file_name = split_path_and_file_name_from_url(dataset_url)
-        partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
-        return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        # TODO: Make this more general. It just works for ACA reef currently.
+        if dataset_name == "aca":
+            # TODO: Actually do this properly for ACA reef dataset. This is just placeholder.
+            path, _file_name = split_path_and_file_name_from_url(dataset_url)
+            partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
+            return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        elif dataset_name == "buildings":
+            return _get_area_from_geoparquet_sedona(sd, dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
