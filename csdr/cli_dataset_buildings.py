@@ -102,6 +102,9 @@ async def _run_index_buildings(
         for (code, url), bbox in zip(countries_to_cache, results)
     ])
 
+    # TODO: Should this write bounds as separate columns (minx, miny, maxx, maxy) instead of a single bbox column? That could be better for querying.
+    # Or as a geometry column?
+
     target_file_name = "buildings.parquet"
     logging.info(f"Writing index buildings parquet to {target_file_name}")
     with BytesIO() as f:

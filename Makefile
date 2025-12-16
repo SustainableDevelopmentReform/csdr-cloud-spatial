@@ -714,6 +714,7 @@ product-aca-eez-provenance-local-db:
 # Product buildings by EEZ
 # Count how many buildings per EEZ.
 # TODO: Fix dataset-provenance-url to point to buildings dataset. Currently it is placeholder.
+# South Sudan geometry hits 9 building parquet bboxes.
 product-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
@@ -722,7 +723,7 @@ product-buildings-eez-process-geometry-local:
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
-		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
+		--geometry-id=b1b00b2e-2739-5215-a18c-eb72c5798034 \
 		--overwrite
 # product-buildings-eez-provenance-local-db:
 # 	csdr provenance product \

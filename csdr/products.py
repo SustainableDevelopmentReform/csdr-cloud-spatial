@@ -106,7 +106,6 @@ def _get_area_from_geoparquet_sedona(
         return round(float(area_m2), 2)
     
     elif "buildings" in dataset_url:
-        # import pdb; pdb.set_trace()
         # buildings.parquet is in EPSG:4326.
 
         # This is for Source.coop data like the VIDA Buildings dataset.
@@ -117,29 +116,42 @@ def _get_area_from_geoparquet_sedona(
 
         # EPSG:4326
         sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
-        import pdb; pdb.set_trace()
 
         intersected_partition_urls = sd.sql(
-            """
-            SELECT
-                url,
-                ST_SetSRID(ST_GeomFromText('POLYGON((' ||
-                    minx || ' ' || miny || ', ' ||
-                    maxx || ' ' || miny || ', ' ||
-                    maxx || ' ' || maxy || ', ' ||
-                    minx || ' ' || maxy || ', ' ||
-                    minx || ' ' || miny ||
-                '))'), 4326) AS bbox_polygon
-            FROM (
+            f"""
+            WITH indexed AS (
                 SELECT
                     url,
-                    string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',') AS bbox_list,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[1]) AS DOUBLE) AS minx,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[2]) AS DOUBLE) AS miny,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[3]) AS DOUBLE) AS maxx,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[4]) AS DOUBLE) AS maxy
-                FROM index_data
-            ) t
+                    ST_SetSRID(
+                        ST_GeomFromText(
+                            'POLYGON((' ||
+                                minx || ' ' || miny || ', ' ||
+                                maxx || ' ' || miny || ', ' ||
+                                maxx || ' ' || maxy || ', ' ||
+                                minx || ' ' || maxy || ', ' ||
+                                minx || ' ' || miny ||
+                            '))'
+                        ),
+                        4326
+                    ) AS bbox_polygon
+                FROM (
+                    SELECT
+                        url,
+                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[1]) AS DOUBLE) AS minx,
+                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[2]) AS DOUBLE) AS miny,
+                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[3]) AS DOUBLE) AS maxx,
+                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[4]) AS DOUBLE) AS maxy
+                    FROM index_data
+                )
+            )
+            SELECT
+                url,
+                bbox_polygon
+            FROM indexed
+            WHERE ST_Intersects(
+                bbox_polygon,
+                ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326)
+            );
             """
         ).to_pandas()
 
@@ -151,7 +163,12 @@ def _get_area_from_geoparquet_sedona(
         total_area_m2 = 0.0
         for partition_url in intersected_partition_urls['url']:
             logging.info(f"Reading country parquet: {partition_url}")
+            start_time = datetime.now()
             sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
+            # TODO: Remove timing logs later
+            total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+            logging.info(f"Time taken to init: {total_seconds} seconds")
+            start_time = datetime.now()
             country_area_result = sd.sql(
                 f"""
                 SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS country_total_area
@@ -160,6 +177,10 @@ def _get_area_from_geoparquet_sedona(
                 """
             ).to_pandas()
             country_area_m2 = country_area_result['country_total_area'][0]
+            # TODO: Remove timing logs later
+            total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+            logging.info(f"Time taken to calculate: {total_seconds} seconds")
+            import pdb; pdb.set_trace()
             if not pd.isna(country_area_m2):
                 total_area_m2 += country_area_m2
                 logging.info(f"{country_area_m2:.2f} m^2 for country parquet {partition_url}")
