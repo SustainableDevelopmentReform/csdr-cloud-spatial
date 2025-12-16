@@ -2,9 +2,11 @@ import logging
 from datetime import datetime
 from json import dumps
 
+import shapely.wkb as wkb
 from geopandas import GeoDataFrame
 from odc.geo.geom import Geometry
 from pandas import Series
+from pyproj import crs as pyproj_crs
 from requests.exceptions import HTTPError
 
 from csdr.app_integration import post_geometry_output, post_geometry_output_bulk
@@ -12,7 +14,7 @@ from csdr.io import read_geospatial_file
 from csdr.utils import CSDRException, make_uuid
 
 
-def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict | None:
+def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: pyproj_crs.CRS) -> dict | None:
     if not gdf_row.geometry:
         # This occurs for example in the ABS Australian States dataset where there are some null geometries
         logging.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
@@ -31,10 +33,11 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict | None
         "MultiPolygon",
     ], f"Only Polygon and MultiPolygon geometries are supported, not {poly.geom_type}"
 
+    geometry_wkb = wkb.dumps(poly.geom, hex=False, srid=crs.to_epsg())
+
     geometry_output = {
         "id": properties.get("csdr-id"),
-        # Simplifying 0.0005 all ABS Aus State geometries post to DB. At 0.00005 WA and TAS fail due to being too large for the API.
-        "geometry": poly.geojson(simplify=0.0005)["geometry"], # .geojson() simplifies large geometries by default. Be careful.
+        "geometry": geometry_wkb,
         "name": properties.get("csdr-name"),
         "description": properties.get("description", ""),
         "metadata": properties.get("metadata", {}),
