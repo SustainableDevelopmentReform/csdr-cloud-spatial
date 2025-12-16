@@ -75,11 +75,7 @@ def _get_area_from_geoparquet_sedona(
 
     start_time = datetime.now()
 
-    # This is for S3 data like the ACA reef dataset.
-    # This is the reef stuff that needs to be generalised.
-    path, _file_name = split_path_and_file_name_from_url(dataset_url)
-    partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
-    sd.read_parquet(partition_path, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
+    sd.read_parquet(dataset_url, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
     # TODO: Remove timing logs later
     total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
     logging.info(f"Time taken to initialise: {total_seconds} seconds")
@@ -188,7 +184,10 @@ def _get_area_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
-        return _get_area_from_geoparquet_sedona(sd, dataset_url, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        # This path config is specific to the the partitioned ACA reef geoparquet structure.
+        path, _file_name = split_path_and_file_name_from_url(dataset_url)
+        partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
+        return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
         raise ValueError(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
