@@ -721,11 +721,18 @@ product-buildings-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
-		--variable-name=class \
-		--variable-value=Reef \
-		--datetime=2022 \
+		--datetime=2025 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
+# product-buildings-eez-provenance-local-db:
+# 	csdr provenance product \
+# 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+# 		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/x.parquet \
+# 		--run-id=test-buildings-eez-run-id \
+# 		--dataset-run-id=55bf1b24-3255-4f3c-979e-b0c35e55e619 \
+# 		--geometries-run-id=test-run-id \
+# 		--post-to-database \
+# 		--overwrite
 
 
 ### OTHER ###
