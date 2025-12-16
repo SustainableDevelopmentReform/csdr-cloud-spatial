@@ -208,7 +208,6 @@ def process_variables_for_geometry(
     results = {}
     sd = sedona.db.connect()
 
-
     logging.info(f"Loading dataset from {dataset_provenance_url}")
     provenance = read_provenance(dataset_provenance_url)
     dataset_url = provenance.get("dataUrl")
@@ -226,7 +225,7 @@ def process_variables_for_geometry(
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for geom in geoms:
-            if var == "sum-area-by-value":
+            if var in ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area", "sum-intertidal-seagrass-area"]:
                 area = _get_area_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -238,9 +237,14 @@ def process_variables_for_geometry(
                     load_kwargs=load_kwargs,
                 )
                 total_area += area
-                results["sum-area-by-value"] = total_area
-                logging.info(f"Total area by value: {total_area}")
-            elif var == "count-buildings":
+                results[var] = total_area
+                logging.info(f"Total area by value: {total_area} for variable {var}")
+            # Area percent variables
+            elif var in ["percent-tidal-flats-area", "percent-saltmarsh-area", "percent-seagrass-area", "percent-mangroves-area"]:
+                logging.info("Starting percent variable analysis...")
+                # Here can we get the total area of the geometry first, then get the area by value, and calculate percent.
+            elif var in ["count-buildings"]:
+                logging.info("Starting count variable analysis...")
                 count = _get_count_points_in_polygon_geoparquet(
                     sd,
                     dataset_url,

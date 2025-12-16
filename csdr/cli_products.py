@@ -26,8 +26,26 @@ from csdr.utils import CSDRException, get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
 
-# TODO: Split area variables for many different products.
-KNOWN_VARIABLES = ["sum-area-by-value", "count-buildings"] # We could get these from the DB.
+# We could get these from the DB variable table. The user can create variables in the app, but they wouldn't be known here.
+# There are currently 3 types of variables:
+# 1. sum-{}-area: for area-based variables
+# 2. count-{}: for count-based variables
+# 3. percent-{}-area: for percentage area-based variables
+# There will likely be a more diverse set of variables in the future.
+KNOWN_VARIABLES = [
+    "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
+    "sum-seagrass-area",
+    "sum-reef-area",
+    "count-buildings",
+    # ACE variables:
+    "sum-intertidal-area",
+    "sum-saltmarsh-area",
+    "sum-intertidal-seagrass-area",
+    "percent-tidal-flats-area",
+    "percent-saltmarsh-area",
+    "percent-seagrass-area",
+    "percent-mangroves-area",
+]
 
 
 def _validate_parameters(
@@ -251,7 +269,7 @@ def process_geometry(
         ..., help="URL that points to the dataset provenance file"
     ),
     variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
-        "sum-area-by-value",
+        ...,
         help="Comma-separated list of variables to extract from the dataset",
         parser=parse_csv_list
     ),
@@ -398,7 +416,7 @@ def process_all_geometries_dask(
         ..., help="URL that points to the dataset provenance file"
     ),
     variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
-        "sum-area-by-value",
+        ...,
         help="Comma-separated list of variables to extract from the dataset",
         parser=parse_csv_list
     ),

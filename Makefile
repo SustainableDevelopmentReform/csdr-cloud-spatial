@@ -434,6 +434,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
@@ -451,6 +452,7 @@ product-gmw-v4-eez-process-geometry-s3:
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=7b628528-0f25-514a-884f-4d9750acccda \
@@ -466,6 +468,7 @@ product-gmw-v4-eez-process-all-geometries-dask-s3:
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -481,6 +484,7 @@ product-gmw-v4-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -507,7 +511,7 @@ product-gmw-v4-eez-consolidate-s3:
 		--datetime=2024
 
 # You need to make a Product in the app before running provenance. Use that product ID here.
-# You also need to make a Variable. It must have the ID 'sum-area-by-value'.
+# You also need to make a Variable. It must have the ID 'sum-mangrove-area'.
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
@@ -546,6 +550,7 @@ product-gmw-v3-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime-string-match=1996 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
@@ -560,6 +565,7 @@ product-gmw-v3-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--variable-name=mangrove \
 		--variable-value=1.0 \
+		--variables-to-extract="sum-mangrove-area" \
 		--datetime-string-match=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -607,6 +613,7 @@ product-seagrass-eez-process-geometry-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
+		--variables-to-extract="sum-seagrass-area" \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
@@ -623,6 +630,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
+		--variables-to-extract="sum-seagrass-area" \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
@@ -638,6 +646,7 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--variable-name=seagrass \
 		--variable-value=1 \
+		--variables-to-extract="sum-seagrass-area" \
 		--datetime-string-match="2021" \
 		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
@@ -683,6 +692,7 @@ product-aca-eez-process-geometry-local:
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
+		--variables-to-extract="sum-reef-area" \
 		--datetime=2022 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
@@ -697,6 +707,7 @@ product-aca-eez-process-geometry-s3:
 		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
+		--variables-to-extract="sum-reef-area" \
 		--datetime=2022 \
 		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
 		--overwrite
@@ -712,6 +723,7 @@ product-aca-eez-process-all-geometries-dask-local:
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
+		--variables-to-extract="sum-reef-area" \
 		--datetime=2022 \
 		--overwrite \
 		--use-dask \
