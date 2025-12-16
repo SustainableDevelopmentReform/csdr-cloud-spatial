@@ -26,7 +26,8 @@ from csdr.utils import get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
 
-KNOWN_VARIABLES = ["sum-area-by-value"]
+# TODO: Split area variables for many different products.
+KNOWN_VARIABLES = ["sum-area-by-value", "count-buildings"] # We could get these from the DB.
 
 
 def _validate_parameters(

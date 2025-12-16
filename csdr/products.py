@@ -58,7 +58,8 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
 def _get_area_from_geoparquet_sedona(
         sd: sedona.db.context.SedonaContext,
         dataset_url: str,
-        geometry_wkt: str, variable: str | None = None,
+        geometry_wkt: str,
+        variable: str | None = None,
         value: float | None = None,
         datetime_string_match: str | None = None
     ) -> float:
@@ -74,131 +75,133 @@ def _get_area_from_geoparquet_sedona(
 
     start_time = datetime.now()
 
-    if "reef" in dataset_url: # TODO: Generalise this to work for any geoparquet dataset, not just ACA reef.
-        # This is for S3 data like the ACA reef dataset.
-        # This is the reef stuff that needs to be generalised.
-        path, _file_name = split_path_and_file_name_from_url(dataset_url)
-        partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
-        sd.read_parquet(partition_path, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
+    # This is for S3 data like the ACA reef dataset.
+    # This is the reef stuff that needs to be generalised.
+    path, _file_name = split_path_and_file_name_from_url(dataset_url)
+    partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
+    sd.read_parquet(partition_path, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
+    # TODO: Remove timing logs later
+    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+    logging.info(f"Time taken to initialise: {total_seconds} seconds")
+
+    start_time = datetime.now()
+    area_result = sd.sql(
+        f"""
+        SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
+        FROM dataset
+        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+        """
+    ).to_pandas()
+
+    area_m2 = area_result['total_area'][0]
+    if pd.isna(area_m2):
+        logging.info("No intersected dataset geometries found.")
+        return 0.0
+    else:
+        logging.info(f"Total intersected area: {area_m2:.2f} m^2")
+
+    # TODO: Remove timing logs later
+    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
+    logging.info(f"Time taken to calculate: {total_seconds} seconds")
+    return round(float(area_m2), 2)
+
+def _get_count_points_in_polygon_geoparquet(
+        sd: sedona.db.context.SedonaContext,
+        dataset_url: str,
+        geometry_wkt: str,
+    ) -> int:
+    # buildings.parquet is in EPSG:4326.
+
+    # This is for Source.coop data - VIDA Buildings dataset.
+    # Buildings steps:
+    # 1. Use sedona to intersect with buildings.parquet index file that we make.
+    # 2. Then know which country parquets to load based on that intersection. Use sedona again to load only those parquets.
+    # 3. Calculate count of buildings from those parquets.
+
+    # EPSG:4326
+    sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
+
+    # TODO: Just use the geometry column directly rather than reconstructing from minx, miny, maxx, maxy.
+    intersected_partition_urls = sd.sql(
+        f"""
+        WITH indexed AS (
+            SELECT
+                code,
+                url,
+                ST_SetSRID(
+                    ST_GeomFromText(
+                        'POLYGON((' ||
+                            minx || ' ' || miny || ', ' ||
+                            maxx || ' ' || miny || ', ' ||
+                            maxx || ' ' || maxy || ', ' ||
+                            minx || ' ' || maxy || ', ' ||
+                            minx || ' ' || miny ||
+                        '))'
+                    ),
+                    4326
+                ) AS bbox_polygon
+            FROM (
+                SELECT
+                    code,
+                    url,
+                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[1]) AS DOUBLE) AS minx,
+                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[2]) AS DOUBLE) AS miny,
+                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[3]) AS DOUBLE) AS maxx,
+                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[4]) AS DOUBLE) AS maxy
+                FROM index_data
+            )
+        )
+        SELECT
+            code,
+            url,
+            bbox_polygon
+        FROM indexed
+        WHERE ST_Intersects(
+            bbox_polygon,
+            ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326)
+        );
+        """
+    ).to_pandas()
+
+    if intersected_partition_urls.empty:
+        logging.info("No intersected dataset geometries found in index.")
+        return 0
+    logging.info(f"Found {len(intersected_partition_urls)} intersected country parquet files from index.")
+
+    # Just for debugging
+    intersected_partition_urls = intersected_partition_urls.head(2)
+    total_count = 0
+    for code, partition_url in intersected_partition_urls['url']:
+        logging.info(f"Reading country parquet: {partition_url}")
+        start_time = datetime.now()
+        sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
         # TODO: Remove timing logs later
         total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-        logging.info(f"Time taken to initialise: {total_seconds} seconds")
-
+        logging.info(f"Time taken to init: {total_seconds} seconds")
         start_time = datetime.now()
-        area_result = sd.sql(
+        country_count_result = sd.sql(
             f"""
-            SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
-            FROM dataset
+            SELECT COUNT(*) AS country_geom_count
+            FROM country_data
             WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
             """
         ).to_pandas()
-
-        area_m2 = area_result['total_area'][0]
-        if pd.isna(area_m2):
-            logging.info("No intersected dataset geometries found.")
-            return 0.0
-        else:
-            logging.info(f"Total intersected area: {area_m2:.2f} m^2")
-
+        country_geom_count = country_count_result['country_geom_count'][0]
         # TODO: Remove timing logs later
         total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
         logging.info(f"Time taken to calculate: {total_seconds} seconds")
-        return round(float(area_m2), 2)
+        if not pd.isna(country_geom_count):
+            total_count += country_geom_count
+            logging.info(f"{country_geom_count} buildings for country parquet {code}")
     
-    elif "buildings" in dataset_url:
-        # buildings.parquet is in EPSG:4326.
-
-        # This is for Source.coop data like the VIDA Buildings dataset.
-        # Buildings steps:
-        # 1. Use sedona to intersect with buildings.parquet index file that we make.
-        # 2. Then know which country parquets to load based on that intersection. Use sedona again to load only those parquets.
-        # 3. Calculate intersected area from those parquets.
-
-        # EPSG:4326
-        sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
-
-        intersected_partition_urls = sd.sql(
-            f"""
-            WITH indexed AS (
-                SELECT
-                    url,
-                    ST_SetSRID(
-                        ST_GeomFromText(
-                            'POLYGON((' ||
-                                minx || ' ' || miny || ', ' ||
-                                maxx || ' ' || miny || ', ' ||
-                                maxx || ' ' || maxy || ', ' ||
-                                minx || ' ' || maxy || ', ' ||
-                                minx || ' ' || miny ||
-                            '))'
-                        ),
-                        4326
-                    ) AS bbox_polygon
-                FROM (
-                    SELECT
-                        url,
-                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[1]) AS DOUBLE) AS minx,
-                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[2]) AS DOUBLE) AS miny,
-                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[3]) AS DOUBLE) AS maxx,
-                        CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[4]) AS DOUBLE) AS maxy
-                    FROM index_data
-                )
-            )
-            SELECT
-                url,
-                bbox_polygon
-            FROM indexed
-            WHERE ST_Intersects(
-                bbox_polygon,
-                ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326)
-            );
-            """
-        ).to_pandas()
-
-        if intersected_partition_urls.empty:
-            logging.info("No intersected dataset geometries found in index.")
-            return 0.0
-        logging.info(f"Found {len(intersected_partition_urls)} intersected country parquet files from index.")
-
-        total_area_m2 = 0.0
-        for partition_url in intersected_partition_urls['url']:
-            logging.info(f"Reading country parquet: {partition_url}")
-            start_time = datetime.now()
-            sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
-            # TODO: Remove timing logs later
-            total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-            logging.info(f"Time taken to init: {total_seconds} seconds")
-            start_time = datetime.now()
-            country_area_result = sd.sql(
-                f"""
-                SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS country_total_area
-                FROM country_data
-                WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-                """
-            ).to_pandas()
-            country_area_m2 = country_area_result['country_total_area'][0]
-            # TODO: Remove timing logs later
-            total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-            logging.info(f"Time taken to calculate: {total_seconds} seconds")
-            import pdb; pdb.set_trace()
-            if not pd.isna(country_area_m2):
-                total_area_m2 += country_area_m2
-                logging.info(f"{country_area_m2:.2f} m^2 for country parquet {partition_url}")
-        
-        logging.info(f"Total intersected area from all countries: {total_area_m2:.2f} m^2")
-        
-        # TODO: Remove timing logs later
-        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-        logging.info(f"Time taken to calculate: {total_seconds} seconds")
-        return round(float(total_area_m2), 2)
-
-    else:
-        raise ValueError(f"Unsupported parquets location: {dataset_url}")    
+    logging.info(f"Total intersected buildings from all countries: {total_count}")
+    return total_count
 
 
 def _get_area_from_dataset_geometry(
     sd: sedona.db.context.SedonaContext,
-    dataset_provenance_url: str,
+    dataset_url: str,
+    dataset_type: str,
     geometry: Geometry,
     variable: str,
     value: float,
@@ -206,10 +209,6 @@ def _get_area_from_dataset_geometry(
     load_kwargs: dict = {},
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
-    logging.info(f"Loading dataset from {dataset_provenance_url}")
-    provenance = read_provenance(dataset_provenance_url)
-    dataset_url = provenance.get("dataUrl")
-    dataset_type = provenance.get("dataType")
 
     if dataset_type == "stac-geoparquet":
         return _get_area_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
@@ -232,19 +231,26 @@ def process_variables_for_geometry(
 ) -> dict[str, str | float]:
     results = {}
     sd = sedona.db.connect()
+
+
+    logging.info(f"Loading dataset from {dataset_provenance_url}")
+    provenance = read_provenance(dataset_provenance_url)
+    dataset_url = provenance.get("dataUrl")
+    dataset_type = provenance.get("dataType")
+
     for var in variables:
-        if var == "sum-area-by-value":
-            # Explode multipolygon geometries to single polygons
-            geoms = [geometry]
-            if geometry.geom_type == "MultiPolygon":
-                geoms = list(geometry.geoms)
-            total_area = 0.0
-            logging.info(f"Amount of single geometries: {len(geoms)}")
-            start_time = datetime.now()
-            for geom in geoms:
+        # Explode multipolygon geometries to single polygons
+        geoms = [geometry]
+        if geometry.geom_type == "MultiPolygon":
+            geoms = list(geometry.geoms)
+        total_area = 0.0
+        logging.info(f"Amount of single geometries: {len(geoms)}")
+        for geom in geoms:
+            if var == "sum-area-by-value":
                 area = _get_area_from_dataset_geometry(
                     sd,
-                    dataset_provenance_url,
+                    dataset_url,
+                    dataset_type,
                     geom,
                     datetime_string_match=datetime_string_match,
                     variable=variable_name,
@@ -252,13 +258,19 @@ def process_variables_for_geometry(
                     load_kwargs=load_kwargs,
                 )
                 total_area += area
-            results["sum-area-by-value"] = total_area
-            logging.info(f"Total area by value: {total_area}")
-            # TODO: Remove timing logs later
-            total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-            logging.info(f"Total time taken: {total_seconds} seconds")
-        else:
-            logging.error(f"Unknown variable requested: {var}")
+                results["sum-area-by-value"] = total_area
+                logging.info(f"Total area by value: {total_area}")
+            elif var == "count-buildings":
+                count = _get_count_points_in_polygon_geoparquet(
+                    sd,
+                    dataset_url,
+                    geom.wkt
+                )
+                results["count-buildings"] = count
+                logging.info(f"Total count-buildings: {count}")
+            else:
+                logging.error(f"Unknown variable requested: {var}")
+                raise ValueError(f"Unknown variable requested: {var}")
     return results
 
 
