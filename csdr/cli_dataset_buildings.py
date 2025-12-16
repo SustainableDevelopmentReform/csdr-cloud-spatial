@@ -4,12 +4,14 @@ import re
 from io import BytesIO
 
 import boto3
+import geopandas as gpd
 import pandas as pd
 import requests
 import typer
 from botocore import UNSIGNED
 from botocore.client import Config
 from obstore.store import ObjectStore
+from shapely.geometry import box
 
 from csdr.io import (
     exists,
@@ -94,16 +96,25 @@ async def _run_index_buildings(
         _get_bounds_from_parquet(url=url, code=code, semaphore=semaphore)
         for code, url in countries_to_cache
     ]
-    results = await asyncio.gather(*tasks)
+    bound_results = await asyncio.gather(*tasks)
     logging.info("Bboxes collected for all country parquet files.")
 
     output = pd.DataFrame([
         {"code": code, "url": url, "bbox": bbox}
-        for (code, url), bbox in zip(countries_to_cache, results)
+        for (code, url), bbox in zip(countries_to_cache, bound_results)
     ])
 
-    # TODO: Should this write bounds as separate columns (minx, miny, maxx, maxy) instead of a single bbox column? That could be better for querying.
-    # Or as a geometry column?
+    # Write bounds as separate columns (minx, miny, maxx, maxy) and a geometry column.
+    output[['minx', 'miny', 'maxx', 'maxy']] = pd.DataFrame(output['bbox'].tolist(), index=output.index)
+    # Add bbox_wkt as a POLYGON geometry column (WKT string)
+    output['bbox_wkt'] = output.apply(
+        lambda row: f"POLYGON(({row['minx']} {row['miny']}, {row['maxx']} {row['miny']}, {row['maxx']} {row['maxy']}, {row['minx']} {row['maxy']}, {row['minx']} {row['miny']}))",
+        axis=1
+    )
+    output = output.drop(columns=['bbox'])
+    # Add a native geometry column using shapely and geopandas
+    output['geometry'] = output.apply(lambda row: box(row['minx'], row['miny'], row['maxx'], row['maxy']), axis=1)
+    output = gpd.GeoDataFrame(output, geometry='geometry', crs='EPSG:4326')
 
     target_file_name = "buildings.parquet"
     logging.info(f"Writing index buildings parquet to {target_file_name}")
