@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 import pandas as pd
 import sedona.db
@@ -73,14 +72,8 @@ def _get_area_from_geoparquet_sedona(
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     region = "ap-southeast-2" # TODO: Get this from env/config.
 
-    start_time = datetime.now()
-
     sd.read_parquet(dataset_url, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
-    # TODO: Remove timing logs later
-    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-    logging.info(f"Time taken to initialise: {total_seconds} seconds")
 
-    start_time = datetime.now()
     area_result = sd.sql(
         f"""
         SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area
@@ -96,9 +89,6 @@ def _get_area_from_geoparquet_sedona(
     else:
         logging.info(f"Total intersected area: {area_m2:.2f} m^2")
 
-    # TODO: Remove timing logs later
-    total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-    logging.info(f"Time taken to calculate: {total_seconds} seconds")
     return round(float(area_m2), 2)
 
 def _get_count_points_in_polygon_geoparquet(
@@ -144,12 +134,7 @@ def _get_count_points_in_polygon_geoparquet(
         partition_url = row['url']
         code = row['code']
         logging.info(f"Reading country parquet: {partition_url}")
-        start_time = datetime.now()
         sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
-        # TODO: Remove timing logs later
-        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-        logging.info(f"Time taken to init: {total_seconds} seconds")
-        start_time = datetime.now()
         country_count_result = sd.sql(
             f"""
             SELECT COUNT(*) AS country_geom_count
@@ -158,9 +143,6 @@ def _get_count_points_in_polygon_geoparquet(
             """
         ).to_pandas()
         country_geom_count = country_count_result['country_geom_count'][0]
-        # TODO: Remove timing logs later
-        total_seconds = round((datetime.now() - start_time).total_seconds(), 2)
-        logging.info(f"Time taken to calculate: {total_seconds} seconds")
         if not pd.isna(country_geom_count):
             total_count += country_geom_count
             logging.info(f"{country_geom_count} buildings for country parquet {code}")
