@@ -118,46 +118,21 @@ def _get_count_points_in_polygon_geoparquet(
     # 2. Then know which country parquets to load based on that intersection. Use sedona again to load only those parquets.
     # 3. Calculate count of buildings from those parquets.
 
+    # TODO: We could speed this up by indexing the countries by second level admin divisions, rather than the whole countries. A lot of countries end up in intersected_partition_urls unnecessarily.
+    # France and Great Britain's country bboxes include their overseas territories, leading to unnecessary loads.
+
     # EPSG:4326
     sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
 
-    # TODO: Just use the geometry column directly rather than reconstructing from minx, miny, maxx, maxy.
     intersected_partition_urls = sd.sql(
         f"""
-        WITH indexed AS (
-            SELECT
-                code,
-                url,
-                ST_SetSRID(
-                    ST_GeomFromText(
-                        'POLYGON((' ||
-                            minx || ' ' || miny || ', ' ||
-                            maxx || ' ' || miny || ', ' ||
-                            maxx || ' ' || maxy || ', ' ||
-                            minx || ' ' || maxy || ', ' ||
-                            minx || ' ' || miny ||
-                        '))'
-                    ),
-                    4326
-                ) AS bbox_polygon
-            FROM (
-                SELECT
-                    code,
-                    url,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[1]) AS DOUBLE) AS minx,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[2]) AS DOUBLE) AS miny,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[3]) AS DOUBLE) AS maxx,
-                    CAST(trim(string_to_list(regexp_replace(bbox, '\\[|\\]', '', 'g'), ',')[4]) AS DOUBLE) AS maxy
-                FROM index_data
-            )
-        )
         SELECT
             code,
             url,
-            bbox_polygon
-        FROM indexed
+            geometry
+        FROM index_data
         WHERE ST_Intersects(
-            bbox_polygon,
+            geometry,
             ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326)
         );
         """
@@ -168,10 +143,10 @@ def _get_count_points_in_polygon_geoparquet(
         return 0
     logging.info(f"Found {len(intersected_partition_urls)} intersected country parquet files from index.")
 
-    # Just for debugging
-    intersected_partition_urls = intersected_partition_urls.head(2)
     total_count = 0
-    for code, partition_url in intersected_partition_urls['url']:
+    for _idx, row in intersected_partition_urls.iterrows():
+        partition_url = row['url']
+        code = row['code']
         logging.info(f"Reading country parquet: {partition_url}")
         start_time = datetime.now()
         sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
@@ -195,7 +170,7 @@ def _get_count_points_in_polygon_geoparquet(
             logging.info(f"{country_geom_count} buildings for country parquet {code}")
     
     logging.info(f"Total intersected buildings from all countries: {total_count}")
-    return total_count
+    return int(total_count)
 
 
 def _get_area_from_dataset_geometry(
@@ -239,6 +214,7 @@ def process_variables_for_geometry(
     dataset_type = provenance.get("dataType")
 
     for var in variables:
+        # TODO: Exploding first is quite inneficient for _get_count_points_in_polygon_geoparquet data loading.
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":

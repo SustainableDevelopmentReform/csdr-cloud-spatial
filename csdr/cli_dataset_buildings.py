@@ -56,7 +56,7 @@ async def _get_bounds_from_parquet(
     # It takes about 2-3 seconds per file this way, rather than minutes to download/load entire file.
 
     # TODO: Get the bbox metadata with a library instead of DIY. Couldn't find a way to do it with SedonaDb, PyArrow, or DuckDB.
-    # PyArrow needs a local or ObjectStorage file. The others don't expose the correct metadata from what I have found.
+    # PyArrow needs a local or ObjectStorage file. The other libraries don't expose the correct metadata from what I have found.
 
     async with semaphore:
         head = requests.head(url)
@@ -137,7 +137,7 @@ def index_buildings(
         help="S3 or local path to write buildings.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)"
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
-    max_concurrent: int = typer.Option(64, help="Maximum number of files to process at once."),
+    max_concurrent: int = typer.Option(32, help="Maximum number of files to process at once."),
 ) -> None:
     logging.info("Starting buildings index process ...")
     
@@ -153,7 +153,7 @@ def index_buildings(
         source_location += "/"
 
     country_urls = _get_all_country_parquet_urls(source_location)
-    asyncio.run(_run_index_buildings(country_urls, max_concurrent=max_concurrent, target_store=target_store, target_file_name=target_file_name))
+    asyncio.run(_run_index_buildings(country_urls, target_store, target_file_name, max_concurrent))
     logging.info("Index buildings dataset process completed.")
 
 if __name__ == "__main__":
