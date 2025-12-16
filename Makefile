@@ -234,14 +234,7 @@ dataset-aca-provenance-local-db:
 		--overwrite
 
 # Dataset MS Buildings
-# Cache is not needed. It would be very heavy to download all country files.
-# dataset-buildings-cache-local:
-# 	csdr buildings cache \
-# 		--source-location=https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/ \
-# 		--target-location=./cache/datasets/buildings/0-0-1/data \
-# 		--no-overwrite \
-# 		--max-concurrent=16
-# Index is done reading each country parquet file using sedona, to just get the bounds.
+# Index is done in-place in Source Coop.
 dataset-buildings-index-local:
 	csdr buildings index \
 		--target-location=./cache/datasets/buildings/0-0-1 \
@@ -726,7 +719,7 @@ product-buildings-eez-process-geometry-local:
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
 		--run-id=test-buildings-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/AFG.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--variable-name=class \
 		--variable-value=Reef \
