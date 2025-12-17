@@ -4,6 +4,8 @@ from typing import Literal
 import requests
 from requests import Response
 
+from csdr.utils import CSDRException
+
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)
 
@@ -12,7 +14,7 @@ ALLOWED_TYPES = ["dataset", "geometry", "product"]
 
 def _check_api_key() -> None:
     if API_KEY is None:
-        raise ValueError(
+        raise CSDRException(
             "API key must be provided in CSDR_API_KEY environment variable"
         )
 
@@ -35,7 +37,7 @@ def post_provenance(
     _check_api_key()
 
     if type not in ALLOWED_TYPES:
-        raise ValueError(f"Type must be one of {ALLOWED_TYPES}")
+        raise CSDRException(f"Type must be one of {ALLOWED_TYPES}")
 
     # IDs are reassigned based on type so that the primary/foreign keys are correct for the database
     if type == "geometry":

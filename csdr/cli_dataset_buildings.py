@@ -1,151 +1,148 @@
 import asyncio
+import json
 import logging
-import re
-from io import BytesIO
 
-import aiohttp
+import geopandas as gpd
 import pandas as pd
+import pyarrow.parquet as pq
 import typer
+from obstore.fsspec import FsspecStore
 from obstore.store import ObjectStore
+from shapely.geometry import box
 
 from csdr.io import (
     exists,
     find_matching_files,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
+    write_gdf_to_parquet,
 )
+from csdr.utils import CSDRException
 
 buildings_app = typer.Typer()
 
+def _get_all_country_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFrame:
+    logging.info(f"Scraping country parquet URLs from {source_location_s3} ...")
+    # List objects via Source Coop S3 proxy.
+    store = get_store_with_prefix_from_url(
+        source_location_s3,
+        region="us-east-1",
+        skip_signature=True,
+        endpoint_url=source_proxy
+    )
 
-async def _download_parquet_file(source_location: str, country_iso: str, target_store: ObjectStore, overwrite: bool, semaphore: asyncio.Semaphore) -> None:
-    # semaphore limits number of concurrent downloads
+    pattern = r'^(?!country_iso=None/None\.parquet$).+\.parquet$' # All parquet files are needed except None/None.parquet
+    parquet_files = find_matching_files(store, pattern=pattern)
+
+    number_found = len(parquet_files)
+    logging.info(f"Number of parquet files found: {number_found}")
+
+    if number_found == 0 or parquet_files is None:
+        raise CSDRException("No country parquet files found in Source Coop S3.")
+    
+    parquet_data = pd.DataFrame({
+        "code": split_path_and_file_name_from_url(file)[1].replace(".parquet", ""),
+        "url": f"{source_proxy}{source_location_s3.replace('s3://', '')}{file}",
+        "s3_url": f"{source_location_s3}{file}",
+        "s3_path": file,
+    } for file in parquet_files)
+
+    return parquet_data
+
+async def _get_bounds_from_parquet(
+        source_proxy: str,
+        s3_url: str,
+        semaphore: asyncio.Semaphore,
+    ) -> tuple[float, float, float, float]:
+
+    # Here we get large parquet files' bbox from metadata. This means that we don't have to download/load all data into memory.
+    # It takes a few seconds per file this way, rather than minutes to download/load entire file.
+
+    logging.info(f"Fetching bounding box from parquet file at {s3_url} ...")
     async with semaphore:
-        # Get file and write to target_store
-        source_file_name = f"country_iso={country_iso}/{country_iso}.parquet"
-        target_file_name = f"{country_iso}.parquet"
-        if exists(target_store, target_file_name):
-            if not overwrite:
-                logging.info(f"Skipping {target_file_name}; output exists at target store and overwrite is off.")
-                return
-            else:
-                logging.info(f"Overwrite is on. Re-downloading {source_file_name} ...")
-        url = f"{source_location.rstrip('/')}/{source_file_name}"
-        logging.info(f"Fetching {url} ...")
-        timeout = aiohttp.ClientTimeout(total=3000) # 3000 seconds (50 minutes)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    logging.error(f"Failed to fetch {url}: HTTP {resp.status}")
-                    return
-                data = await resp.read()
-        logging.info(f"Writing {target_file_name} to target store ...")
-        await target_store.put_async(target_file_name, data)
-
-
-async def _run_extract_buildings(
-    source_location: str,
-    target_location: str,
-    overwrite: bool,
-    max_concurrent: int,
-) -> None:
-    logging.info("Scraping source coop for all parquet files...")
-    target_store = get_store_with_prefix_from_url(target_location)
-
-    countries_to_extract = []
-    # TODO: fetch https://source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country HTML and get all <a> links that have title like "country_iso=AFG"
-    # Example: <a title="country_iso=AFG" class="ObjectBrowser_item__v_6Zb" data-focused="true" href="/vida/google-microsoft-open-buildings/geoparquet/by_country/country_iso=AFG" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0px; flex: 1 1 0%; opacity: 1; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg><span class="rt-Text" style="font-family: var(--code-font-family); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0px; flex: 1 1 0%;">country_iso=AFG</span></a>
-    # countries_to_extract = ["AFG", "AGO", "ALB", "AND" , "ARE", "ARG", "ARM", "ATG", "AUS"] # TODO: Get all dynamically from source_store listing
-    countries_to_extract = ["AFG", "AUS"] # TODO: Get all dynamically from source_store listing
-    logging.info(f"Found {len(countries_to_extract)} country files to extract from {source_location}. Extracting...")
-
-    semaphore = asyncio.Semaphore(max_concurrent)
-    tasks = [
-        _download_parquet_file(
-            source_location=source_location,
-            country_iso=country_iso,
-            target_store=target_store,
-            overwrite=overwrite,
-            semaphore=semaphore,
+        fs = FsspecStore(
+            "s3",
+            region="us-east-1",
+            skip_signature=True,
+            endpoint_url=source_proxy
         )
-        for country_iso in countries_to_extract
-    ]
-    await asyncio.gather(*tasks)
-    logging.info("Completed extracting all region zips.")
+        parquet_file = pq.ParquetFile(s3_url, filesystem=fs)
 
+        meta = parquet_file.schema_arrow.metadata
 
-# Buildings Extract gets all zip files from source_location, unzips them to target_location, preserving folder structure.
-# We need to get all 185 partitioned parquet files (per country or country/sa2). Not sure if we should do this manually or as part of extract.
-# Then extract doesn't need to unzip.
-# # https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/country_iso=AFG/AFG.parquet
-@buildings_app.command("extract")
-def extract_buildings(
-    source_location: str = typer.Option(
-        "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country",
-        help="HTTP url containing parquet files to extract (e.g. https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country)"
-    ),
-    target_location: str = typer.Option(
-        ...,
-        help="S3 or local path to write unzipped files (e.g. s3://bucket/datasets/buildings/0-0-1/data)"
-    ),
-    overwrite: bool = typer.Option(True, help="Overwrite files if they exist at target."),
-    max_concurrent: int = typer.Option(16, help="Maximum number of unzips to process at once."),
-) -> None:
-    logging.info("Starting buildings extraction process ...")
-    source_location = source_location.rstrip("/")
-    target_location = target_location.rstrip("/")
-    asyncio.run(_run_extract_buildings(source_location, target_location, overwrite, max_concurrent))
-    logging.info("Buildings extraction process completed.")
+        geo_json = meta[b'geo'].decode('utf-8')
+        geo = json.loads(geo_json)
+
+        bbox = geo["columns"]["geometry"]["bbox"]
+        
+        logging.info(f"Bounding box {bbox} for {s3_url}")
+
+        return bbox
+
 
 async def _run_index_buildings(
-    source_location: str,
-    target_location: str,
-    overwrite: bool,
+        source_proxy: str,
+        parquet_data: pd.DataFrame,
+        target_store: ObjectStore,
+        target_file_name: str,
+        max_concurrent: int,
 ) -> None:
-    target_store = get_store_with_prefix_from_url(target_location)
+    semaphore = asyncio.Semaphore(max_concurrent)
+    # Launch all bbox fetches concurrently
+    tasks = [
+        _get_bounds_from_parquet(source_proxy, s3_url, semaphore=semaphore)
+        for s3_url in parquet_data["s3_url"]
+    ]
+    bound_results = await asyncio.gather(*tasks)
+    logging.info("Bboxes collected for all country parquet files.")
+
+    parquet_data["bbox"] = bound_results # Append bbox to (code, url, s3_url) dataframe
+    # Add geo data to df
+    parquet_data[['minx', 'miny', 'maxx', 'maxy']] = pd.DataFrame(parquet_data['bbox'].tolist(), index=parquet_data.index)
+    parquet_data['bbox_wkt'] = parquet_data.apply(
+        lambda row: f"POLYGON(({row['minx']} {row['miny']}, {row['maxx']} {row['miny']}, {row['maxx']} {row['maxy']}, {row['minx']} {row['maxy']}, {row['minx']} {row['miny']}))",
+        axis=1
+    )
+    parquet_data = parquet_data.drop(columns=['bbox'])
+    parquet_data['geometry'] = parquet_data.apply(lambda row: box(row['minx'], row['miny'], row['maxx'], row['maxy']), axis=1)
+    parquet_data = gpd.GeoDataFrame(parquet_data, geometry='geometry', crs='EPSG:4326')
+
     target_file_name = "buildings.parquet"
-    if exists(target_store, target_file_name) and not overwrite:
-        logging.info(f"Skipping index: {target_file_name} already exists and overwrite is off.")
-        return
-    source_store = get_store_with_prefix_from_url(source_location)
-    logging.info(f"Searching for all parquet files under {source_location} ...")
-    parquet_paths = find_matching_files(source_store, r"\.parquet$")
-    logging.info(f"Found {len(parquet_paths)} parquet files to merge into {target_file_name}")
-    dfs = []
-    for path in parquet_paths:
-        logging.info(f"Reading {path} ...")
-        # Get a file-like object from obstore, read it into a GeoDataFrame, append gdf to list.
-        bytes_obj = source_store.get(path).bytes()
-        # TODO: Use io.read_geospatial_file
-        df = pd.read_parquet(BytesIO(bytes_obj))
-        dfs.append(df)
-    if not dfs:
-        logging.warning("No Parquet files found, nothing to merge.")
-        return
-    merged_df = pd.concat(dfs, ignore_index=True)
-    logging.info(f"Writing merged Parquet to {target_file_name}")
-    with BytesIO() as f:
-        merged_df.to_parquet(f, index=False)
-        f.seek(0)
-        target_store.put(target_file_name, f.read())
-    logging.info("Merge and export to Parquet completed.")
+    logging.info(f"Writing index buildings parquet to {target_file_name}")
+    write_gdf_to_parquet(parquet_data, target_store, target_file_name)
+    logging.info("Index buildings dataset completed.")
 
 
-# Buildings Index gets all of the parquet files (one per country), and merges them into a single buildings.parquet file at target_location.
+# Buildings Index gets all of the parquet files (one per country) from source coop, and writes their name, path, and bounds to a single buildings.parquet file at target_location.
 @buildings_app.command("index")
 def index_buildings(
-    source_location: str = typer.Option(
-        ...,
-        help="S3 or local path to extracted buildings files (e.g. s3://bucket/datasets/buildings/0-0-1/data)"
+    source_location_s3: str = typer.Option(
+        "s3://vida/google-microsoft-open-buildings/geoparquet/by_country/",
+        help="S3 url containing parquet files to cache (e.g. s3://vida/google-microsoft-open-buildings/geoparquet/by_country/)"
+    ),
+    source_proxy: str = typer.Option(
+        "https://data.source.coop/",
+        help="HTTP url containing parquet files to cache (e.g. https://data.source.coop/)"
     ),
     target_location: str = typer.Option(
         ...,
         help="S3 or local path to write buildings.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)"
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
+    max_concurrent: int = typer.Option(32, help="Maximum number of files to process at once."),
 ) -> None:
-    logging.info("Starting buildings merge/index process ...")
-    asyncio.run(_run_index_buildings(source_location, target_location, overwrite))
-    logging.info("buildings merge/index process completed.")
+    logging.info("Starting buildings index process ...")
+    
+    target_store = get_store_with_prefix_from_url(target_location)
+    target_file_name = "buildings.parquet"
+    if exists(target_store, target_file_name) and not overwrite:
+        logging.info(f"Skipping index: {target_file_name} already exists and overwrite is off.")
+        return
+    logging.info("Either file does not exist or overwrite is on, proceeding with indexing.")
+
+    parquet_data = _get_all_country_parquet_urls(source_location_s3, source_proxy)
+    asyncio.run(_run_index_buildings(source_proxy, parquet_data, target_store, target_file_name, max_concurrent))
+    logging.info("Index buildings dataset process completed.")
 
 if __name__ == "__main__":
     buildings_app()

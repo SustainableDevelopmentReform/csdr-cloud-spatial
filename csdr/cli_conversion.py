@@ -16,6 +16,7 @@ from csdr.io import (
     split_path_and_file_name_from_url,
     write_gdf_to_parquet,
 )
+from csdr.utils import CSDRException
 
 conversion_app = typer.Typer()
 
@@ -67,10 +68,9 @@ def convert_zipfile_to_parquet(
 
     # Check if source zip exists
     if not exists(source_store, source_zip_name):
-        logging.error(
+        raise CSDRException(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
-        raise typer.Exit(code=1) # Exit with error
     logging.info(f"Source zip file found at {source_zip_location}, proceeding with extraction.")
 
     target_location = target_location.rstrip("/")
@@ -84,7 +84,7 @@ def convert_zipfile_to_parquet(
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
-        logging.warning(
+        logging.info(
             f"Target parquet file already exists at {target_url} and overwrite is off. Use --overwrite to replace. Exiting successfully."
         )
         raise typer.Exit(code=0) # Exit successfully, nothing to do
@@ -99,8 +99,7 @@ def convert_zipfile_to_parquet(
         logging.info(f"Files in zip: {files_in_zip}")
         logging.info(f"Requested internal path: {source_internal_path_name}")
         if source_internal_path_name not in files_in_zip:
-            logging.info("ERROR: source_internal_path_name does not match any file in the zip!")
-            raise ValueError("Internal path not found in zip file.")
+            raise CSDRException(f"Internal path {source_internal_path_name} not found in zip file.")
         # Open the shapefile within the ZIP
         with z.open(source_internal_path_name) as src:
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
@@ -186,10 +185,9 @@ def convert_geospatial_file_to_parquet(
     source_store = get_store_with_prefix_from_url(source_path)
 
     if not exists(source_store, source_name):
-        logging.error(
+        raise CSDRException(
             f"Source geospatial file does not exist at {source_location}. Cannot convert."
         )
-        raise typer.Exit(code=1)
     else:
         logging.info(
             f"Source geospatial file found at {source_location}, proceeding with conversion."
@@ -210,7 +208,7 @@ def convert_geospatial_file_to_parquet(
         logging.warning(
             f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
-        raise typer.Exit(code=0)
+        raise typer.Exit(code=0) # Exit successfully, nothing to do
 
     # Read the geospatial file into a GeoDataFrame
     gdf = read_geospatial_file(source_location)

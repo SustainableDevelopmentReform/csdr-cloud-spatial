@@ -24,6 +24,7 @@ from csdr.io import (
 )
 from csdr.products import parse_outputs
 from csdr.provenance import get_provenance
+from csdr.utils import CSDRException
 
 provenance_app = Typer()
 
@@ -67,7 +68,7 @@ def _meta_provenance(
         source_url = data_url
 
     if type not in ALLOWED_PROVENANCE_TYPES:
-        raise ValueError(f"Type must be one of {ALLOWED_PROVENANCE_TYPES}")
+        raise CSDRException(f"Type must be one of {ALLOWED_PROVENANCE_TYPES}")
 
     # Build provenance dictionary
     provenance = get_provenance(

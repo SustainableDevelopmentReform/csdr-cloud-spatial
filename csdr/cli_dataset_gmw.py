@@ -22,7 +22,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
-from csdr.utils import suppress_rust_output
+from csdr.utils import CSDRException, suppress_rust_output
 
 gmw_app = typer.Typer()
 
@@ -43,8 +43,7 @@ async def cache_single_source(
 
         # Must check this file exists before proceeding
         if not exists(source_store, source_file_name):
-            logging.error(f"Source file does not exist at {source_url}. Cannot extract.")
-            raise ValueError(f"Source file does not exist at {source_url}.")
+            raise CSDRException(f"Source file does not exist at {source_url}. Cannot extract.")
         logging.info(f"Source file found at {source_url}, proceeding with extraction.")
 
         source_meta = source_store.head(source_file_name)
@@ -244,14 +243,12 @@ async def run_extract_gmw(
     logging.info(f"Checking for source zip file at path {source_zip_name}...")
     source_exists = exists(store, source_zip_name)
     if not source_exists:
-        logging.error(
+        raise CSDRException(
             f"Source zip file does not exist at {source_location}. Cannot extract."
         )
-        raise typer.Exit(code=1)
-    else:
-        logging.info(
-            f"Source zip file found at {source_location}, proceeding with extraction."
-        )
+    logging.info(
+        f"Source zip file found at {source_location}, proceeding with extraction."
+    )
 
     # Ensure that target_location is absolute path if local, otherwise STAC item href will be relative which is broken.
     if not target_location.startswith("s3://") and not target_location.startswith("http"):

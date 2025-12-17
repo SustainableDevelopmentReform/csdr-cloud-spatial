@@ -234,24 +234,16 @@ dataset-aca-provenance-local-db:
 		--overwrite
 
 # Dataset MS Buildings
-dataset-buildings-extract-local:
-	csdr buildings extract \
-		--source-location=https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country \
-		--target-location=./cache/datasets/buildings/0-0-1/data \
-		--no-overwrite \
-		--max-concurrent=16
-
+# Index is done in-place in Source Coop.
 dataset-buildings-index-local:
 	csdr buildings index \
-		--source-location=./cache/datasets/buildings/0-0-1/data \
 		--target-location=./cache/datasets/buildings/0-0-1 \
 		--overwrite
-
 dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
-		--id=608e20ef-b074-47aa-a0f7-c0eb5437d28b \
+		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
 		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
-		--source-url="https://source.coop/vida/google-microsoft-open-buildings" \
+		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
 		--post-to-database \
@@ -701,11 +693,11 @@ product-aca-eez-process-all-geometries-dask-local:
 
 product-aca-eez-consolidate-local:
 	csdr products consolidate \
-			--product-id=5926571e-a088-419d-a966-24557866ce90 \
-			--location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-			--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-			--variable-name=class
+		--product-id=5926571e-a088-419d-a966-24557866ce90 \
+		--location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
+		--variable-name=class
 # 'class' isn't the best variable-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
 
 product-aca-eez-provenance-local-db:
@@ -721,8 +713,39 @@ product-aca-eez-provenance-local-db:
 
 # Product buildings by EEZ
 # Count how many buildings per EEZ.
-# product-buildings-eez-process-geometry-local:
-# 	csdr products process-geometry \
+# South Sudan b1b00b2e-2739-5215-a18c-eb72c5798034
+# South Sudan geometry hits 9 building parquet bboxes.
+# France has a massive bounding box that South Sudan intersects, but 0 buildings actually intersect.
+# Germany a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b
+# Variable with id 'count-buildings' must exist in the app before running this.
+product-buildings-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+		--run-id=test-buildings-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
+		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--variable-name=count-buildings \
+		--datetime=2025 \
+		--geometry-id=a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b \
+		--variables-to-extract=count-buildings \
+		--overwrite
+product-buildings-eez-consolidate-local:
+	csdr products consolidate \
+			--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+			--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
+			--variable-name=count-buildings
+product-buildings-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/count-buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
+		--run-id=test-buildings-eez-run-id \
+		--dataset-run-id=c77dd12e-875b-4d05-b9de-0958f1a4d7ec \
+		--geometries-run-id=eez-test-run-id \
+		--post-to-database \
+		--overwrite
 
 
 ### OTHER ###

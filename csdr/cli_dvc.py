@@ -14,7 +14,7 @@ from dvc.stage import PipelineStage
 from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
-from csdr.utils import run_command
+from csdr.utils import CSDRException, run_command
 
 
 class ShapelyEncoder(json.JSONEncoder):
@@ -64,11 +64,9 @@ def status(
                 logging.info(f"Filtering for pipeline type: {pipeline_type}")
                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
             else:
-                logging.error(
-                    f"Invalid pipeline type: {pipeline_type}. "
-                    "Choose from 'datasets', 'geometries', 'products'."
+                raise CSDRException(
+                    f"Invalid pipeline type: {pipeline_type}. Choose from 'datasets', 'geometries', 'products'."
                 )
-                raise typer.Exit(code=1)
         else:
             logging.info("Checking all pipelines.")
             reproduce_kwargs["all_pipelines"] = True
@@ -87,12 +85,9 @@ def status(
             logging.info("No changes detected.")
 
     except NotDvcRepoError:
-        logging.error("Current directory is not a DVC repository.")
-        raise typer.Exit(code=1)
+        raise CSDRException("Current directory is not a DVC repository.")
     except Exception as e:
-        logging.error(f"Failed to get DVC status: {e}", exc_info=True)
-        raise typer.Exit(code=1)
-
+        raise CSDRException(f"Failed to get DVC status: {e}")
 
 # This isn't really needed at the moment, just use `dvc repro`
 
@@ -128,11 +123,9 @@ def status(
 #                 logging.info(f"Filtering for pipeline type: {pipeline_type}")
 #                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
 #             else:
-#                 logging.error(
-#                     f"Invalid pipeline type: {pipeline_type}. "
-#                     "Choose from 'datasets', 'geometries', 'products'."
+#                 raise CSDRException(
+#                     f"Invalid pipeline type: {pipeline_type}. Choose from 'datasets', 'geometries', 'products'."
 #                 )
-#                 raise typer.Exit(code=1)
 #         else:
 #             logging.info("Checking all pipelines.")
 #             reproduce_kwargs["all_pipelines"] = True
@@ -142,12 +135,9 @@ def status(
 #         logging.info("Reproduction complete.")
 
 #     except NotDvcRepoError:
-#         logging.error("Current directory is not a DVC repository.")
-#         raise typer.Exit(code=1)
+#         raise CSDRException("Current directory is not a DVC repository.")
 #     except Exception as e:
-#         logging.error(f"Failed to get DVC status: {e}")
-#         raise typer.Exit(code=1)
-
+#         raise CSDRException(f"Failed to get DVC status: {e}")
 
 def commit_if_changes(message: str) -> None:
     logging.info("Checking Git status...")
@@ -155,21 +145,18 @@ def commit_if_changes(message: str) -> None:
         ["git", "status", "--porcelain"]
     )
     if not git_status_success:
-        logging.error("Failed to check Git status. Is this a Git repository?")
-        raise typer.Exit(code=1)
+        raise CSDRException("Failed to check Git status. Is this a Git repository?")
 
     if bool(git_status_output):
         logging.info("Changes detected or commit forced. Staging and committing...")
         add_success, _, add_stderr = run_command(["git", "add", "."])
         if not add_success:
-            logging.error(f"Failed to stage changes with 'git add .': {add_stderr}")
-            raise typer.Exit(code=1)
+            raise CSDRException(f"Failed to stage changes with 'git add .': {add_stderr}")
 
         commit_cmd = ["git", "commit", "-m", message]
         commit_success, _, commit_stderr = run_command(commit_cmd)
         if not commit_success:
-            logging.error(f"Failed to commit changes: {commit_stderr}")
-            raise typer.Exit(code=1)
+            raise CSDRException(f"Failed to commit changes: {commit_stderr}")
         else:
             logging.info(f"Committed changes with message: '{message}'")
     else:
@@ -235,8 +222,7 @@ def generate_product_json_files(
                 json.dump(feature, f, cls=ShapelyEncoder, indent=4)
 
     except Exception as e:
-        logging.error(f"Failed to generate product JSON files: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"Failed to generate product JSON files: {e}")
 
 
 @dvc_app.command("publish")
@@ -420,20 +406,16 @@ def publish(
             logging.info("Pushing changes to remote repository...")
             push_success, push_output, push_stderr = run_command(["git", "push"])
             if not push_success:
-                logging.error(f"Failed to push changes: {push_stderr}")
-                raise typer.Exit(code=1)
+                raise CSDRException(f"Failed to push changes: {push_stderr}")
             else:
                 logging.info(f"Successfully pushed changes: {push_output}")
         else:
             logging.info("Skipping Git commit - --no-commit flag used.")
 
     except NotDvcRepoError:
-        logging.error("Current directory is not a DVC repository.")
-        raise typer.Exit(code=1)
+        raise CSDRException("Current directory is not a DVC repository.")
     except Exception as e:
-        logging.error(f"Failed during DVC processing or provenance generation: {e}", exc_info=True)
-        raise typer.Exit(code=1)
-
+        raise CSDRException(f"Failed during DVC processing or provenance generation: {e}")
 
 if __name__ == "__main__":
     dvc_app()
