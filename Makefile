@@ -786,6 +786,10 @@ product-buildings-eez-provenance-local-db:
 		--overwrite
 
 
+# Product ACEs by EEZ
+# --variables-to-extract="sum-mangrove-area,sum-intertidal-area,sum-saltmarsh-area,sum-seagrass-area,percent-mangrove-area,percent-intertidal-area,percent-saltmarsh-area,percent-seagrass-area" \
+
+
 ### OTHER ###
 
 # Test GeoJSON

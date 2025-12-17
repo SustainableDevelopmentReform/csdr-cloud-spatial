@@ -40,11 +40,11 @@ KNOWN_VARIABLES = [
     # ACE variables:
     "sum-intertidal-area",
     "sum-saltmarsh-area",
-    "sum-intertidal-seagrass-area",
-    "percent-tidal-flats-area",
+    "sum-seagrass-area",
+    "percent-mangrove-area",
+    "percent-intertidal-area",
     "percent-saltmarsh-area",
     "percent-seagrass-area",
-    "percent-mangroves-area",
 ]
 
 

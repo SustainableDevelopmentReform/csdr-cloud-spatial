@@ -213,8 +213,11 @@ def process_variables_for_geometry(
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
 
+    # Order area variables first, then area percentages. Area percentages are dependent on area calculations.
+    variables = sorted(variables, key=lambda v: ("percent-" in v, v))
+
     for var in variables:
-        # TODO: Exploding first is quite inefficient for _get_count_points_in_polygon_geoparquet data loading.
+        logging.info(f"Processing variable: {var}")
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
@@ -224,8 +227,10 @@ def process_variables_for_geometry(
         total_area = 0.0
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
-        for geom in geoms:
-            if var in ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area", "sum-intertidal-seagrass-area"]:
+        for i, geom in enumerate(geoms):
+            logging.info(f"Processing geom: {i} of {len(geoms)}")
+            # Area variables
+            if var in ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]:
                 area = _get_area_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -240,9 +245,16 @@ def process_variables_for_geometry(
                 results[var] = total_area
                 logging.info(f"Total area by value: {total_area} for variable {var}")
             # Area percent variables
-            elif var in ["percent-tidal-flats-area", "percent-saltmarsh-area", "percent-seagrass-area", "percent-mangroves-area"]:
+            elif var in ["percent-mangrove-area", "percent-intertidal-area", "percent-saltmarsh-area", "percent-seagrass-area"]:
                 logging.info("Starting percent variable analysis...")
+                # The variables were sorted so all actual areas are already calculated before any hit this condition.
                 # Here can we get the total area of the geometry first, then get the area by value, and calculate percent.
+                # TODO: Reproject geometry to EPSG:6933 for area calculation consistency. Geoms are in EPSG:4326 in the DB (not sure about in the parquet file).
+                total_geom_area_m2 = geometry.area  # In square meters because geometry is in EPSG:6933
+                area_by_value = results.get(f"sum-{var.replace('percent-', '')}", 0.0)
+                area_percent = (area_by_value / total_geom_area_m2 * 100.0) if total_geom_area_m2 > 0 else 0.0
+                results[var] = area_percent
+                logging.info(f"Calculated {var}: {area_percent:.2f}% (Area by value: {area_by_value:.2f} m^2, Total geom area: {total_geom_area_m2:.2f} m^2)")
             elif var in ["count-buildings"]:
                 logging.info("Starting count variable analysis...")
                 count = _get_count_points_in_polygon_geoparquet(
