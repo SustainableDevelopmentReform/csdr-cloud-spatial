@@ -91,8 +91,8 @@ def get_url_from_store(store: ObjectStore) -> str:
 
 def split_path_and_file_name_from_url(url: str) -> tuple[str, str]:
     # Get last "/" and return everything after it as the file name
-    file_name = urlparse(url).path.split("/")[-1]
-    path = url.replace(file_name, "").rstrip("/")
+    file_name = url.rsplit("/", 1)[-1]
+    path = url[:-(len(file_name))].rstrip("/")
     return path, file_name
 
 
