@@ -204,54 +204,6 @@ def read_stacgeoparquet(dataset_url: str) -> pystac.ItemCollection:
     return pystac.ItemCollection.from_dict(stac_items)
 
 
-# What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely. Might not work with s3 auth.
-def search_stacgeoparquet(dataset_url: str, geometry: Geometry | None = None, datetime_string_match: str | None = None) -> pystac.ItemCollection:
-    client = rustac.DuckdbClient()
-    # Handle AWS S3 authentication
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    creds = credentials.get_frozen_credentials()
-    client.execute("INSTALL aws;")
-    client.execute("LOAD aws;")
-    # TODO: Don't hardcode the region. Get it from boto3 session or environment.
-    client.execute("""
-        CREATE OR REPLACE SECRET secret (
-            TYPE s3,
-            PROVIDER config,
-            KEY_ID ?,
-            SECRET ?,
-            REGION 'ap-southeast-2',
-            ENDPOINT 's3.ap-southeast-2.amazonaws.com',
-            SESSION_TOKEN ?
-        );
-    """, params=[creds.access_key, creds.secret_key, creds.token])
-
-    if geometry is not None:
-        geometry_geojson = geometry.geojson(simplify=0)["geometry"] # Don't simplify geometry (by default it simplifies large geometries)
-        geometry_bbox = geometry.boundingbox
-    else:
-        geometry_geojson = None
-        geometry_bbox = None
-
-    if datetime_string_match is not None:
-        # Make single year into date range for filtering
-        # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z'
-        year = int(datetime_string_match)
-        start = datetime(year, 1, 1, 0, 0, 0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
-        end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
-        dt_filter = f"{start}/{end}"
-    else:
-        dt_filter = None
-
-    stac_items = client.search(dataset_url, intersects=geometry_geojson, bbox=geometry_bbox, datetime=dt_filter)
-
-    item_collection_dict = {
-        "type": "FeatureCollection",
-        "features": stac_items
-    }
-    return pystac.ItemCollection.from_dict(item_collection_dict)
-
-
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
     geometry: Geometry,
