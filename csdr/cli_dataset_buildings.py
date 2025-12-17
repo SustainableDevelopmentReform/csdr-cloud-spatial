@@ -3,52 +3,52 @@ import logging
 import re
 from io import BytesIO
 
-import boto3
 import geopandas as gpd
 import pandas as pd
 import requests
 import typer
-from botocore import UNSIGNED
-from botocore.client import Config
 from obstore.store import ObjectStore
 from shapely.geometry import box
 
 from csdr.io import (
     exists,
+    find_matching_files,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
 )
 
 buildings_app = typer.Typer()
 
 
+class NoCountryParquetFilesFound(Exception):
+    pass
+
+
 def _get_all_country_parquet_urls(source_location: str) -> list[str]:
     logging.info(f"Scraping country parquet URLs from {source_location} ...")
-    code_url_pairs = set()
-    s3 = boto3.client(
-        "s3",
-        endpoint_url="https://data.source.coop",
-        config=Config(signature_version=UNSIGNED),
+    # List objects via Source Coop S3 proxy.
+    store = get_store_with_prefix_from_url(
+        "s3://vida/google-microsoft-open-buildings/geoparquet/by_country/",
+        region="us-east-1",
+        skip_signature=True,
+        endpoint_url="https://data.source.coop"
     )
-    paginator = s3.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket="vida", Prefix="google-microsoft-open-buildings/"):
-        for obj in page.get("Contents", []):
-            match = re.search(r"country_iso=([A-Z]{3})/", obj["Key"])
-            if match:
-                code = match.group(1)
-                url = f"{source_location}country_iso={code}/{code}.parquet"
-                code_url_pairs.add((code, url))
 
-    if not code_url_pairs:
-        raise RuntimeError("No country files found in S3 listing via boto3.")
+    pattern = r'^(?!country_iso=None/None\.parquet$).+\.parquet$' # All parquet files are needed except None/None.parquet
+    parquet_files = find_matching_files(store, pattern=pattern)
 
-    code_url_pairs = sorted(code_url_pairs)
-    logging.info(f"Found {len(code_url_pairs)} country files to cache from {source_location}.")
-    return code_url_pairs
+    number_found = len(parquet_files)
+    logging.info(f"Number of parquet files found: {number_found}")
 
+    if number_found == 0 or parquet_files is None:
+        raise NoCountryParquetFilesFound("No country parquet files found in Source Coop S3.")
+    
+    parquet_urls = [f"{source_location}/{file}.parquet" for file in parquet_files]
+
+    return parquet_urls
 
 async def _get_bounds_from_parquet(
         url: str,
-        code: str,
         semaphore: asyncio.Semaphore,
     ) -> tuple[float, float, float, float]:
 
@@ -58,6 +58,7 @@ async def _get_bounds_from_parquet(
     # TODO: Get the bbox metadata with a library instead of DIY. Couldn't find a way to do it with SedonaDb, PyArrow, or DuckDB.
     # PyArrow needs a local or ObjectStorage file. The other libraries don't expose the correct metadata from what I have found.
 
+    logging.info(f"Fetching bounding box from parquet file at {url} ...")
     async with semaphore:
         head = requests.head(url)
         file_size = int(head.headers["Content-Length"])
@@ -77,7 +78,7 @@ async def _get_bounds_from_parquet(
         if match:
             bbox_str = match.group(1)
             bbox = tuple(float(x.strip()) for x in bbox_str.split(","))
-            logging.info(f"Bounding box {bbox} for {code}")
+            logging.info(f"Bounding box {bbox} for {url}")
 
             return bbox
         else:
@@ -85,7 +86,7 @@ async def _get_bounds_from_parquet(
 
 
 async def _run_index_buildings(
-        countries_to_cache: list[str],
+        parquet_urls: list[str],
         target_store: ObjectStore,
         target_file_name: str,
         max_concurrent: int,
@@ -93,15 +94,15 @@ async def _run_index_buildings(
     semaphore = asyncio.Semaphore(max_concurrent)
     # Launch all bbox fetches concurrently
     tasks = [
-        _get_bounds_from_parquet(url=url, code=code, semaphore=semaphore)
-        for code, url in countries_to_cache
+        _get_bounds_from_parquet(url, semaphore=semaphore)
+        for url in parquet_urls
     ]
     bound_results = await asyncio.gather(*tasks)
     logging.info("Bboxes collected for all country parquet files.")
 
     output = pd.DataFrame([
-        {"code": code, "url": url, "bbox": bbox}
-        for (code, url), bbox in zip(countries_to_cache, bound_results)
+        {"code": split_path_and_file_name_from_url(url)[1], "url": url, "bbox": bbox}
+        for url, bbox in zip(parquet_urls, bound_results)
     ])
 
     # Write bounds as separate columns (minx, miny, maxx, maxy) and a geometry column.
@@ -129,8 +130,8 @@ async def _run_index_buildings(
 @buildings_app.command("index")
 def index_buildings(
     source_location: str = typer.Option(
-        "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/",
-        help="HTTP url containing parquet files to cache (e.g. https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/)"
+        "https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country",
+        help="HTTP url containing parquet files to cache (e.g. https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country)"
     ),
     target_location: str = typer.Option(
         ...,
@@ -148,12 +149,10 @@ def index_buildings(
         return
     logging.info("Either file does not exist or overwrite is on, proceeding with indexing.")
 
-    # Make sure source location ends with "/"
-    if not source_location.endswith("/"):
-        source_location += "/"
+    source_location = source_location.rstrip("/")
 
-    country_urls = _get_all_country_parquet_urls(source_location)
-    asyncio.run(_run_index_buildings(country_urls, target_store, target_file_name, max_concurrent))
+    parquet_urls = _get_all_country_parquet_urls(source_location)
+    asyncio.run(_run_index_buildings(parquet_urls, target_store, target_file_name, max_concurrent))
     logging.info("Index buildings dataset process completed.")
 
 if __name__ == "__main__":

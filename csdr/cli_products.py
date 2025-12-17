@@ -546,6 +546,7 @@ def consolidate_product(
     url = f"{location}/{path}"
     logging.info(f"Looking for product files in {url}")
 
+    # TODO: Use io.find_matching_files for this step
     # Get a list of all the json files in the product directory
     json_files = []
     chunks = store.list(path)
