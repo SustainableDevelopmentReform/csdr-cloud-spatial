@@ -17,27 +17,22 @@ def test_sample_polygon(sample_polygon: polygon) -> None:
 
 def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
     assert sample_stacgeoparquet is not None
-    assert len(sample_stacgeoparquet) == 2
-    assert sample_stacgeoparquet[0].id =='dep_s2_seagrass_047_017_2022'
-    assert sample_stacgeoparquet[1].id =='dep_s2_seagrass_047_018_2022'
+    assert len(sample_stacgeoparquet) == 1
 
 
 def test_intersection_raster(
-    sample_polygon2: polygon, sample_stacgeoparquet: ItemCollection
+    sample_polygon: polygon, sample_stacgeoparquet: ItemCollection
 ) -> None:
     # sample_polygon is in EPSG:4326.
     # This STAC-Geoparquet file contains a single item in EPSG:4326
-    # Seagrass COGs are in 3832.
     data = load_xarray_stacgeoparquet(
-        sample_stacgeoparquet, geom=sample_polygon2, resolution=10, crs="epsg:3832" # 6933
+        sample_stacgeoparquet, geometry=sample_polygon, resolution=10, crs="epsg:6933"
     )
     assert data is not None
 
     # This reprojects to 6933 internally for area calculation.
-    area = xarray_calculate_area(data, sample_polygon2, "seagrass", 1)
-    assert area >= 10391947.0 # Gets this locally
-    assert area <= 10392044.93 # Gets this in CI. Why the 100m^2 difference?
-    # TODO: Figure out why area differs slightly between local and CI runs.
+    area = xarray_calculate_area(data, sample_polygon, "asset", 1)
+    assert area == 19827100.0
 
 
 def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:

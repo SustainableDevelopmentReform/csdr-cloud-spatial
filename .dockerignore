@@ -1,3 +1,5 @@
 tmp/
 in/
 out/
+cache/
+bucket/

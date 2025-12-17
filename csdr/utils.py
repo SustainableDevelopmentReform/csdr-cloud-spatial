@@ -1,10 +1,9 @@
-import json
+import asyncio
 import logging
 import subprocess
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from typing import Any, TypedDict, cast
 
 import boto3
@@ -18,6 +17,8 @@ from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
+
+from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
 
 class Event(TypedDict):
@@ -183,69 +184,44 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         cmd_str = " ".join(command)
         logging.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
         return False, "", str(e)
+
+
+def read_stacgeoparquet(dataset_url: str) -> pystac.ItemCollection:
+    # This could be refactored to use rustac.DuckdbClient.search so that less data is loaded however it gets errors sometimes such as "RustacError: External error: General error: Invalid byte order"
+    path, file_name = split_path_and_file_name_from_url(dataset_url)
+    store = get_store_with_prefix_from_url(path)
     
+    async def _rustac_read() -> dict[str, Any]:
+        stac_items = await rustac.read(file_name, store=store)
+        print(f"Read {len(stac_items['features'])} STAC items from {dataset_url}")
+        return stac_items
+    
+    stac_items = asyncio.run(_rustac_read())
 
-# What about just using pystac.ItemCollection.from_file? Then we can skip rustac entirely. Might not work with s3 auth.
-def search_stacgeoparquet(dataset_url: str, geometry: Geometry | None = None, datetime_string_match: str | None = None) -> pystac.ItemCollection:
-    client = rustac.DuckdbClient()
-    # Handle AWS S3 authentication
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    creds = credentials.get_frozen_credentials()
-    client.execute("INSTALL aws;")
-    client.execute("LOAD aws;")
-    # TODO: Don't hardcode the region. Get it from boto3 session or environment.
-    client.execute("""
-        CREATE OR REPLACE SECRET secret (
-            TYPE s3,
-            PROVIDER config,
-            KEY_ID ?,
-            SECRET ?,
-            REGION 'ap-southeast-2',
-            ENDPOINT 's3.ap-southeast-2.amazonaws.com',
-            SESSION_TOKEN ?
-        );
-    """, params=[creds.access_key, creds.secret_key, creds.token])
-
-    if geometry is not None:
-        geometry_geojson = geometry.geojson()["geometry"]
-        geometry_bbox = geometry.boundingbox
-    else:
-        geometry_geojson = None
-        geometry_bbox = None
-
-    if datetime_string_match is not None:
-        # Make single year into date range for filtering
-        # Year filter example: dt='2017-01-01T00:00:00Z/2017-12-31T23:59:59Z'
-        year = int(datetime_string_match)
-        start = datetime(year, 1, 1, 0, 0, 0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
-        end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
-        dt_filter = f"{start}/{end}"
-    else:
-        dt_filter = None
-
-    stac_items = client.search(dataset_url, intersects=geometry_geojson, bbox=geometry_bbox, datetime=dt_filter)
-
-    item_collection_dict = {
-        "type": "FeatureCollection",
-        "features": stac_items
-    }
-    return pystac.ItemCollection.from_dict(item_collection_dict)
+    return pystac.ItemCollection.from_dict(stac_items)
 
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
+    geometry: Geometry,
+    datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
+    # Temporal filter (if parameter is provided)
+    if datetime_string_match is not None:
+        all_items = items.clone()
+        items = []
+        for item in all_items:
+            if datetime_string_match in item.datetime.isoformat():
+                items.append(item)
+
     # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
-    # Can add bbox and geom filters to load but they are already done in search_stacgeoparquet (upstream function).
-    # data = load(items, bbox=bbox, geopolygon=geom, **load_kwargs)
-    data = load(items, **load_kwargs)
+    data = load(items, geopolygon=geometry, **load_kwargs)
 
     return data
 
