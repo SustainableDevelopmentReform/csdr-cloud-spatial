@@ -81,8 +81,7 @@ def convert_vector(
         source_crs = source_crs_option if source_crs_option else gdf.crs
         if not source_crs:
             raise CSDRException(
-                "Could not determine source CRS from file and "
-                "--source-crs not provided."
+                "Could not determine source CRS from file and --source-crs not provided."
             )
         logging.info(f"Using source CRS: {source_crs}")
 

@@ -76,8 +76,7 @@ def zonal_stats(
     """
     if not zarr_path or not geoparquet_path or not output_path or not data_variable:
         raise CSDRException(
-            "--input-zarr, --input-geoparquet, --output-path, and "
-            "--data-variable are required."
+            "--input-zarr, --input-geoparquet, --output-path, and  --data-variable are required."
         )
 
     params_path = os.path.join(os.getcwd(), "params.yaml")

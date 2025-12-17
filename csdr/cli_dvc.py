@@ -65,8 +65,7 @@ def status(
                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
             else:
                 raise CSDRException(
-                    f"Invalid pipeline type: {pipeline_type}. "
-                    "Choose from 'datasets', 'geometries', 'products'."
+                    f"Invalid pipeline type: {pipeline_type}. Choose from 'datasets', 'geometries', 'products'."
                 )
         else:
             logging.info("Checking all pipelines.")
@@ -125,8 +124,7 @@ def status(
 #                 reproduce_kwargs["targets"] = [f"{pipeline_type}/"]
 #             else:
 #                 raise CSDRException(
-#                     f"Invalid pipeline type: {pipeline_type}. "
-#                     "Choose from 'datasets', 'geometries', 'products'."
+#                     f"Invalid pipeline type: {pipeline_type}. Choose from 'datasets', 'geometries', 'products'."
 #                 )
 #         else:
 #             logging.info("Checking all pipelines.")
