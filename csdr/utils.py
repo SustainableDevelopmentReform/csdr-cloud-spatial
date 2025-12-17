@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import asyncio
-=======
->>>>>>> c17a8ab (Change to using our own error class.)
 import logging
 import subprocess
 import uuid
