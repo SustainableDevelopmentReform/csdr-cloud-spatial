@@ -395,9 +395,8 @@ geometry-aus-states-provenance-local-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--no-post-geometry-in-bulk \
 		--overwrite
-# Don't use bulk posting because there are few geometries, but they are large (NSW geojson is 15MB).
+
 
 ### PRODUCTS ###
 

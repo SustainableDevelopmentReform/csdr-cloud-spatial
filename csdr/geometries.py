@@ -1,3 +1,4 @@
+import base64
 import logging
 from datetime import datetime
 from json import dumps
@@ -33,11 +34,14 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: pyproj_crs.CRS) -> 
         "MultiPolygon",
     ], f"Only Polygon and MultiPolygon geometries are supported, not {poly.geom_type}"
 
-    geometry_wkb = wkb.dumps(poly.geom, hex=False, srid=crs.to_epsg())
+    # Reproject geometry to 4326 because that is all the API supports right now.
+    poly = poly.to_crs("EPSG:4326")
+    geometry_wkb = wkb.dumps(poly.geom, hex=False, srid=4326)
+    base64_wkb_string = base64.b64encode(geometry_wkb).decode('utf-8')
 
     geometry_output = {
         "id": properties.get("csdr-id"),
-        "geometry": geometry_wkb,
+        "geometry": {"wkb": base64_wkb_string},
         "name": properties.get("csdr-name"),
         "description": properties.get("description", ""),
         "metadata": properties.get("metadata", {}),
@@ -100,6 +104,8 @@ def post_bulk_geometry_outputs_to_database(
         if geometry_output is not None:
             # Only append if geometry_output is not None
             outputs.append(geometry_output)
+        else:
+            logging.warning(f"Skipping geometry output {row.get('id')} with null geometry.")
 
     if batch_size is None or batch_size <= 0:
         batch_size = len(outputs)
@@ -142,6 +148,7 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
             continue # Skip geometry if geometry_output is None (handle null geometries)
         geometry_output["geometriesRunId"] = run_id
         response = post_geometry_output(geometry_output)
+
         try:
             response.raise_for_status()
         except HTTPError as e:
@@ -154,7 +161,7 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         else:
             successes += 1
             logging.info(
-                f"Wrote geometry output to database \n {dumps(response.json(), indent=2)}"
+                f"Wrote geometry output {geometry_output.get('id')} to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
             logging.info(f"Wrote geometry output {geometry_output.get('id')} to database.")
     logging.info(
