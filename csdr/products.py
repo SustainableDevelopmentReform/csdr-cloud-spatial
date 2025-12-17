@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pandas as pd
 import sedona.db
@@ -216,7 +217,10 @@ def process_variables_for_geometry(
 
     # Order area variables first, then area percentages. Area percentages are dependent on area calculations.
     variables = sorted(variables, key=lambda v: ("percent-" in v, v)) # TODO: Make this more robust when there are non-area percent variables.
-
+    sum_area_var_pattern = re.compile(r"^sum-.*-area$")
+    area_percent_var_pattern = re.compile(r"^percent-.*-area$")
+    count_var_pattern = re.compile(r"^count-.*$")
+    # TODO: Extend to other variable types as needed by future products.
     for var in variables:
         logging.info(f"Processing variable: {var}")
         # Explode multipolygon geometries to single polygons
@@ -225,13 +229,14 @@ def process_variables_for_geometry(
             geoms = list(geometry.geoms)
 
         # TODO: When doing the variable refactor, generalise these.
-        total_area = 0.0
+        total_multipolygon_area = 0.0 # Need for percent area calculations
+        total_variable_area = 0.0
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for i, geom in enumerate(geoms):
             logging.info(f"Processing geom: {i} of {len(geoms)}")
             # Area variables
-            if var in ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]:
+            if sum_area_var_pattern.match(var): # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
                 area = _get_area_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -242,22 +247,25 @@ def process_variables_for_geometry(
                     value=variable_value,
                     load_kwargs=load_kwargs,
                 )
-                total_area += area
-                results[var] = total_area
-                logging.info(f"Total area by value: {total_area} for variable {var}")
+                total_variable_area += area
+                results[var] = total_variable_area
+                logging.info(f"Total area by value: {total_variable_area} for variable {var}")
             # Area percent variables
-            elif var in ["percent-mangrove-area", "percent-intertidal-area", "percent-saltmarsh-area", "percent-seagrass-area"]:
+            elif area_percent_var_pattern.match(var): # ["percent-mangrove-area", "percent-intertidal-area", "percent-saltmarsh-area", "percent-seagrass-area"]
                 logging.info("Starting percent variable analysis...")
                 # The variables were sorted so all actual areas are already calculated before any hit this condition.
                 # Here can we get the total area of the geometry first, then get the area by value, and calculate percent.
                 # TODO: Reproject geometry to EPSG:6933 for area calculation consistency. Geoms are in EPSG:4326 in the DB (not sure about in the parquet file).
-                total_geom_area_m2 = geometry.area  # In square meters because geometry is in EPSG:6933
+                # TODO: Check this for multipolygons - need total area of all geometries. Germany has 2 geometries.
+                geom_area_m2 = geometry.area  # This is just this single geom's area
+                total_multipolygon_area += geom_area_m2
                 area_by_value = results.get(f"sum-{var.replace('percent-', '')}", 0.0)
-                area_percent = (area_by_value / total_geom_area_m2 * 100.0) if total_geom_area_m2 > 0 else 0.0
+                area_percent = (area_by_value / total_multipolygon_area * 100.0) if total_multipolygon_area > 0 else 0.0
                 results[var] = area_percent
-                logging.info(f"Calculated {var}: {area_percent:.2f}% (Area by value: {area_by_value:.2f} m^2, Total geom area: {total_geom_area_m2:.2f} m^2)")
-            elif var in ["count-buildings"]:
+                logging.info(f"Calculated {var}: {area_percent:.2f}% (Area by value: {area_by_value:.2f} m^2, Total geom area: {total_multipolygon_area:.2f} m^2)")
+            elif count_var_pattern.match(var): # ["count-buildings"]
                 logging.info("Starting count variable analysis...")
+                # TODO: Check this for multipolygons - need total count of all geometries?
                 count = _get_count_points_in_polygon_geoparquet(
                     sd,
                     dataset_url,
