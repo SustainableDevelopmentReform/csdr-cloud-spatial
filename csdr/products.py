@@ -75,6 +75,7 @@ def _get_area_from_geoparquet_sedona(
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     region = "ap-southeast-2" # TODO: Get this from env/config.
 
+    # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     sd.read_parquet(dataset_url, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
 
     area_result = sd.sql(
@@ -214,7 +215,7 @@ def process_variables_for_geometry(
     dataset_type = provenance.get("dataType")
 
     # Order area variables first, then area percentages. Area percentages are dependent on area calculations.
-    variables = sorted(variables, key=lambda v: ("percent-" in v, v))
+    variables = sorted(variables, key=lambda v: ("percent-" in v, v)) # TODO: Make this more robust when there are non-area percent variables.
 
     for var in variables:
         logging.info(f"Processing variable: {var}")
@@ -264,7 +265,7 @@ def process_variables_for_geometry(
                 )
                 # TODO: Check this logic for summing. Germany has 2 geometries.
                 total_count += count
-                results["count-buildings"] = total_count
+                results[var] = total_count
                 logging.info(f"Total count-buildings: {total_count}")
             else:
                 logging.error(f"Unknown variable requested: {var}")
