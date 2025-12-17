@@ -109,7 +109,6 @@ async def _run_index_buildings(
 
     target_file_name = "buildings.parquet"
     logging.info(f"Writing index buildings parquet to {target_file_name}")
-    # TODO: Use write_gdf_to_parquet from io.py
     write_gdf_to_parquet(parquet_data, target_store, target_file_name)
     logging.info("Index buildings dataset completed.")
 
