@@ -13,7 +13,9 @@ from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, ObjectStore, S3Store, from_url
 from pyarrow import ArrowInvalid
 
-from csdr.utils import CSDRException
+
+class CSDRException(Exception):
+    pass
 
 # We support three types of stores: 
 # 1. S3Store for s3:// URLs
