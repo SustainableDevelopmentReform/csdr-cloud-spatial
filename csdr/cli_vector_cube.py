@@ -8,6 +8,7 @@ import typer
 import xarray as xr
 import xvec  # noqa: F401
 
+from csdr.utils import CSDRException
 
 vector_cube_app = typer.Typer()
 
@@ -74,19 +75,17 @@ def zonal_stats(
     from a GeoParquet file and outputs the results to a new GeoParquet file.
     """
     if not zarr_path or not geoparquet_path or not output_path or not data_variable:
-        logging.error(
+        raise CSDRException(
             "--input-zarr, --input-geoparquet, --output-path, and "
             "--data-variable are required."
         )
-        raise typer.Exit(code=1)
 
     params_path = os.path.join(os.getcwd(), "params.yaml")
     params = dvc.api.params_show(params_path)
     if "zonal_stats" in params:
         stats = params["zonal_stats"]
     else:
-        logging.error("zonal_stats must be specified in params.yaml.")
-        raise typer.Exit(code=1)
+        raise CSDRException("zonal_stats must be specified in params.yaml.")
 
     try:
         logging.info(f"Reading Zarr dataset from: {zarr_path}")
@@ -98,9 +97,7 @@ def zonal_stats(
         ds = xr.open_zarr(zarr_path, **options)
 
         if data_variable not in ds:
-            logging.error(f"Data variable '{data_variable}' not found in Zarr dataset.")
-            logging.error(f"Available variables: {list(ds.data_vars)}")
-            raise typer.Exit(code=1)
+            raise CSDRException(f"Data variable '{data_variable}' not found in Zarr dataset. Available variables: {list(ds.data_vars)}")
 
         da = ds[data_variable]  # Select the data variable
 
@@ -130,12 +127,10 @@ def zonal_stats(
                 f"with null geometries."
             )
         if len(gdf_filtered) == 0:
-            logging.error("No valid geometries found in the input GeoParquet.")
-            raise typer.Exit(code=1)
+            raise CSDRException("No valid geometries found in the input GeoParquet.")
         target_crs = da.rio.crs
         if not target_crs:
-            logging.error("Could not determine CRS from Zarr dataset.")
-            raise typer.Exit(code=1)
+            raise CSDRException("Could not determine CRS from Zarr dataset.")
         logging.info(f"Using target CRS from Zarr: {target_crs}")
 
         logging.info(
@@ -202,10 +197,9 @@ def zonal_stats(
             # Calculate area-based statistics if requested:
             if stat["mode"] == "area":
                 if not stats_da.rio.crs.is_projected:
-                    logging.error(
+                    raise CSDRException(
                         "Data is in a geographic CRS, must specify a projected CRS for area-based statistics."
                     )
-                    raise typer.Exit(code=1)
                 else:
                     pixel_area = abs(
                         stats_da.rio.resolution()[0] * stats_da.rio.resolution()[1]
@@ -255,8 +249,7 @@ def zonal_stats(
         logging.info("Processing complete.")
 
     except Exception as e:
-        logging.error(f"An error occurred during zonal statistics: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"An error occurred during zonal statistics: {e}")
 
 
 if __name__ == "__main__":

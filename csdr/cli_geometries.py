@@ -5,6 +5,7 @@ import os
 import geopandas as gpd
 import typer
 
+from csdr.utils import CSDRException
 
 geometry_app = typer.Typer()
 
@@ -48,8 +49,7 @@ def convert_vector(
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        logging.error("--input-dir, --output-path, and --target-crs are required.")
-        raise typer.Exit(code=1)
+        raise CSDRException("--input-dir, --output-path, and --target-crs are required.")
 
     try:
         # Find input vector file using glob relative to input_dir
@@ -59,8 +59,7 @@ def convert_vector(
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            logging.error(f"No files matching '{input_glob}' found within {input_dir}")
-            raise typer.Exit(code=1)
+            raise CSDRException(f"No files matching '{input_glob}' found within {input_dir}")
 
         vector_file_path = found_files[0]  # Use the first found file
         if len(found_files) > 1:
@@ -81,12 +80,10 @@ def convert_vector(
         # Determine source CRS
         source_crs = source_crs_option if source_crs_option else gdf.crs
         if not source_crs:
-            logging.error(
+            raise CSDRException(
                 "Could not determine source CRS from file and "
                 "--source-crs not provided."
             )
-            raise typer.Exit(code=1)
-
         logging.info(f"Using source CRS: {source_crs}")
 
         # Reproject
@@ -104,8 +101,7 @@ def convert_vector(
         logging.info("Vector conversion complete.")
 
     except Exception as e:
-        logging.error(f"An error occurred during vector conversion: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"An error occurred during vector conversion: {e}")
 
 
 @geometry_app.command("validate")
@@ -121,8 +117,7 @@ def validate(
     Validate the GeoParquet file against the provided schema.
     """
     if not input_file:
-        logging.error("Input file is required.")
-        raise typer.Exit(code=1)
+        raise CSDRException("Input file is required.")
 
     try:
         # Read the GeoParquet file
@@ -131,16 +126,14 @@ def validate(
 
         # Fail if no geometry column
         if "geometry" not in gdf.columns:
-            logging.error("No geometry column found in the GeoParquet file.")
-            raise typer.Exit(code=1)
+            raise CSDRException("No geometry column found in the GeoParquet file.")
 
         # Validate the GeoParquet file
         # validate_geoparquet(gdf, schema_path)
         logging.info("Validation complete.")
 
     except Exception as e:
-        logging.error(f"An error occurred during validation: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"An error occurred during validation: {e}")
 
 
 if __name__ == "__main__":

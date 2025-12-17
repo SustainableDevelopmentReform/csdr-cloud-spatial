@@ -9,7 +9,7 @@ import rioxarray
 import typer
 import xarray as xr
 
-from csdr.utils import run_command
+from csdr.utils import CSDRException, run_command
 
 dataset_app = typer.Typer()
 
@@ -142,13 +142,10 @@ def warp_raster(
         )
         logging.info(log_msg)
         if failed_warps > 0:
-            logging.error(f"{failed_warps} files failed to warp.")
-            # Optionally raise an error if any failures occurred
-            raise typer.Exit(code=1)
+            raise CSDRException(f"{failed_warps} files failed to warp.")
 
     except Exception as e:
-        logging.error(f"Raster warping process failed: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"Raster warping process failed: {e}")
 
 
 @dataset_app.command("raster-to-zarr")
@@ -169,9 +166,7 @@ def raster_to_zarr(
             raster_path, masked=True, default_name="data_variable"
         )
         if not isinstance(rds, xr.DataArray):
-            logging.error(f"Expected xarray.DataArray, got {type(rds).__name__}")
-            raise typer.Exit(code=1)
-
+            raise CSDRException(f"Expected xarray.DataArray, got {type(rds).__name__}")
         logging.info("Opened raster file successfully.")
 
         # Ensure spatial dimensions are named x and y
@@ -180,16 +175,14 @@ def raster_to_zarr(
             logging.info("Renamed spatial dims 'X'/'Y' to 'x'/'y'.")
 
         if "x" not in rds.dims and "y" not in rds.dims:
-            logging.error("No standard spatial dims ('x'/'y' or 'X'/'Y') found.")
-            raise typer.Exit(code=1)
+            raise CSDRException("No standard spatial dims ('x'/'y' or 'X'/'Y') found.")
 
         logging.info(f"Writing Zarr: {zarr_path}")
         rds.to_zarr(zarr_path, mode="w", consolidated=True)
         logging.info("Successfully wrote Zarr store.")
 
     except Exception as e:
-        logging.error(f"Raster to Zarr conversion failed: {e}", exc_info=True)
-        raise typer.Exit(code=1)
+        raise CSDRException(f"Raster to Zarr conversion failed: {e}")
 
 
 if __name__ == "__main__":

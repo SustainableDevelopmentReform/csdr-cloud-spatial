@@ -6,13 +6,14 @@ import re
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, ObjectStore, S3Store, from_url
 from pyarrow import ArrowInvalid
+
+from csdr.utils import CSDRException
 
 # We support three types of stores: 
 # 1. S3Store for s3:// URLs
@@ -59,7 +60,7 @@ def write_json(
             json.dump(data, f, indent=2)
     elif type(store) is HTTPStore:
         # This should be supported https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.put
-        raise NotImplementedError("HTTPStore does not support writing files (even though it is in the obstore docs).")
+        raise CSDRException("HTTPStore does not support writing files (even though it is in the obstore docs).")
 
 
 def get_store_with_prefix_from_url(
@@ -86,7 +87,7 @@ def get_url_from_store(store: ObjectStore) -> str:
     elif type(store) is LocalStore:
         return store.prefix
     else:
-        raise ValueError(f"Unsupported store type: {type(store)}")
+        raise CSDRException(f"Unsupported store type: {type(store)}")
 
 
 def split_path_and_file_name_from_url(url: str) -> tuple[str, str]:

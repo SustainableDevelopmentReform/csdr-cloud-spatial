@@ -7,6 +7,7 @@ from odc.geo.geom import Geometry
 from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
+    CSDRException,
     load_xarray_stacgeoparquet,
     read_stacgeoparquet,
     xarray_calculate_area,
@@ -41,7 +42,7 @@ def _get_area_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variabl
     logging.info(f"Loaded data with shape {data.dims}")
 
     if variable not in data.data_vars:
-        raise ValueError(
+        raise CSDRException(
             f"Variable {variable} not found in dataset. Available: {list(data.data_vars)}"
         )
 
@@ -171,7 +172,7 @@ def _get_area_from_dataset_geometry(
         partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
         return _get_area_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
     else:
-        raise ValueError(
+        raise CSDRException(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
         )
 
@@ -227,7 +228,7 @@ def process_variables_for_geometry(
                 logging.info(f"Total count-buildings: {count}")
             else:
                 logging.error(f"Unknown variable requested: {var}")
-                raise ValueError(f"Unknown variable requested: {var}")
+                raise CSDRException(f"Unknown variable requested: {var}")
     return results
 
 

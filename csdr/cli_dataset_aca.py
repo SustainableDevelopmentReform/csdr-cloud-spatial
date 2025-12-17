@@ -16,6 +16,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     write_gdf_to_parquet,
 )
+from csdr.utils import CSDRException
 
 aca_app = typer.Typer()
 
@@ -168,8 +169,7 @@ async def _run_index_aca(
         gdf = gpd.read_file(BytesIO(bytes_obj))
         dfs.append(gdf)
     if not dfs:
-        logging.error("No GPKG files found, nothing to merge.")
-        raise ValueError("No GPKG files found to merge.")
+        raise CSDRException("No GPKG files found, nothing to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
     with BytesIO() as f:

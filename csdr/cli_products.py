@@ -22,7 +22,7 @@ from csdr.io import (
 )
 from csdr.products import process_variables_for_geometry
 from csdr.provenance import read_provenance
-from csdr.utils import get_geom_from_gdf, make_uuid
+from csdr.utils import CSDRException, get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
 
@@ -37,17 +37,14 @@ def _validate_parameters(
 ) -> str:
     """Validate parameters and return the datetime to use."""
     if set(variables_to_extract) - set(KNOWN_VARIABLES):
-        logging.error(
+        raise CSDRException(
             f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
         )
-        raise typer.Exit(code=1)
-
     if datetime is None:
         if datetime_string_match is None:
-            logging.error(
+            raise CSDRException(
                 "Either datetime or datetime_string_match must be set to process a geometry"
             )
-            raise typer.Exit(code=1)
         else:
             datetime = datetime_string_match
 
@@ -341,11 +338,9 @@ def process_geometry(
     sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
     geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
     if len(geometry) == 0:
-        logging.error(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
-        raise typer.Exit(code=1)
+        raise CSDRException(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
     if len(geometry) > 1:
-        logging.error(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
-        raise typer.Exit(code=1)
+        raise CSDRException(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
     geometry = geometry.iloc[0]
     geometry = Geometry(geometry.geometry, crs=f"EPSG:{geometry.crs}") # ODC Geometry object. This is just one geometry.
 
@@ -573,23 +568,22 @@ def consolidate_product(
 
         # Do some quality checks
         if dataset_provenance_url != dataset_provenance_url:
-            raise ValueError(
+            raise CSDRException(
                 f"Dataset provenance URL mismatch in {file}: {dataset_provenance_url} != {dataset_provenance_url}"
             )
         if product_id != product.get("productId", None):
-            raise ValueError(
+            raise CSDRException(
                 f"Product ID mismatch in {file}: {product_id} != {product.get('productId', None)}"
             )
         if geometry_provenance_url != geometry_provenance_url:
-            raise ValueError(
+            raise CSDRException(
                 f"Geometry provenance URL mismatch in {file}: {geometry_provenance_url} != {geometry_provenance_url}"
             )
 
         all_data.append(product)
 
     if not all_data:
-        logging.error(f"No valid product data found in {url}")
-        raise typer.Exit(code=1)
+        raise CSDRException(f"No valid product data found in {url}")
 
     df = pd.DataFrame(all_data)
     logging.info(f"Consolidated product data from {url}: {df.shape[0]} rows")

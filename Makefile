@@ -713,7 +713,6 @@ product-aca-eez-provenance-local-db:
 
 # Product buildings by EEZ
 # Count how many buildings per EEZ.
-# TODO: Fix dataset-provenance-url to point to buildings dataset. Currently it is placeholder.
 # South Sudan b1b00b2e-2739-5215-a18c-eb72c5798034
 # South Sudan geometry hits 9 building parquet bboxes.
 # France has a massive bounding box that South Sudan intersects, but 0 buildings actually intersect.

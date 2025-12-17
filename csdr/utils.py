@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import asyncio
+=======
+>>>>>>> c17a8ab (Change to using our own error class.)
 import logging
 import subprocess
 import uuid
@@ -20,6 +23,9 @@ from xarray import DataArray, Dataset
 
 from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
+
+class CSDRException(Exception):
+    pass
 
 class Event(TypedDict):
     timestamp: int
@@ -235,7 +241,7 @@ def xarray_calculate_area(
     # Work with a dataarray, not a dataset, so it's a singular thing
     if type(data) is not DataArray:
         if variable is None:
-            raise ValueError("Variable must be specified when data is a Dataset.")
+            raise CSDRException("Variable must be specified when data is a Dataset.")
         data = data[variable]
 
     # Only select a specific value. This will convert to float, with nans
@@ -297,9 +303,9 @@ def suppress_rust_output() -> Generator[None, None, None]:
 def get_geom_from_gdf(gdf: gpd.GeoDataFrame, geometry_id: str) -> Geometry:
     features = gdf[gdf["csdr-id"] == geometry_id]
     if len(features) == 0:
-        raise ValueError(f"Geometry ID {geometry_id} not found in GeoDataFrame.")
+        raise CSDRException(f"Geometry ID {geometry_id} not found in GeoDataFrame.")
     if len(features) > 1:
-        raise ValueError(f"Geometry ID {geometry_id} is not unique in GeoDataFrame.")
+        raise CSDRException(f"Geometry ID {geometry_id} is not unique in GeoDataFrame.")
     feature = features.iloc[0]
 
     # Convert to ODC geometry

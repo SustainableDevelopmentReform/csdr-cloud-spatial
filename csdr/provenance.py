@@ -11,6 +11,7 @@ from csdr.io import (
     get_url_from_store,
     split_path_and_file_name_from_url,
 )
+from csdr.utils import CSDRException
 
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
 
@@ -41,7 +42,7 @@ def get_provenance(
     It does not read from a database.
     """
     if data_type not in SUPPORTED_DATA_FORMATS:
-        raise ValueError(
+        raise CSDRException(
             f"Unsupported dataset type: {data_type}. Supported types are: {SUPPORTED_DATA_FORMATS}"
         )
 

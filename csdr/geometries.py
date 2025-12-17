@@ -9,7 +9,7 @@ from requests.exceptions import HTTPError
 
 from csdr.app_integration import post_geometry_output, post_geometry_output_bulk
 from csdr.io import read_geospatial_file
-from csdr.utils import make_uuid
+from csdr.utils import CSDRException, make_uuid
 
 
 def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: str) -> dict:
@@ -55,7 +55,7 @@ def add_geometry_id_name(
     - Modified GeoDataFrame with 'csdr-id' and 'csdr-name' fields added.
     """
     if name_field not in gdf.columns:
-        raise ValueError(
+        raise CSDRException(
             f"Name field '{name_field}' not found in GeoDataFrame columns."
         )
 
@@ -68,7 +68,7 @@ def add_geometry_id_name(
 
     # Ensure there are no blank names
     if gdf["csdr-name"].isnull().any() or (gdf["csdr-name"] == "").any():
-        raise ValueError("The 'csdr-name' field contains null or blank values.")
+        raise CSDRException("The 'csdr-name' field contains null or blank values.")
 
     # Add csdr-id field
     timestamp = datetime.now().isoformat()

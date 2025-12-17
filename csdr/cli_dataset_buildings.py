@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-from io import BytesIO
 
 import geopandas as gpd
 import pandas as pd
@@ -16,14 +15,11 @@ from csdr.io import (
     find_matching_files,
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
+    write_gdf_to_parquet,
 )
+from csdr.utils import CSDRException
 
 buildings_app = typer.Typer()
-
-
-class NoCountryParquetFilesFound(Exception):
-    pass
-
 
 def _get_all_country_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFrame:
     logging.info(f"Scraping country parquet URLs from {source_location_s3} ...")
@@ -42,7 +38,7 @@ def _get_all_country_parquet_urls(source_location_s3: str, source_proxy: str) ->
     logging.info(f"Number of parquet files found: {number_found}")
 
     if number_found == 0 or parquet_files is None:
-        raise NoCountryParquetFilesFound("No country parquet files found in Source Coop S3.")
+        raise CSDRException("No country parquet files found in Source Coop S3.")
     
     parquet_data = pd.DataFrame({
         "code": split_path_and_file_name_from_url(file)[1].replace(".parquet", ""),
@@ -114,10 +110,7 @@ async def _run_index_buildings(
     target_file_name = "buildings.parquet"
     logging.info(f"Writing index buildings parquet to {target_file_name}")
     # TODO: Use write_gdf_to_parquet from io.py
-    with BytesIO() as f:
-        parquet_data.to_parquet(f, index=False)
-        f.seek(0)
-        target_store.put(target_file_name, f.read())
+    write_gdf_to_parquet(parquet_data, target_store, target_file_name)
     logging.info("Index buildings dataset completed.")
 
 
@@ -149,7 +142,6 @@ def index_buildings(
     logging.info("Either file does not exist or overwrite is on, proceeding with indexing.")
 
     parquet_data = _get_all_country_parquet_urls(source_location_s3, source_proxy)
-    # parquet_data = parquet_data.head(1)  # TODO: Remove this line to process all files
     asyncio.run(_run_index_buildings(source_proxy, parquet_data, target_store, target_file_name, max_concurrent))
     logging.info("Index buildings dataset process completed.")
 
