@@ -14,6 +14,7 @@ from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_acsc2 import acsc2_app
+from csdr.cli_geometry_aus_states import aus_states_app
 from csdr.cli_geometry_cwa import cwa_app
 from csdr.cli_geometry_eez import eez_app
 from csdr.cli_helpers import helpers_app
@@ -70,6 +71,8 @@ app.add_typer(acsc2_app, name="acsc2", help="Cache and process the Australian Co
 app.add_typer(cwa_app, name="cwa", help="Cache and process the GA Coastal Waters Areas dataset.")
 # EEZ
 app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
+# ABS Australian States
+app.add_typer(aus_states_app, name="aus-states", help="Cache and process the ABS Australian States dataset.")
 
 # Generic conversion tools
 app.add_typer(conversion_app, name="convert", help="Data conversion tools.")
