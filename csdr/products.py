@@ -218,7 +218,10 @@ def process_variables_for_geometry(
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
             geoms = list(geometry.geoms)
+
+        # TODO: When doing the variable refactor, generalise these.
         total_area = 0.0
+        total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for geom in geoms:
             if var == "sum-area-by-value":
@@ -241,8 +244,10 @@ def process_variables_for_geometry(
                     dataset_url,
                     geom.wkt
                 )
-                results["count-buildings"] = count
-                logging.info(f"Total count-buildings: {count}")
+                # TODO: Check this logic for summing. Germany has 2 geometries.
+                total_count += count
+                results["count-buildings"] = total_count
+                logging.info(f"Total count-buildings: {total_count}")
             else:
                 logging.error(f"Unknown variable requested: {var}")
                 raise CSDRException(f"Unknown variable requested: {var}")
