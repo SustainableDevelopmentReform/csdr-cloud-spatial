@@ -49,7 +49,7 @@ async def _get_bounds_from_parquet(
         source_proxy: str,
         s3_url: str,
         semaphore: asyncio.Semaphore,
-    ) -> tuple[float, float, float, float]:
+    ) -> tuple[float, float, float, float] | None:
     # Here we get large parquet files' bbox from metadata. This means that we don't have to download/load all data into memory.
     # It takes a couple of seconds per file this way, rather than minutes to download/load entire file.
     logging.info(f"Fetching bounding box from parquet file at {s3_url} ...")
@@ -69,10 +69,16 @@ async def _get_bounds_from_parquet(
                 meta = parquet_file.schema_arrow.metadata
                 geo_json = meta[b'geo'].decode('utf-8')
                 geo = json.loads(geo_json)
-                bbox = geo["columns"]["geometry"]["bbox"]
-                logging.info(f"Bounding box {bbox} for {s3_url}")
-                return bbox
-                break # Break out of retry loop on success
+
+                # Safeguard against invalid files where bbox metadata is missing. Skip it.
+                geometry_col = geo["columns"]["geometry"]
+                if "bbox" in geometry_col:
+                    bbox = geometry_col["bbox"]
+                    logging.info(f"Bounding box {bbox} for {s3_url}")
+                    return bbox
+                else:
+                    logging.warning(f"File {s3_url} has no bbox. Skipping.")
+                    return None
             except Exception as e:
                 logging.error(f"Error fetching bounding box for {s3_url} on attempt {attempt + 1} of {retry_limit}: {e}", exc_info=True)
                 if attempt == retry_limit - 1:
@@ -96,7 +102,12 @@ async def _run_index_buildings(
     bound_results = await asyncio.gather(*tasks)
     logging.info("Bboxes collected for all parquet files.")
 
-    parquet_data["bbox"] = bound_results # Append bbox to (code, url, s3_url) dataframe
+    # Remove rows where bbox is None
+    parquet_data["bbox"] = bound_results
+    valid_mask = parquet_data["bbox"].apply(lambda x: x is not None)
+    parquet_data = parquet_data[valid_mask].copy()
+    if parquet_data.empty:
+        raise CSDRException("No valid bboxes found. Exiting.")
     # Add geo data to df
     parquet_data[['minx', 'miny', 'maxx', 'maxy']] = pd.DataFrame(parquet_data['bbox'].tolist(), index=parquet_data.index)
     parquet_data['bbox_wkt'] = parquet_data.apply(
@@ -129,7 +140,7 @@ def index_buildings(
         help="S3 or local path to write buildings.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)"
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
-    max_concurrent: int = typer.Option(8, help="Maximum number of files to process at once."),
+    max_concurrent: int = typer.Option(32, help="Maximum number of files to process at once."),
 ) -> None:
     logging.info("Starting buildings index process ...")
     
