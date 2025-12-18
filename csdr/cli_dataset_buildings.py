@@ -60,6 +60,7 @@ async def _get_bounds_from_parquet(
         # It is better to retry here for just one parquet file, rather than make the workflow rerun the step.
         retry_limit = 3
         for attempt in range(retry_limit):
+            # TODO: Might not need retries now that fs is closed properly. I think that issue was an effect of leaving all open files unclosed.
             fs = None # Initialize fs to None so it can be closed in finally block
             try:
                 fs = FsspecStore(
