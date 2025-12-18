@@ -94,6 +94,8 @@ def _get_area_from_geoparquet_sedona(
 
     return round(float(area_m2), 2)
 
+
+# TODO: Generalise this to work for any geoparquet dataset, not just VIDA Buildings.
 def _get_count_points_in_polygon_geoparquet(
         sd: sedona.db.context.SedonaContext,
         dataset_url: str,
@@ -133,7 +135,7 @@ def _get_count_points_in_polygon_geoparquet(
     total_count = 0
     # Retry on failure. 2/160 geometries had a failure in Argo.
     # The failure is an invalid range request when reading the parquet file.
-    # It is better to retry here for just one of potentially many countries, even though the workflow will retry the whole process_geometry.
+    # It is better to retry here for just one of potentially many parquet files, even though the workflow will retry the whole process_geometry.
     @retry(max_retries=3, retry_logger=logger)
     def count_points_parquet(row: pd.Series) -> int:
         country_code = row['country_code']
@@ -165,7 +167,7 @@ def _get_count_points_in_polygon_geoparquet(
             logging.exception(f"Failed to process 2nd level country admin area parquet {row['country_code']}/{row['s2_code']} after retries. Raising so workflow will retry.")
             raise
     
-    logging.info(f"Total intersected buildings from all countries: {total_count}")
+    logging.info(f"Total intersected buildings from all parquet files: {total_count}")
     return int(total_count)
 
 
