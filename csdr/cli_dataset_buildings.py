@@ -59,6 +59,8 @@ async def _get_bounds_from_parquet(
     # It takes a couple of seconds per file this way, rather than minutes to download/load entire file.
     logging.info(f"Fetching bounding box from parquet file at {s3_url} ...")
     async with semaphore:
+        # Retry: Very occasionally reading the parquet file errors with an invalid byte range.
+        # It is better to retry here for just one parquet file, rather than make the workflow rerun the step.
         @retry(max_retries=3, retry_logger=logger)
         def fetch_bbox() -> tuple[float, float, float, float]:
             parquet_file = None
