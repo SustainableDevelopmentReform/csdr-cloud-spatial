@@ -32,6 +32,7 @@ dependencies = [
     "odc-geo",
     "pandas",
     "pyarrow",
+    "python_retry",
     "pystac",
     "pystac-client",
     "requests",

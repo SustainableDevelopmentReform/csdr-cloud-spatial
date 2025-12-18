@@ -1085,6 +1085,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pystac" },
     { name = "pystac-client" },
+    { name = "python-retry" },
     { name = "requests" },
     { name = "rio-stac" },
     { name = "rioxarray", version = "0.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1141,6 +1142,7 @@ requires-dist = [
     { name = "pyarrow" },
     { name = "pystac" },
     { name = "pystac-client" },
+    { name = "python-retry" },
     { name = "requests" },
     { name = "rio-stac" },
     { name = "rioxarray" },
@@ -2105,7 +2107,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -4274,6 +4276,14 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f0/26/19cadc79a718c5edbec86fd4919a6b6d3f681039a2f6d66d14be94e75fb9/python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6", size = 44221, upload-time = "2025-10-26T15:12:10.434Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/1b/a298b06749107c305e1fe0f814c6c74aea7b2f1e10989cb30f544a1b3253/python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61", size = 21230, upload-time = "2025-10-26T15:12:09.109Z" },
+]
+
+[[package]]
+name = "python-retry"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/16/442a6ef19877c8f344cdf42219abc735b41187b1904c9f7a2b9a3d823ce1/python_retry-0.0.1-py3-none-any.whl", hash = "sha256:4e1678a05721a7708639adf0b10d4a07fb719906a310514b393a2c83c4b9964d", size = 4229, upload-time = "2022-03-11T09:36:05.851Z" },
 ]
 
 [[package]]

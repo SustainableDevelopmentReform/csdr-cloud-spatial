@@ -8,6 +8,7 @@ import pyarrow.parquet as pq
 import typer
 from obstore.fsspec import FsspecStore
 from obstore.store import ObjectStore
+from python_retry import retry
 from shapely.geometry import box
 
 from csdr.io import (
@@ -20,6 +21,8 @@ from csdr.utils import CSDRException
 
 buildings_app = typer.Typer()
 
+logger = logging.getLogger()
+
 def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFrame:
     logging.info(f"Scraping country 2nd level admin parquet URLs from {source_location_s3} ...")
     # List objects via Source Coop S3 proxy.
@@ -31,7 +34,7 @@ def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFram
     )
     # We could exclude the "country_iso=None" files because they are tiny and have no bbox metadata so we can't index them.
     # This weird data is handled below when fetching bboxes.
-    pattern = r'^country_iso=.*\.parquet$' # Starts with "country_iso=" and ends with ".parquet"
+    pattern = r'^country_iso=(?!None/).+\.parquet$' # Starts with "country_iso=" and ends with ".parquet", but not "country_iso=None/" because that data is broken.
     parquet_files = find_matching_files(store, pattern=pattern)
     number_found = len(parquet_files)
     logging.info(f"Number of parquet files found: {number_found}")
@@ -51,17 +54,14 @@ async def _get_bounds_from_parquet(
         source_proxy: str,
         s3_url: str,
         semaphore: asyncio.Semaphore,
-    ) -> tuple[float, float, float, float] | None:
+    ) -> tuple[float, float, float, float]:
     # Here we get large parquet files' bbox from metadata. This means that we don't have to download/load all data into memory.
     # It takes a couple of seconds per file this way, rather than minutes to download/load entire file.
     logging.info(f"Fetching bounding box from parquet file at {s3_url} ...")
     async with semaphore:
-        # Retry: Very occasionally reading the parquet file errors with an invalid byte range.
-        # It is better to retry here for just one parquet file, rather than make the workflow rerun the step.
-        retry_limit = 3
-        for attempt in range(retry_limit):
-            # TODO: Might not need retries now that fs is closed properly. I think that issue was an effect of leaving all open files unclosed.
-            fs = None # Initialize fs to None so it can be closed in finally block
+        @retry(max_retries=3, retry_logger=logger)
+        def fetch_bbox() -> tuple[float, float, float, float]:
+            parquet_file = None
             try:
                 fs = FsspecStore(
                     "s3",
@@ -71,30 +71,20 @@ async def _get_bounds_from_parquet(
                 )
                 parquet_file = pq.ParquetFile(s3_url, filesystem=fs)
                 meta = parquet_file.schema_arrow.metadata
-
                 geo_json = meta[b'geo'].decode('utf-8')
                 geo = json.loads(geo_json)
-
-                # Safeguard against invalid files where bbox metadata is missing. Skip it.
-                geometry_col = geo["columns"]["geometry"]
-                if "bbox" in geometry_col:
-                    bbox = geometry_col["bbox"]
-                    logging.info(f"Bounding box {bbox} for {s3_url}")
-                    return bbox
-                else:
-                    logging.warning(f"File {s3_url} has no bbox. Skipping.")
-                    return None
-
-            except Exception as e:
-                logging.error(f"Error fetching bounding box for {s3_url} on attempt {attempt + 1} of {retry_limit}: {e}", exc_info=True)
-                if attempt == retry_limit - 1:
-                    logging.error(f"Failed to fetch bounding box for {s3_url} after {retry_limit} attempts. Raising so workflow will retry.")
-                    raise
+                bbox = geo["columns"]["geometry"]["bbox"]
+                logging.info(f"Bounding box {bbox} for {s3_url}")
+                return bbox
             finally:
-                # Close the filesystem to avoid resource leaks
-                if fs is not None:
-                    logging.info(f"Closing filesystem for {s3_url} to avoid resource leaks.")
-                    fs.close()
+                if parquet_file is not None:
+                    logging.info(f"Closing ReadableStream for {s3_url} to avoid resource leaks.")
+                    parquet_file.close()
+        try:
+            return fetch_bbox()
+        except Exception:
+            logging.exception(f"Failed to fetch bounding box for {s3_url} after 3 retries. Raising so workflow will retry.")
+            raise
 
 
 async def _run_index_buildings(
@@ -113,10 +103,7 @@ async def _run_index_buildings(
     bound_results = await asyncio.gather(*tasks)
     logging.info("Bboxes collected for all parquet files.")
 
-    # Remove rows where bbox is None
     parquet_data["bbox"] = bound_results
-    valid_mask = parquet_data["bbox"].apply(lambda x: x is not None)
-    parquet_data = parquet_data[valid_mask].copy()
     if parquet_data.empty:
         raise CSDRException("No valid bboxes found. Exiting.")
     # Add geo data to df
