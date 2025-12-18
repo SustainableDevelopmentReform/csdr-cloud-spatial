@@ -124,9 +124,8 @@ def post_bulk_geometry_outputs_to_database(
         try:
             response.raise_for_status()
         except HTTPError as e:
-            logging.error(
+            logging.exception(
                 f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
-                exc_info=True,
             )
             raise
 

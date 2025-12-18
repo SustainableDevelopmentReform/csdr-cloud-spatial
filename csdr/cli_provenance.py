@@ -100,9 +100,8 @@ def _meta_provenance(
         try:
             response.raise_for_status()
         except HTTPError:
-            logging.error(
+            logging.exception(
                 f"Failed to post provenance to database. Response was: \n{dumps(response.json(), indent=2)}",
-                exc_info=True,
             )
             raise
         logging.info(
@@ -307,9 +306,8 @@ def write_product_provenance(
                 try:
                     response.raise_for_status()
                 except HTTPError as e:
-                    logging.error(
+                    logging.exception(
                         f"Failed to post product output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
-                        exc_info=True,
                     )
                     raise
                 else:
