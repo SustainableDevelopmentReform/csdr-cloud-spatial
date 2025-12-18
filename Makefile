@@ -243,7 +243,7 @@ dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
 		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
 		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
-		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country/" \
+		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
 		--post-to-database \

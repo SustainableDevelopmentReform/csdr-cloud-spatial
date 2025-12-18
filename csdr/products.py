@@ -132,21 +132,33 @@ def _get_count_points_in_polygon_geoparquet(
 
     total_count = 0
     for _idx, row in intersected_partition_urls.iterrows():
-        partition_url = row['url']
-        code = row['code']
-        logging.info(f"Reading country parquet: {partition_url}")
-        sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
-        country_count_result = sd.sql(
-            f"""
-            SELECT COUNT(*) AS country_geom_count
-            FROM country_data
-            WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-            """
-        ).to_pandas()
-        country_geom_count = country_count_result['country_geom_count'][0]
-        if not pd.isna(country_geom_count):
-            total_count += country_geom_count
-            logging.info(f"{country_geom_count} buildings for country parquet {code}")
+        # Retry on failure. 2/160 geometries had a failure in Argo.
+        # The failure is an invalid range request when reading the parquet file.
+        # It is better to retry here for just one of potentially many countries, even though the workflow will retry the whole process_geometry.
+        retry_limit = 3
+        for attempt in range(retry_limit):
+            code = row['code']
+            try:
+                partition_url = row['url']
+                logging.info(f"Reading country parquet: {partition_url}")
+                sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
+                country_count_result = sd.sql(
+                    f"""
+                    SELECT COUNT(*) AS country_geom_count
+                    FROM country_data
+                    WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+                    """
+                ).to_pandas()
+                country_geom_count = country_count_result['country_geom_count'][0]
+                if not pd.isna(country_geom_count):
+                    total_count += country_geom_count
+                    logging.info(f"{country_geom_count} buildings for country parquet {code}")
+                break  # Break out of retry loop on success
+            except Exception as e:
+                logging.error(f"Error processing country parquet {code} on attempt {attempt + 1} of {retry_limit}: {e}", exc_info=True)
+                if attempt == retry_limit - 1:
+                    logging.error(f"Failed to process country parquet {code} after {retry_limit} attempts. Raising so workflow will retry.")
+                    raise e
     
     logging.info(f"Total intersected buildings from all countries: {total_count}")
     return int(total_count)
