@@ -129,7 +129,7 @@ def index_buildings(
         help="S3 or local path to write buildings.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)"
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
-    max_concurrent: int = typer.Option(32, help="Maximum number of files to process at once."),
+    max_concurrent: int = typer.Option(4, help="Maximum number of files to process at once."),
 ) -> None:
     logging.info("Starting buildings index process ...")
     
