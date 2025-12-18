@@ -29,6 +29,8 @@ def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFram
         skip_signature=True,
         endpoint_url=source_proxy
     )
+    # We could exclude the "country_iso=None" files because they are tiny and have no bbox metadata so we can't index them.
+    # This weird data is handled below when fetching bboxes.
     pattern = r'^country_iso=.*\.parquet$' # Starts with "country_iso=" and ends with ".parquet"
     parquet_files = find_matching_files(store, pattern=pattern)
     number_found = len(parquet_files)
