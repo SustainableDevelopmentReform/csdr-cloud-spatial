@@ -60,6 +60,7 @@ async def _get_bounds_from_parquet(
         # It is better to retry here for just one parquet file, rather than make the workflow rerun the step.
         retry_limit = 3
         for attempt in range(retry_limit):
+            fs = None # Initialize fs to None so it can be closed in finally block
             try:
                 fs = FsspecStore(
                     "s3",
@@ -69,6 +70,7 @@ async def _get_bounds_from_parquet(
                 )
                 parquet_file = pq.ParquetFile(s3_url, filesystem=fs)
                 meta = parquet_file.schema_arrow.metadata
+
                 geo_json = meta[b'geo'].decode('utf-8')
                 geo = json.loads(geo_json)
 
@@ -81,11 +83,17 @@ async def _get_bounds_from_parquet(
                 else:
                     logging.warning(f"File {s3_url} has no bbox. Skipping.")
                     return None
+
             except Exception as e:
                 logging.error(f"Error fetching bounding box for {s3_url} on attempt {attempt + 1} of {retry_limit}: {e}", exc_info=True)
                 if attempt == retry_limit - 1:
                     logging.error(f"Failed to fetch bounding box for {s3_url} after {retry_limit} attempts. Raising so workflow will retry.")
-                    raise e
+                    raise
+            finally:
+                # Close the filesystem to avoid resource leaks
+                if fs is not None:
+                    logging.info(f"Closing filesystem for {s3_url} to avoid resource leaks.")
+                    fs.close()
 
 
 async def _run_index_buildings(

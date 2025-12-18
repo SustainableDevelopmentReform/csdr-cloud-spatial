@@ -158,7 +158,7 @@ def _get_count_points_in_polygon_geoparquet(
                 logging.error(f"Error processing country parquet {code} on attempt {attempt + 1} of {retry_limit}: {e}", exc_info=True)
                 if attempt == retry_limit - 1:
                     logging.error(f"Failed to process country parquet {code} after {retry_limit} attempts. Raising so workflow will retry.")
-                    raise e
+                    raise
     
     logging.info(f"Total intersected buildings from all countries: {total_count}")
     return int(total_count)
