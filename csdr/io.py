@@ -104,8 +104,8 @@ def read_dict(store: ObjectStore, file_name: str) -> dict[str, Any]:
         try:
             json_dict = json.load(buffer)
             return json_dict
-        except Exception as e:
-            logging.error(f"Failed to read dict from {file_name} with exception {e}", exc_info=True)
+        except Exception:
+            logging.exception(f"Failed to read dict from {file_name}.")
             raise
 
 
@@ -128,9 +128,9 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
             try:
                 gdf = gpd.read_file(buffer, **kwargs)
                 return gdf
-            except Exception as e:
-                logging.error(
-                    f"Failed to read geospatial file from {url} with exception {e}", exc_info=True
+            except Exception:
+                logging.exception(
+                    f"Failed to read geospatial file from {url}."
                 )
                 raise
 

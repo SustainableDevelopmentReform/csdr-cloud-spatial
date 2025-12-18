@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import sedona.db
 from odc.geo.geom import Geometry
+from python_retry import retry
 
 from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
@@ -13,6 +14,7 @@ from csdr.utils import (
     xarray_calculate_area,
 )
 
+logger = logging.getLogger()
 
 # The _get_area_from_stac_geoparquet function does the following:
 # 1. Loads a STAC-Geoparquet using rustac.
@@ -92,6 +94,8 @@ def _get_area_from_geoparquet_sedona(
 
     return round(float(area_m2), 2)
 
+
+# TODO: Generalise this to work for any geoparquet dataset, not just VIDA Buildings.
 def _get_count_points_in_polygon_geoparquet(
         sd: sedona.db.context.SedonaContext,
         dataset_url: str,
@@ -102,11 +106,8 @@ def _get_count_points_in_polygon_geoparquet(
     # This is for Source.coop data - VIDA Buildings dataset.
     # Buildings steps:
     # 1. Use sedona to intersect with buildings.parquet index file that we make.
-    # 2. Then know which country parquets to load based on that intersection. Use sedona again to load only those parquets.
+    # 2. Then know which country 2nd level admin area parquets to load based on that intersection. Use sedona again to load only those parquets.
     # 3. Calculate count of buildings from those parquets.
-
-    # TODO: We could speed this up by indexing the countries by second level admin divisions, rather than the whole countries. A lot of countries end up in intersected_partition_urls unnecessarily.
-    # France and Great Britain's country bboxes include their overseas territories, leading to unnecessary loads.
 
     # EPSG:4326
     sd.read_parquet(dataset_url).to_view("index_data", overwrite=True)
@@ -114,7 +115,8 @@ def _get_count_points_in_polygon_geoparquet(
     intersected_partition_urls = sd.sql(
         f"""
         SELECT
-            code,
+            country_code,
+            s2_code,
             url,
             geometry
         FROM index_data
@@ -128,27 +130,44 @@ def _get_count_points_in_polygon_geoparquet(
     if intersected_partition_urls.empty:
         logging.info("No intersected dataset geometries found in index.")
         return 0
-    logging.info(f"Found {len(intersected_partition_urls)} intersected country parquet files from index.")
+    logging.info(f"Found {len(intersected_partition_urls)} intersected 2nd level country admin area parquet files from index.")
 
     total_count = 0
-    for _idx, row in intersected_partition_urls.iterrows():
+    # Retry on failure. 2/160 geometries had a failure in Argo.
+    # The failure is an invalid range request when reading the parquet file.
+    # It is better to retry here for just one of potentially many parquet files, even though the workflow will retry the whole process_geometry.
+    @retry(max_retries=3, retry_logger=logger)
+    def count_points_parquet(row: pd.Series) -> int:
+        country_code = row['country_code']
+        s2_code = row['s2_code']
         partition_url = row['url']
-        code = row['code']
-        logging.info(f"Reading country parquet: {partition_url}")
-        sd.read_parquet(partition_url).to_view("country_data", overwrite=True)
-        country_count_result = sd.sql(
-            f"""
-            SELECT COUNT(*) AS country_geom_count
-            FROM country_data
-            WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
-            """
-        ).to_pandas()
-        country_geom_count = country_count_result['country_geom_count'][0]
-        if not pd.isna(country_geom_count):
-            total_count += country_geom_count
-            logging.info(f"{country_geom_count} buildings for country parquet {code}")
+        try:
+            logging.info(f"Reading parquet: {partition_url}")
+            sd.read_parquet(partition_url).to_view("data", overwrite=True)
+            count_result = sd.sql(
+                f"""
+                SELECT COUNT(*) AS geom_count
+                FROM data
+                WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+                """
+            ).to_pandas()
+            geom_count = count_result['geom_count'][0]
+            if not pd.isna(geom_count):
+                logging.info(f"{geom_count} buildings for parquet {country_code}, {s2_code}")
+                return int(geom_count)
+            return 0
+        except Exception:
+            logging.exception(f"Error processing 2nd level country admin area parquet {country_code}/{s2_code}")
+            raise
+
+    for _idx, row in intersected_partition_urls.iterrows():
+        try:
+            total_count += count_points_parquet(row)
+        except Exception:
+            logging.exception(f"Failed to process 2nd level country admin area parquet {row['country_code']}/{row['s2_code']} after retries. Raising so workflow will retry.")
+            raise
     
-    logging.info(f"Total intersected buildings from all countries: {total_count}")
+    logging.info(f"Total intersected buildings from all parquet files: {total_count}")
     return int(total_count)
 
 
@@ -196,12 +215,15 @@ def process_variables_for_geometry(
     dataset_type = provenance.get("dataType")
 
     for var in variables:
-        # TODO: Exploding first is quite inneficient for _get_count_points_in_polygon_geoparquet data loading.
+        # TODO: Exploding first is quite inefficient for _get_count_points_in_polygon_geoparquet data loading.
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
             geoms = list(geometry.geoms)
+
+        # TODO: When doing the variable refactor, generalise these.
         total_area = 0.0
+        total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for geom in geoms:
             if var == "sum-area-by-value":
@@ -224,8 +246,10 @@ def process_variables_for_geometry(
                     dataset_url,
                     geom.wkt
                 )
-                results["count-buildings"] = count
-                logging.info(f"Total count-buildings: {count}")
+                # TODO: Check this logic for summing. Germany has 2 geometries.
+                total_count += count
+                results["count-buildings"] = total_count
+                logging.info(f"Total count-buildings: {total_count}")
             else:
                 logging.error(f"Unknown variable requested: {var}")
                 raise CSDRException(f"Unknown variable requested: {var}")
