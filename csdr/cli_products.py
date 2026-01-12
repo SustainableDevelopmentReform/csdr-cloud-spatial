@@ -354,12 +354,13 @@ def process_geometry(
     geometry_file_url = provenance.get("dataUrl")
     aws_region = "ap-southeast-2"  # TODO: Get this from env/config.
     sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
-    geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
+    geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-name\", \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
     if len(geometry) == 0:
         raise CSDRException(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
     if len(geometry) > 1:
         raise CSDRException(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
     geometry = geometry.iloc[0]
+    logging.info(f"Processing geometry '{geometry['csdr-name']}' with id '{geometry_id}'") # Name is helpful for debugging logs.
     geometry = Geometry(geometry.geometry, crs=f"EPSG:{geometry.crs}") # ODC Geometry object. This is just one geometry.
 
     # Set up Dask client
