@@ -2,10 +2,10 @@ import sedona.db
 from odc.geo.geom import polygon
 from pystac import ItemCollection
 
-from csdr.products import _get_area_from_geoparquet_sedona
+from csdr.products import _get_area_m2_from_geoparquet_sedona
 from csdr.utils import (
     load_xarray_stacgeoparquet,
-    xarray_calculate_area,
+    xarray_calculate_area_m2,
 )
 
 
@@ -31,7 +31,7 @@ def test_intersection_raster(
     assert data is not None
 
     # This reprojects to 6933 internally for area calculation.
-    area = xarray_calculate_area(data, sample_polygon, "asset", 1)
+    area = xarray_calculate_area_m2(data, sample_polygon, "asset", 1)
     assert area == 19827100.0
 
 
@@ -42,7 +42,7 @@ def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:
     # variable = ""
     # value = ""
     # datetime_string_match = ""
-    area = _get_area_from_geoparquet_sedona(
+    area = _get_area_m2_from_geoparquet_sedona(
         sd,
         dataset_parquet_url,
         sample_polygon.wkt,

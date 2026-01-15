@@ -218,7 +218,7 @@ def load_xarray_stacgeoparquet(
             if datetime_string_match in item.datetime.isoformat():
                 items.append(item)
 
-    # Force the use of Dask. Redundant because it is already done in get_area_from_dataset_geometry (parent function).
+    # Force the use of Dask. Redundant because it is already done in get_area_m2_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 
@@ -229,7 +229,7 @@ def load_xarray_stacgeoparquet(
     return data
 
 
-def xarray_calculate_area(
+def xarray_calculate_area_m2(
     data: Dataset | DataArray,
     geom: Geometry,
     variable: str | None = None,
@@ -255,11 +255,11 @@ def xarray_calculate_area(
 
     # Count all the non-nan cells, and multiply by area
     count = float(masked.notnull().sum().values)
-    one_pixel_area = abs(
+    one_pixel_area_m2 = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )
 
-    return round(float(count) * one_pixel_area, 2)
+    return round(float(count) * one_pixel_area_m2, 2)
 
 
 # Make a UUID
