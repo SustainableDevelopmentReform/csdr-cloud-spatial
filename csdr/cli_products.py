@@ -310,20 +310,36 @@ def process_geometry(
     logging.info(f"Run ID: '{run_id}'")
     logging.info(f"variables_to_extract (raw JSON): {variables_to_extract}")
 
-    target_location = target_location.rstrip("/") # Remove trailing slash if present
-
     # Parse variables_to_extract as JSON
     try:
         variables_dict = json.loads(variables_to_extract)
     except Exception as e:
         raise CSDRException(f"Failed to parse variables_to_extract as JSON: {e}")
-
     if not isinstance(variables_dict, dict):
         raise CSDRException("variables_to_extract must be a JSON object mapping variable keys to variable info dicts.")
-
     # Validate parameters (use keys for validation, e.g. 'sum-mangrove-area')
     variable_names = list(variables_dict.keys())
     datetime_val = _validate_parameters(variable_names, datetime, datetime_string_match)
+
+    # Prepare target location and check for existing output and overwrite flag
+    target_location = target_location.rstrip("/") # Remove trailing slash if present
+    # Write output for each variable (or all in one file)
+    target_store = get_store_with_prefix_from_url(target_location)
+    if len(variable_names) == 1:
+        variable_for_path = next(iter(variables_dict.values()))['variable-name'] # Use the only item's variable-name
+    else:
+        variable_for_path = "many-variables"
+    target_path = get_product_path(
+        product_id,
+        variable_for_path,
+        datetime=datetime_val,
+        geometry_id=geometry_id,
+    )
+    target_url = f"{target_location}/{target_path}"
+    if exists(target_store, target_path) and not overwrite:
+        logging.info(f"Product already exists at {target_url}, skipping processing.")
+        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+    logging.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
     # Load geometry data using Sedona so filtering is done before loading into memory
     # TODO: Make this a function get_geometry_parquet_sedona
@@ -363,20 +379,6 @@ def process_geometry(
             run_id,
         )
 
-        # Write output for each variable (or all in one file)
-        target_store = get_store_with_prefix_from_url(target_location)
-
-        if len(variable_names) == 1:
-            variable_for_path = variable_names[0]
-        else:
-            variable_for_path = "many-variables"
-        target_path = get_product_path(
-            product_id,
-            variable_for_path,
-            datetime=datetime_val,
-            geometry_id=geometry_id,
-        )
-        target_url = f"{target_location.rstrip('/')}/{target_path}"
         logging.info(f"Writing to {target_url}. target_path: {target_path}...")
         write_json(target_store, target_path, product_output)
         logging.info(f"Wrote results to {target_url}")
