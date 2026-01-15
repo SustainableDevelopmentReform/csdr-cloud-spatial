@@ -731,6 +731,8 @@ product-aca-eez-provenance-local-db:
 # South Sudan geometry hits 9 building parquet bboxes.
 # France has a massive bounding box that South Sudan intersects, but 0 buildings actually intersect.
 # Germany a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b
+# Australia bdcf6908-2ad1-5451-80ef-d0a9994d8a78
+# Malaysia 698e177a-687f-5e72-8bd5-280b88d9ad19
 # Variable with id 'count-buildings' must exist in the app before running this.
 product-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
@@ -740,7 +742,7 @@ product-buildings-eez-process-geometry-local:
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
-		--geometry-id=a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b \
+		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
 		--variables-to-extract='{"count-buildings": {"variable-name": "count-buildings", "variable-value": null}}' \
 		--overwrite
 product-buildings-eez-consolidate-local:
@@ -773,6 +775,10 @@ product-buildings-eez-provenance-local-db:
 # ('percent-saltmarsh-area', 'Saltmarsh Area Percent', 'Percent of saltmarsh area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
 # ('percent-seagrass-area', 'Seagrass Area Percent', 'Percent of seagrass area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL);
 # Times: 2021 and 2022.
+# Geometries:
+# 446b9a00-e0e3-51be-934b-0df1c2c75b2c
+# b608c6ab-6ce4-5a89-9523-ee07d8dd4c22
+# 320d51fc-e195-5e45-9c2c-fd4fb38af9c7
 product-ace-acsc2-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
@@ -780,11 +786,26 @@ product-ace-acsc2-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
 		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
-		--datetime=2021 \
-		--geometry-id=320d51fc-e195-5e45-9c2c-fd4fb38af9c7 \
+		--datetime=2022 \
+		--geometry-id=b608c6ab-6ce4-5a89-9523-ee07d8dd4c22 \
 		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "classification", "variable-value": 3}, "sum-intertidal-area": {"variable-name": "classification", "variable-value": 2}, "sum-saltmarsh-area": {"variable-name": "classification", "variable-value": 4}, "sum-seagrass-area": {"variable-name": "classification", "variable-value": 5}, "percent-mangrove-area": {"variable-name": null, "variable-value": null}, "percent-intertidal-area": {"variable-name": null, "variable-value": null}, "percent-saltmarsh-area": {"variable-name": null, "variable-value": null}, "percent-seagrass-area": {"variable-name": null, "variable-value": null}}' \
 		--overwrite
-
+product-ace-acsc2-consolidate-local:
+	csdr products consolidate \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
+		--variable-name=many-variables
+product-ace-acsc2-provenance-local-db:
+	csdr provenance product \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--product-url=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id/many-variables/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
+		--run-id=test-ace-acsc2-run-id \
+		--dataset-run-id=b110a9cd-0052-4436-8504-3d55f6d79094 \
+		--geometries-run-id=acsc2-test-run-id \
+		--post-to-database \
+		--overwrite
 
 
 
