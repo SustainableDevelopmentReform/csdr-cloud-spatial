@@ -200,7 +200,7 @@ def _get_area_from_dataset_geometry(
 
 def process_variables_for_geometry(
     geometry: Geometry,
-    variables: list[str],
+    variables: dict[str, dict],
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
     variable_name: str = "asset",
@@ -216,27 +216,35 @@ def process_variables_for_geometry(
     dataset_type = provenance.get("dataType")
 
     # Order area variables first, then area percentages. Area percentages are dependent on area calculations.
-    variables = sorted(variables, key=lambda v: ("percent-" in v, v)) # TODO: Make this more robust when there are non-area percent variables.
+    variables = dict(sorted(variables.items(), key=lambda item: ("percent-" in item[0], item[0]))) # TODO: Make this more robust when there are non-area percent variables.
     sum_area_var_pattern = re.compile(r"^sum-.*-area$")
     area_percent_var_pattern = re.compile(r"^percent-.*-area$")
     count_var_pattern = re.compile(r"^count-.*$")
     # TODO: Extend to other variable types as needed by future products.
-    for var in variables:
-        logging.info(f"Processing variable: {var}")
+    for var_key, var_info in variables.items():
+        variable_name = var_info.get("variable-name")
+        variable_value = var_info.get("variable-value")
+        # Try to convert variable_value to float if possible
+        try:
+            if variable_value is not None:
+                variable_value = float(variable_value)
+        except Exception:
+            pass
+        logging.info(f"Processing variable: {var_key} with variable name: {variable_name} and value: {variable_value}")
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
             geoms = list(geometry.geoms)
 
         # TODO: When doing the variable refactor, generalise these.
-        total_multipolygon_area = 0.0 # Need for percent area calculations
+        total_multipolygon_area_m2 = 0.0 # Need for percent area calculations
         total_variable_area = 0.0
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for i, geom in enumerate(geoms):
-            logging.info(f"Processing geom: {i} of {len(geoms)}")
+            logging.info(f"Processing geom: {i + 1} of {len(geoms)}")
             # Area variables
-            if sum_area_var_pattern.match(var): # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
+            if sum_area_var_pattern.match(var_key): # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
                 area = _get_area_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -248,36 +256,34 @@ def process_variables_for_geometry(
                     load_kwargs=load_kwargs,
                 )
                 total_variable_area += area
-                results[var] = total_variable_area
-                logging.info(f"Total area by value: {total_variable_area} for variable {var}")
+                results[var_key] = total_variable_area
+                logging.info(f"Total area by value: {total_variable_area} for variable {var_key}, value {variable_value}")
             # Area percent variables
-            elif area_percent_var_pattern.match(var): # ["percent-mangrove-area", "percent-intertidal-area", "percent-saltmarsh-area", "percent-seagrass-area"]
+            elif area_percent_var_pattern.match(var_key): # ["percent-mangrove-area", "percent-intertidal-area", "percent-saltmarsh-area", "percent-seagrass-area"]
                 logging.info("Starting percent variable analysis...")
                 # The variables were sorted so all actual areas are already calculated before any hit this condition.
-                # Here can we get the total area of the geometry first, then get the area by value, and calculate percent.
-                # TODO: Reproject geometry to EPSG:6933 for area calculation consistency. Geoms are in EPSG:4326 in the DB (not sure about in the parquet file).
-                # TODO: Check this for multipolygons - need total area of all geometries. Germany has 2 geometries.
-                geom_area_m2 = geometry.area  # This is just this single geom's area
-                total_multipolygon_area += geom_area_m2
-                area_by_value = results.get(f"sum-{var.replace('percent-', '')}", 0.0)
-                area_percent = (area_by_value / total_multipolygon_area * 100.0) if total_multipolygon_area > 0 else 0.0
-                results[var] = area_percent
-                logging.info(f"Calculated {var}: {area_percent:.2f}% (Area by value: {area_by_value:.2f} m^2, Total geom area: {total_multipolygon_area:.2f} m^2)")
-            elif count_var_pattern.match(var): # ["count-buildings"]
+                # We get the total area of the geometry first, then get the area by value, and calculate percent.
+                # Reproject to EPSG:6933 for area in m^2. Geoms are in EPSG:4326 in the DB (not sure about in the parquet file).
+                geometry_6933 = geometry.to_crs("EPSG:6933")
+                geom_area_m2 = geometry_6933.area  # This is just this single geom's area
+                total_multipolygon_area_m2 += geom_area_m2
+                area_by_value = results.get(f"sum-{var_key.replace('percent-', '')}", 0.0)
+                area_percent = (area_by_value / total_multipolygon_area_m2) * 100.0 if total_multipolygon_area_m2 > 0 else 0.0
+                results[var_key] = area_percent
+                logging.info(f"Calculated {var_key}: {area_percent:.2f}% (Area by value: {area_by_value:.2f} m^2, Total geom area: {total_multipolygon_area_m2:.2f} m^2)")
+            elif count_var_pattern.match(var_key): # ["count-buildings"]
                 logging.info("Starting count variable analysis...")
-                # TODO: Check this for multipolygons - need total count of all geometries?
                 count = _get_count_points_in_polygon_geoparquet(
                     sd,
                     dataset_url,
                     geom.wkt
                 )
-                # TODO: Check this logic for summing. Germany has 2 geometries.
                 total_count += count
-                results[var] = total_count
+                results[var_key] = total_count
                 logging.info(f"Total count-buildings: {total_count}")
             else:
-                logging.error(f"Unknown variable requested: {var}")
-                raise CSDRException(f"Unknown variable requested: {var}")
+                logging.error(f"Unknown variable requested: {var_key}")
+                raise CSDRException(f"Unknown variable requested: {var_key}")
     return results
 
 

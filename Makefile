@@ -197,7 +197,7 @@ dataset-ace-provenance-local:
 		--id=19e30180-8512-4cce-b280-fa17bb014578 \
 		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
 		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
-		--source-metadata-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
+		--source-metadata-url="https://knowledge.dea.ga.gov.au/data/product/dea-coastal-ecosystems" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
@@ -787,8 +787,46 @@ product-buildings-eez-provenance-local-db:
 
 
 # Product ACEs by EEZ
-# --variables-to-extract="sum-mangrove-area,sum-intertidal-area,sum-saltmarsh-area,sum-seagrass-area,percent-mangrove-area,percent-intertidal-area,percent-saltmarsh-area,percent-seagrass-area" \
-
+# First product with many variables. These must be added in the app as variables.
+# INSERT INTO public.variable (id, name, description, unit, display_order, category_id, created_at, updated_at, metadata) VALUES
+# ('sum-mangrove-area', 'Mangrove Area', 'Total area of mangrove', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('sum-intertidal-area', 'Intertidal Area', 'Total area of intertidal zone', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('sum-saltmarsh-area', 'Saltmarsh Area', 'Total area of saltmarsh', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('sum-seagrass-area', 'Seagrass Area', 'Total area of seagrass', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('percent-mangrove-area', 'Mangrove Area Percent', 'Percent of mangrove area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('percent-intertidal-area', 'Intertidal Area Percent', 'Percent of intertidal area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('percent-saltmarsh-area', 'Saltmarsh Area Percent', 'Percent of saltmarsh area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
+# ('percent-seagrass-area', 'Seagrass Area Percent', 'Percent of seagrass area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL);
+# Times: 2021 and 2022.
+product-ace-acsc2-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--run-id=test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
+		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--datetime=2021 \
+		--geometry-id=320d51fc-e195-5e45-9c2c-fd4fb38af9c7 \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "classification", "variable-value": 3}, "sum-intertidal-area": {"variable-name": "classification", "variable-value": 2}, "sum-saltmarsh-area": {"variable-name": "classification", "variable-value": 4}, "sum-seagrass-area": {"variable-name": "classification", "variable-value": 5}, "percent-mangrove-area": {"variable-name": null, "variable-value": null}, "percent-intertidal-area": {"variable-name": null, "variable-value": null}, "percent-saltmarsh-area": {"variable-name": null, "variable-value": null}, "percent-seagrass-area": {"variable-name": null, "variable-value": null}}' \
+		--overwrite
+# TODO: Should variable-name be a list when there are multiple variables to extract?
+# All variables use the same variable-name 'classification' in this case.
+# Each variable has different values in the dataset.
+# Old format: --variables-to-extract="sum-mangrove-area,sum-intertidal-area,sum-saltmarsh-area,sum-seagrass-area,percent-mangrove-area,percent-intertidal-area,percent-saltmarsh-area,percent-seagrass-area" \
+# TODO: What if the param was:
+# --variables-to-extract="{
+# 	  	"sum-mangrove-area": {"variable-name": "classification", "variable-value": 3},
+#   	"sum-intertidal-area": {"variable-name": "classification", "variable-value": 2},
+#   	"sum-saltmarsh-area": {"variable-name": "classification", "variable-value": 4},
+#   	"sum-seagrass-area": {"variable-name": "classification", "variable-value": 5},
+# 		# These are derived from the above so don't need variable-value
+# 		"percent-mangrove-area": {"variable-name": null, "variable-value": null},
+# 		"percent-intertidal-area": {"variable-name": null, "variable-value": null},
+# 		"percent-saltmarsh-area": {"variable-name": null, "variable-value": null},
+# 		"percent-seagrass-area": {"variable-name": null, "variable-value": null},
+# }
+# TODO: I would have to then update all other products to use this new format.
+# Provenance metadata: 
 
 ### OTHER ###
 
