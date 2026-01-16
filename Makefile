@@ -765,20 +765,9 @@ product-buildings-eez-provenance-local-db:
 
 # Product ACEs by EEZ
 # First product with many variables. These must be added in the app as variables.
-# INSERT INTO public.variable (id, name, description, unit, display_order, category_id, created_at, updated_at, metadata) VALUES
-# ('sum-mangrove-area', 'Mangrove Area', 'Total area of mangrove', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('sum-intertidal-area', 'Intertidal Area', 'Total area of intertidal zone', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('sum-saltmarsh-area', 'Saltmarsh Area', 'Total area of saltmarsh', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('sum-seagrass-area', 'Seagrass Area', 'Total area of seagrass', 'm^2', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('percent-mangrove-area', 'Mangrove Area Percent', 'Percent of mangrove area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('percent-intertidal-area', 'Intertidal Area Percent', 'Percent of intertidal area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('percent-saltmarsh-area', 'Saltmarsh Area Percent', 'Percent of saltmarsh area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL),
-# ('percent-seagrass-area', 'Seagrass Area Percent', 'Percent of seagrass area', '%', DEFAULT, 'ace', DEFAULT, DEFAULT, NULL);
 # Times: 2021 and 2022.
 # Geometries:
-# 446b9a00-e0e3-51be-934b-0df1c2c75b2c
-# b608c6ab-6ce4-5a89-9523-ee07d8dd4c22
-# 320d51fc-e195-5e45-9c2c-fd4fb38af9c7
+# 446b9a00-e0e3-51be-934b-0df1c2c75b2c, b608c6ab-6ce4-5a89-9523-ee07d8dd4c22, 320d51fc-e195-5e45-9c2c-fd4fb38af9c7
 product-ace-acsc2-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
