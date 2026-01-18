@@ -328,7 +328,7 @@ geometry-acsc2-cache-local:
 geometry-acsc2-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/acsc2.zip \
+		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip \
 		--source-internal-path-name=Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.shp \
 		--target-location=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id \
 		--create-pmtiles
@@ -355,7 +355,7 @@ geometry-cwa-cache-local:
 geometry-cwa-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/cwa.zip \
+		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/CW_1970_1980_Areas.zip \
 		--source-internal-path-name=CW_1970_1980_Areas.shp \
 		--target-location=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id \
 		--create-pmtiles

@@ -30,7 +30,7 @@ async def run_cache_acsc2(
     target_location = target_location.rstrip("/")
     logging.info(f"Caching '{geometry_name}' from '{source_url}' to '{target_location}'...")
     target_path = target_location # This is the path, there is no file name
-    target_file_name = "acsc2.zip"
+    target_file_name = "Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip" # Use the incoming file name.
     target_store = get_store_with_prefix_from_url(target_path)
 
     if exists(target_store, target_file_name) and not overwrite:
@@ -41,8 +41,7 @@ async def run_cache_acsc2(
 
     logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
 
-    # Dowload zip
-    
+    # Download zip
     response = get(source_url)
     response.raise_for_status()  # Raise an error if the download failed
     zip_bytes = BytesIO(response.content)
