@@ -1,10 +1,17 @@
+import asyncio
 import glob
 import logging
 import os
+from io import BytesIO
 
 import geopandas as gpd
 import typer
+from requests import get
 
+from csdr.io import (
+    exists,
+    get_store_with_prefix_from_url,
+)
 from csdr.utils import CSDRException
 
 geometry_app = typer.Typer()
@@ -133,6 +140,74 @@ def validate(
 
     except Exception as e:
         raise CSDRException(f"An error occurred during validation: {e}")
+    
+
+# Caching CWA and ACSC2 geometries
+# "GA Coastal Waters Areas", or "Australian Coastal Sediment Compartments - Secondary Compartments"
+async def run_cache(
+    source_url: str,
+    target_location: str,
+    overwrite: bool,
+) -> str:
+    # Downloads the cwa/acsc2 zip of shapefile from source_url and stores it at target_location
+    # Source url is http://
+    # Target location can be s3:// or local file path
+    target_location = target_location.rstrip("/")
+    target_path = target_location # This is the path, there is no file name
+
+    # Get the name of the file
+    if "2af87180973d44b0b5b73583e3c06957_2" in source_url:
+        logging.info("Detected ACSC2 geometry based on source URL.")
+        target_file_name = "Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip"
+    elif "37a401e932544c88828a7d099880afb5_1" in source_url:
+        logging.info("Detected CWA geometry based on source URL.")
+        target_file_name = "CW_1970_1980_Areas.zip"
+    else:
+        logging.error("Unknown geometry source URL.")
+        raise CSDRException("Unknown geometry source URL.")
+
+    target_store = get_store_with_prefix_from_url(target_path)
+
+    if exists(target_store, target_file_name) and not overwrite:
+        logging.info("File already exists at target location and overwrite is off, skipping download.")
+        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+
+    logging.info("File doesn't exist or overwrite is on. Re-downloading.")
+
+    logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
+
+    # Download zip
+    response = get(source_url)
+    response.raise_for_status()  # Raise an error if the download failed
+    zip_bytes = BytesIO(response.content)
+
+    # TODO: Should get the file name dynamically here, but that would mean that the overwrite functionality would not be as effective in preventing re-downloads.
+
+    # Get the file name
+    await target_store.put_async(target_file_name, zip_bytes)
+
+    return target_location
+
+
+# Download zipped shapefile.
+@geometry_app.command("cache")
+def cache(
+    source_url: str = typer.Option(
+        ...,
+        help="URL of the source zipped shapefile geometry to cache.",
+    ),
+    target_location: str = typer.Option(
+        ...,
+        help="Local or remote path (like 's3://csdr-public-dev/geometries/acsc2/0-0-1/raw' or s3://csdr-public-dev/geometries/cwa/0-0-1/raw) to store the cached geometry file.",
+    ),
+    overwrite: bool = typer.Option(
+        True, help="Replace existing zip file if it exists."
+    ),
+) -> None:
+    logging.info(f"Starting caching process for '{source_url}'...")
+
+    result_path = asyncio.run(run_cache(source_url, target_location, overwrite))
+    logging.info(f"Caching process completed. Cached to '{result_path}'")
 
 
 if __name__ == "__main__":
