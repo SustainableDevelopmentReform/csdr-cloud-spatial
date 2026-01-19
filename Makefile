@@ -321,7 +321,8 @@ geometry-eez-provenance-s3-db:
 
 # Geometry Australian Coastal Sediment Compartments - Secondary Compartments
 geometry-acsc2-cache-local:
-	csdr acsc2 cache \
+	csdr geometries cache \
+		--source-url="https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
 		--target-location=./cache/geometries/acsc2/0-0-1/raw \
 		--overwrite
 
@@ -348,7 +349,7 @@ geometry-acsc2-provenance-local-db:
 
 # Geometry GA Coastal Waters Areas
 geometry-cwa-cache-local:
-	csdr cwa cache \
+	csdr geometries cache \
 		--source-url="https://hub.arcgis.com/api/v3/datasets/37a401e932544c88828a7d099880afb5_1/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
 		--target-location=./cache/geometries/cwa/0-0-1/raw \
 		--overwrite
