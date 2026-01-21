@@ -197,7 +197,7 @@ dataset-ace-provenance-local:
 		--id=19e30180-8512-4cce-b280-fa17bb014578 \
 		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
 		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
-		--source-metadata-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
+		--source-metadata-url="https://knowledge.dea.ga.gov.au/data/product/dea-coastal-ecosystems" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
@@ -432,9 +432,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
@@ -450,9 +448,7 @@ product-gmw-v4-eez-process-geometry-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=7b628528-0f25-514a-884f-4d9750acccda \
@@ -466,9 +462,7 @@ product-gmw-v4-eez-process-all-geometries-dask-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -482,9 +476,7 @@ product-gmw-v4-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -548,9 +540,7 @@ product-gmw-v3-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime-string-match=1996 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
@@ -563,9 +553,7 @@ product-gmw-v3-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variable-name=mangrove \
-		--variable-value=1.0 \
-		--variables-to-extract="sum-mangrove-area" \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
 		--datetime-string-match=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -611,9 +599,7 @@ product-seagrass-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variable-name=seagrass \
-		--variable-value=1 \
-		--variables-to-extract="sum-seagrass-area" \
+		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
@@ -628,9 +614,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variable-name=seagrass \
-		--variable-value=1 \
-		--variables-to-extract="sum-seagrass-area" \
+		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
@@ -644,9 +628,7 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variable-name=seagrass \
-		--variable-value=1 \
-		--variables-to-extract="sum-seagrass-area" \
+		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
 		--datetime-string-match="2021" \
 		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
@@ -690,9 +672,7 @@ product-aca-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variable-name=class \
-		--variable-value=Reef \
-		--variables-to-extract="sum-reef-area" \
+		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
@@ -705,9 +685,7 @@ product-aca-eez-process-geometry-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variable-name=class \
-		--variable-value=Reef \
-		--variables-to-extract="sum-reef-area" \
+		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
 		--overwrite
@@ -721,9 +699,7 @@ product-aca-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variable-name=class \
-		--variable-value=Reef \
-		--variables-to-extract="sum-reef-area" \
+		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
 		--overwrite \
 		--use-dask \
@@ -755,6 +731,8 @@ product-aca-eez-provenance-local-db:
 # South Sudan geometry hits 9 building parquet bboxes.
 # France has a massive bounding box that South Sudan intersects, but 0 buildings actually intersect.
 # Germany a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b
+# Australia bdcf6908-2ad1-5451-80ef-d0a9994d8a78
+# Malaysia 698e177a-687f-5e72-8bd5-280b88d9ad19
 # Variable with id 'count-buildings' must exist in the app before running this.
 product-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
@@ -763,18 +741,17 @@ product-buildings-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
-		--variable-name=count-buildings \
 		--datetime=2025 \
-		--geometry-id=a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b \
-		--variables-to-extract=count-buildings \
+		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
+		--variables-to-extract='{"count-buildings": {"variable-name": "count-buildings", "variable-value": null}}' \
 		--overwrite
 product-buildings-eez-consolidate-local:
 	csdr products consolidate \
-			--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-			--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
-			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-			--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
-			--variable-name=count-buildings
+		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
+		--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
+		--variable-name=count-buildings
 product-buildings-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
@@ -787,7 +764,39 @@ product-buildings-eez-provenance-local-db:
 
 
 # Product ACEs by EEZ
-# --variables-to-extract="sum-mangrove-area,sum-intertidal-area,sum-saltmarsh-area,sum-seagrass-area,percent-mangrove-area,percent-intertidal-area,percent-saltmarsh-area,percent-seagrass-area" \
+# First product with many variables. These must be added in the app as variables.
+# Times: 2021 and 2022.
+# Geometries:
+# 446b9a00-e0e3-51be-934b-0df1c2c75b2c, b608c6ab-6ce4-5a89-9523-ee07d8dd4c22, 320d51fc-e195-5e45-9c2c-fd4fb38af9c7
+product-ace-acsc2-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--run-id=test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
+		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--datetime=2022 \
+		--geometry-id=b608c6ab-6ce4-5a89-9523-ee07d8dd4c22 \
+		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "classification", "variable-value": 3}, "sum-intertidal-area": {"variable-name": "classification", "variable-value": 2}, "sum-saltmarsh-area": {"variable-name": "classification", "variable-value": 4}, "sum-seagrass-area": {"variable-name": "classification", "variable-value": 5}, "percent-mangrove-area": {"variable-name": null, "variable-value": null}, "percent-intertidal-area": {"variable-name": null, "variable-value": null}, "percent-saltmarsh-area": {"variable-name": null, "variable-value": null}, "percent-seagrass-area": {"variable-name": null, "variable-value": null}}' \
+		--overwrite
+product-ace-acsc2-consolidate-local:
+	csdr products consolidate \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
+		--variable-name=many-variables
+product-ace-acsc2-provenance-local-db:
+	csdr provenance product \
+		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
+		--product-url=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id/many-variables/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
+		--run-id=test-ace-acsc2-run-id \
+		--dataset-run-id=b110a9cd-0052-4436-8504-3d55f6d79094 \
+		--geometries-run-id=acsc2-test-run-id \
+		--post-to-database \
+		--overwrite
+
+
 
 
 ### OTHER ###
