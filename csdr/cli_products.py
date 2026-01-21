@@ -26,8 +26,26 @@ from csdr.utils import CSDRException, get_geom_from_gdf, make_uuid
 
 products_app = typer.Typer()
 
-# TODO: Split area variables for many different products.
-KNOWN_VARIABLES = ["sum-area-by-value", "count-buildings"] # We could get these from the DB.
+# We could get these from the DB variable table. The user can create variables in the app, but they wouldn't be known here.
+# There are currently 3 types of variables:
+# 1. sum-{}-area: for area-based variables
+# 2. count-{}: for count-based variables
+# 3. percent-{}-area: for percentage area-based variables
+# There will likely be a more diverse set of variables in the future.
+KNOWN_VARIABLES = [
+    "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
+    "sum-seagrass-area",
+    "sum-reef-area",
+    "count-buildings",
+    # ACE variables:
+    "sum-intertidal-area",
+    "sum-saltmarsh-area",
+    "sum-seagrass-area",
+    "percent-mangrove-area",
+    "percent-intertidal-area",
+    "percent-saltmarsh-area",
+    "percent-seagrass-area",
+]
 
 
 def _validate_parameters(
@@ -251,7 +269,7 @@ def process_geometry(
         ..., help="URL that points to the dataset provenance file"
     ),
     variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
-        "sum-area-by-value",
+        ...,
         help="Comma-separated list of variables to extract from the dataset",
         parser=parse_csv_list
     ),
@@ -336,12 +354,13 @@ def process_geometry(
     geometry_file_url = provenance.get("dataUrl")
     aws_region = "ap-southeast-2"  # TODO: Get this from env/config.
     sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
-    geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
+    geometry = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-name\", \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
     if len(geometry) == 0:
         raise CSDRException(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
     if len(geometry) > 1:
         raise CSDRException(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
     geometry = geometry.iloc[0]
+    logging.info(f"Processing geometry '{geometry['csdr-name']}' with id '{geometry_id}'") # Name is helpful for debugging logs.
     geometry = Geometry(geometry.geometry, crs=f"EPSG:{geometry.crs}") # ODC Geometry object. This is just one geometry.
 
     # Set up Dask client
@@ -398,7 +417,7 @@ def process_all_geometries_dask(
         ..., help="URL that points to the dataset provenance file"
     ),
     variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
-        "sum-area-by-value",
+        ...,
         help="Comma-separated list of variables to extract from the dataset",
         parser=parse_csv_list
     ),
