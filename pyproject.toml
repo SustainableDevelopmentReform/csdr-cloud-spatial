@@ -36,7 +36,7 @@ dependencies = [
     "pystac",
     "pystac-client",
     "requests",
-    "rustac",
+    "rustac[arrow]",
     "rio-stac",
     "rioxarray",
     "s3fs",
