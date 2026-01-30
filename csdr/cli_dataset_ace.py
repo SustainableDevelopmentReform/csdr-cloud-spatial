@@ -44,6 +44,7 @@ async def run_index_aus_coastal_ecosystems(
     with suppress_rust_output():
         # Use rustac search_to to get all items from the ACE STAC collection and write to parquet
         # TODO: experiment with parquet_compression options for rustac write
+        # TODO: Use geoarrow for geometry column
         items = await search_to(
             target_filename,
             source_stac_url,

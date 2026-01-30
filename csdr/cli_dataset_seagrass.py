@@ -36,6 +36,7 @@ async def run_index_dep_seagrass(
 
     with suppress_rust_output():
         # TODO: experiment with parquet_compression options for rustac write
+        # TODO: Use geoarrow for geometry column
         count_items = await search_to(
             target_filename,
             stac_api_url,

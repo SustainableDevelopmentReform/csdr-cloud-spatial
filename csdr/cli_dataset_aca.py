@@ -172,6 +172,7 @@ async def _run_index_aca(
         raise CSDRException("No GPKG files found, nothing to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
+    # TODO: Use geoarrow for geometry column
     with BytesIO() as f:
         merged_gdf.to_parquet(f, index=False)
         f.seek(0)

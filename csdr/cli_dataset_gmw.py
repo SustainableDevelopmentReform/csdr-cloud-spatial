@@ -348,6 +348,7 @@ async def run_index_gmw(
     logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
     with suppress_rust_output():
         # TODO: experiment with parquet_compression options for rustac write
+        # TODO: Use geoarrow for geometry column
         await write(file_name, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
 
     logging.info(f"Parquet write completed, wrote to {target_url}")
