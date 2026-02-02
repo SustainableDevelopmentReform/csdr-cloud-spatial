@@ -23,8 +23,8 @@ First, ensure that GDAL is installed in your environment. To install the depende
 
 1. Activate virtual env: `source .venv/bin/activate`
 2. Install packages listed in pyproject.toml: `pip install -e .`
-2. Add a package: `uv add 'rustac[arrow]`
-3. Remove a package: `uv remove 'rustac[arrow]`
+2. Add a package: `uv add 'rustac[arrow]'`
+3. Remove a package: `uv remove 'rustac[arrow]'`
 4. Update lock + env after editing pyproject.toml: `uv sync`
 
 
