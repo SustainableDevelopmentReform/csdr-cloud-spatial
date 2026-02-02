@@ -184,7 +184,10 @@ def write_gdf_to_parquet(
 ) -> None:
     # Write GeoDataFrame to a GeoParquet file in memory
     with BytesIO() as parquet_buffer:
-        gdf.to_parquet(parquet_buffer, engine="pyarrow")
+        # Use geoarrow for geometry column for vizualisation in the CSDR app.
+        # Write covering bbox for better querying capabilities.
+        # TODO: Experiment with parquet_compression options. Defaults to snappy.
+        gdf.to_parquet(parquet_buffer, index=False, engine="pyarrow", geometry_encoding="geoarrow", write_covering_bbox=True) 
         parquet_buffer.seek(0)
 
         # Write the parquet bytes to the target store using obstore

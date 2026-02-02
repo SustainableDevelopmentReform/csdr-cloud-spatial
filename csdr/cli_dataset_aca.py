@@ -172,14 +172,10 @@ async def _run_index_aca(
         raise CSDRException("No GPKG files found, nothing to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
-    # TODO: Use geoarrow for geometry column
-    with BytesIO() as f:
-        merged_gdf.to_parquet(f, index=False)
-        f.seek(0)
-        target_store.put(target_file_name, f.read())
-    logging.info("Merge and export to GeoParquet completed.")
+    write_gdf_to_parquet(merged_gdf, target_store, target_file_name)
+    logging.info("Merge and export to GeoParquet (arrow) completed.")
     logging.info("Starting partitioning of the merged GeoParquet ...")
-    _partition_parquet(target_store, merged_gdf, grid_size=10, overwrite=overwrite)
+    _partition_parquet(target_store, merged_gdf, grid_chunks=10, overwrite=overwrite)
     logging.info("Partitioning completed.")
 
 
