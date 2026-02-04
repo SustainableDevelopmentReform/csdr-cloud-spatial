@@ -192,6 +192,11 @@ dataset-ace-index-local:
 		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
 		--target-location=./cache/datasets/ace/0-0-1 \
 		--overwrite
+dataset-ace-index-s3:
+	csdr ace index \
+		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
+		--target-location=s3://csdr-public-dev/datasets/ace/0-0-1 \
+		--overwrite
 dataset-ace-provenance-local:
 	csdr provenance dataset \
 		--id=19e30180-8512-4cce-b280-fa17bb014578 \

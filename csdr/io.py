@@ -7,11 +7,16 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import geoarrow.pyarrow as ga
 import geopandas as gpd
 import pandas as pd
+import pyarrow.parquet as pq
 from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, ObjectStore, S3Store, from_url
-from pyarrow import ArrowInvalid
+from pyarrow import ArrowInvalid, Table
+from stac_geoparquet.arrow import (
+    parse_stac_items_to_arrow,  # , to_parquet # Would be nice to use to_parquet?
+)
 
 
 class CSDRException(Exception):
@@ -192,3 +197,43 @@ def write_gdf_to_parquet(
 
         # Write the parquet bytes to the target store using obstore
         store.put(file_name, parquet_buffer.getvalue())
+
+
+def stac_items_to_arrow(item_dicts: list[dict[str, Any]]) -> Table:
+    # Use Arrow. This is needed for vizualisation in the CSDR app.
+    # Could alternatively use rustac.to_arrow instead of parse_stac_items_to_arrow. I don't think either properly processes the geometry column to arrow native type.
+    # arrow_table = rustac.to_arrow(item_dicts)
+
+    # Could use this lightweight lib instead of pyarrow: https://kylebarron.dev/arro3/latest/api/io/parquet/#arro3.io.write_parquet
+
+    # This (parse_stac_items_to_arrow) may not be the best approach, but it works for now.
+    record_batch_reader = parse_stac_items_to_arrow(item_dicts)
+    table = record_batch_reader.read_all()
+
+    # to_parquet(
+    #     table,
+    #     output_path=target_url,
+    # )
+
+    # Convert WKB to native encoding. This is needed because otherwise the geometry column has type binary not geoarrow.
+    geom_col = table.column('geometry')
+    native_geom = ga.as_geoarrow(geom_col, coord_type=ga.CoordType.SEPARATED)
+    # Replace column
+    new_table = table.set_column(
+        table.schema.get_field_index('geometry'),
+        'geometry',
+        native_geom
+    )
+    # print(new_table.schema)
+
+    return new_table
+
+
+def write_arrow_to_parquet(
+    table: Table, store: ObjectStore, file_name: str
+) -> None:
+    # Write Arrow Table to Parquet in memory, then put to store
+    with BytesIO() as buf:
+        pq.write_table(table, buf)
+        buf.seek(0)
+        store.put(file_name, buf.getvalue())

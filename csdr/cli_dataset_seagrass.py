@@ -3,11 +3,13 @@ import asyncio
 import logging
 
 import typer
-from rustac import search_to
+from rustac import search
 
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
+    stac_items_to_arrow,
+    write_arrow_to_parquet,
 )
 from csdr.utils import suppress_rust_output
 
@@ -35,21 +37,21 @@ async def run_index_dep_seagrass(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     with suppress_rust_output():
-        # TODO: experiment with parquet_compression options for rustac write
-        # TODO: Use geoarrow for geometry column
-        count_items = await search_to(
-            target_filename,
+        items = await search(
             stac_api_url,
             collections=["dep_s2_seagrass"],
-            store=target_store,
         )
+        count_items = len(items)
+
+        if count_items == 0:
+            logging.error("No STAC items found, nothing to index.")
+            exit(1) # Exit with error code
+
+        arrow_table = stac_items_to_arrow(items)
+        logging.info(f"Writing {count_items} STAC items to parquet (arrow) at {target_url}")
+        write_arrow_to_parquet(arrow_table, target_store, target_filename)
 
     logging.info(f"Written {count_items} STAC items to parquet at {target_url}")
-    if count_items == 0:
-        logging.error("No STAC items found, nothing to index.")
-        exit(1) # Exit with error code
-
-    logging.info(f"Finished writing parquet file to {target_url}")
 
 
 # Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.

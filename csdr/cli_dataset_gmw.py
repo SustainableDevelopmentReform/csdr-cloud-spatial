@@ -8,23 +8,20 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 
-import geoarrow.pyarrow as ga
-import pyarrow.parquet as pq
 import typer
 import xarray as xr
 from obstore.store import ObjectStore
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
-from stac_geoparquet.arrow import (
-    parse_stac_items_to_arrow,  # , to_parquet # Would be nice to use to_parquet?
-)
 
 from csdr.io import (
     exists,
     get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
+    stac_items_to_arrow,
+    write_arrow_to_parquet,
 )
 from csdr.utils import CSDRException
 
@@ -348,40 +345,11 @@ async def run_index_gmw(
     # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(source_store)
 
-    logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
-    # Use Arrow. This is needed for vizualisation in the CSDR app.
-    # Could alternatively use rustac.to_arrow instead of parse_stac_items_to_arrow. I don't think either properly processes the geometry column to arrow native type.
-    # arrow_table = rustac.to_arrow(item_dicts)
+    arrow_table = stac_items_to_arrow(item_dicts)
 
-    # Could use this lightweight lib instead of pyarrow: https://kylebarron.dev/arro3/latest/api/io/parquet/#arro3.io.write_parquet
+    logging.info(f"Writing {len(item_dicts)} STAC items to parquet (arrow) at {target_url}")
 
-    # This (parse_stac_items_to_arrow) may not be the best approach, but it works for now.
-    record_batch_reader = parse_stac_items_to_arrow(item_dicts)
-    table = record_batch_reader.read_all()
-
-    # to_parquet(
-    #     table,
-    #     output_path=target_url,
-    # )
-
-    # Convert WKB to native encoding. This is needed because otherwise the geometry column has type binary not geoarrow.
-    geom_col = table.column('geometry')
-    native_geom = ga.as_geoarrow(geom_col, coord_type=ga.CoordType.SEPARATED)
-    # Replace column
-    new_table = table.set_column(
-        table.schema.get_field_index('geometry'),
-        'geometry',
-        native_geom
-    )
-    # print(new_table.schema)
-
-    # Open the file directly with Python's file handling
-    with open(target_url, 'wb') as f:
-        pq.write_table(
-            new_table,
-            f,
-        )
-
+    write_arrow_to_parquet(arrow_table, target_store, file_name)
     logging.info(f"Parquet (arrow) write completed, wrote to {target_url}")
 
 
