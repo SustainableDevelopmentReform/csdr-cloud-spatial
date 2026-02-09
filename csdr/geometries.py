@@ -131,7 +131,7 @@ def post_bulk_geometry_outputs_to_database(
 
         # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
         logging.info(
-            f"Wrote {len(bulk_output['outputs'])} bulk geometry outputs to database."
+            f"Wrote {len(outputs)} bulk geometry outputs to database."
         )
 
 

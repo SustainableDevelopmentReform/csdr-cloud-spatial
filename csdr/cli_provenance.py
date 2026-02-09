@@ -291,14 +291,14 @@ def write_product_provenance(
     if post_to_database:
         logging.info("Posting consolidated product data to database")
 
-        for variable, output in parsed_outputs.items():
+        for indicator, output in parsed_outputs.items():
             for timePoint in output.keys():
                 outputs = output[timePoint]
                 logging.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
                 content = {
                     "productRunId": consolidated_run_id,
                     "timePoint": timePoint,
-                    "variableId": variable,
+                    "indicatorId": indicator,
                     "outputs": outputs,
                 }
 
@@ -312,5 +312,5 @@ def write_product_provenance(
                     raise
                 else:
                     logging.info(
-                        f"Posted product output for variable {variable} timePoint {timePoint}: {response.status_code}"
+                        f"Posted product output for indicator {indicator} timePoint {timePoint}: {response.status_code}"
                     )

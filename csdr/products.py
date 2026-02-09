@@ -20,8 +20,8 @@ logger = logging.getLogger()
 # The _get_area_m2_from_stac_geoparquet function does the following:
 # 1. Loads a STAC-Geoparquet using rustac.
 # 2. If items found, loads the xarray dataset from the STAC items.
-# 4. Calculates the area where the specified variable equals the given value within the geometry.
-def _get_area_m2_from_stac_geoparquet(dataset_url: str, geometry: Geometry, variable: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
+# 4. Calculates the area where the specified indicators equals the given value within the geometry.
+def _get_area_m2_from_stac_geoparquet(dataset_url: str, geometry: Geometry, indicator: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
     """ Calculate the area of the dataset within the given geometry. """
     # Get the STAC items filtered by geometry and datetime
     items = read_stacgeoparquet(dataset_url)
@@ -44,14 +44,14 @@ def _get_area_m2_from_stac_geoparquet(dataset_url: str, geometry: Geometry, vari
 
     logging.info(f"Loaded data with shape {data.dims}")
 
-    if variable not in data.data_vars:
+    if indicator not in data.data_vars:
         raise CSDRException(
-            f"Variable {variable} not found in dataset. Available: {list(data.data_vars)}"
+            f"Indicator {indicator} not found in dataset. Available: {list(data.data_vars)}"
         )
 
-    # Calculate area (m²). This also does the variable/value filter.
+    # Calculate area (m²). This also does the indicator/value filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[variable], geometry, variable=variable, value=value
+        data[indicator], geometry, indicator=indicator, value=value
     )
 
     return total_area_m2
@@ -62,7 +62,7 @@ def _get_area_m2_from_geoparquet_sedona(
         sd: sedona.db.context.SedonaContext,
         dataset_url: str,
         geometry_wkt: str,
-        variable: str | None = None,
+        indicator: str | None = None,
         value: float | None = None,
         datetime_string_match: str | None = None
     ) -> float:
@@ -71,7 +71,7 @@ def _get_area_m2_from_geoparquet_sedona(
     # Local for development testing
     # url can be s3://, https://, or local.
 
-    # TODO: Add filters for variable, value, and datetime_string_match
+    # TODO: Add filters for indicator, value, and datetime_string_match
 
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     region = "ap-southeast-2" # TODO: Get this from env/config.
@@ -175,7 +175,7 @@ def _get_area_m2_from_dataset_geometry(
     dataset_url: str,
     dataset_type: str,
     geometry: Geometry,
-    variable: str,
+    indicator: str,
     value: float,
     datetime_string_match: str | None = None,
     load_kwargs: dict = {},
@@ -183,25 +183,25 @@ def _get_area_m2_from_dataset_geometry(
     """Calculate the area (m²) of the dataset within the given geometry."""
 
     if dataset_type == "stac-geoparquet":
-        return _get_area_m2_from_stac_geoparquet(dataset_url, geometry, variable, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
+        return _get_area_m2_from_stac_geoparquet(dataset_url, geometry, indicator, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
     elif dataset_type == "geoparquet":
         # This path config is specific to the the partitioned ACA reef geoparquet structure.
         path, _file_name = split_path_and_file_name_from_url(dataset_url)
         partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
-        return _get_area_m2_from_geoparquet_sedona(sd, partition_path, geometry.wkt, variable, value, datetime_string_match=datetime_string_match)
+        return _get_area_m2_from_geoparquet_sedona(sd, partition_path, geometry.wkt, indicator, value, datetime_string_match=datetime_string_match)
     else:
         raise CSDRException(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
         )
 
 
-def process_variables_for_geometry(
+def process_indicators_for_geometry(
     geometry: Geometry,
-    variables: dict[str, dict],
+    indicators: dict[str, dict],
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
-    variable_name: str = "asset",
-    variable_value: float | int | None = None,
+    indicator_name: str = "asset",
+    indicator_value: float | int | None = None,
     load_kwargs: dict = {},
 ) -> dict[str, str | float]:
     results = {}
@@ -212,32 +212,32 @@ def process_variables_for_geometry(
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
 
-    # Order sum area variables first, then area percentages. Area percentages are dependent on area calculations.
-    variables = dict(sorted(variables.items(), key=lambda item: ("percent-" in item[0], item[0]))) # TODO: Make this more robust when there are non-area percent variables.
+    # Order sum area indicators first, then area percentages. Area percentages are dependent on area calculations.
+    indicators = dict(sorted(indicators.items(), key=lambda item: ("percent-" in item[0], item[0]))) # TODO: Make this more robust when there are non-area percent indicators.
 
     sum_area_var_pattern = re.compile(r"^sum-.*-area$")
     area_percent_var_pattern = re.compile(r"^percent-.*-area$")
     count_var_pattern = re.compile(r"^count-.*$")
-    # TODO: Extend to other variable types as needed by future products.
-    for var_key, var_info in variables.items():
-        variable_name = var_info.get("variable-name")
-        variable_value = var_info.get("variable-value")
-        # Try to convert variable_value to float if possible
+    # TODO: Extend to other indicator types as needed by future products.
+    for var_key, var_info in indicators.items():
+        indicator_name = var_info.get("indicator-name")
+        indicator_value = var_info.get("indicator-value")
+        # Try to convert indicator_value to float if possible
         try:
-            if variable_value is not None:
-                variable_value = float(variable_value)
+            if indicator_value is not None:
+                indicator_value = float(indicator_value)
         except Exception:
             pass
-        logging.info(f"Processing variable: {var_key} with variable name: {variable_name} and value: {variable_value}")
+        logging.info(f"Processing indicator: {var_key} with indicator name: {indicator_name} and value: {indicator_value}")
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
             geoms = list(geometry.geoms)
 
-        # These total_* variables are the sums over all single geometries in the multipolygon
-        # TODO: When doing the variable refactor, generalise these.
+        # These total_* indicators are the sums over all single geometries in the multipolygon
+        # TODO: When doing the indicator refactor, generalise these.
         total_multipolygon_area_m2 = 0.0 # Need for percent area calculations
-        total_variable_area_m2 = 0.0
+        total_indicator_area_m2 = 0.0
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
         for i, geom in enumerate(geoms):
@@ -246,7 +246,7 @@ def process_variables_for_geometry(
             geometry_6933 = geom.to_crs("EPSG:6933")
             geom_area_m2 = geometry_6933.area
             total_multipolygon_area_m2 += geom_area_m2
-            # Area variables
+            # Area indicators
             if sum_area_var_pattern.match(var_key): # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
                 area_m2 = _get_area_m2_from_dataset_geometry(
                     sd,
@@ -254,15 +254,15 @@ def process_variables_for_geometry(
                     dataset_type,
                     geom,
                     datetime_string_match=datetime_string_match,
-                    variable=variable_name,
-                    value=variable_value,
+                    indicator=indicator_name,
+                    value=indicator_value,
                     load_kwargs=load_kwargs,
                 )
-                total_variable_area_m2 += area_m2
-                results[var_key] = total_variable_area_m2
-                logging.info(f"Total area by value: {total_variable_area_m2}m² for variable {var_key}, value {variable_value}")
+                total_indicator_area_m2 += area_m2
+                results[var_key] = total_indicator_area_m2
+                logging.info(f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value {indicator_value}")
             elif count_var_pattern.match(var_key): # ["count-buildings"]
-                logging.info("Starting count variable analysis...")
+                logging.info("Starting count indicator analysis...")
                 # TODO: Try to parallelise this to improve performance on multipolygons with many parts, that each intersect many parquet files.
                 count = _get_count_points_in_polygon_geoparquet(
                     sd,
@@ -273,13 +273,13 @@ def process_variables_for_geometry(
                 results[var_key] = total_count
                 logging.info(f"Total count of intersected buildings for this multipolygon geometry so far: {total_count}")
             
-        # Handle area percent variables outside of the single geometry loop, since they depend on total area calculations
+        # Handle area percent indicators outside of the single geometry loop, since they depend on total area calculations
         if area_percent_var_pattern.match(var_key):
             logging.info("Calculating percent area now that all geoms have been processed...")
-            variable_area_m2 = results.get(f"sum-{var_key.replace('percent-', '')}", 0.0)
-            area_percent = (variable_area_m2 / total_multipolygon_area_m2) * 100.0 if total_multipolygon_area_m2 > 0 else 0.0
+            indicator_area_m2 = results.get(f"sum-{var_key.replace('percent-', '')}", 0.0)
+            area_percent = (indicator_area_m2 / total_multipolygon_area_m2) * 100.0 if total_multipolygon_area_m2 > 0 else 0.0
             results[var_key] = area_percent
-            logging.info(f"Calculated {var_key}: {area_percent:.2f}% (Variable area: {variable_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)")
+            logging.info(f"Calculated {var_key}: {area_percent:.2f}% (Indicator area: {indicator_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)")
 
     return results
 
@@ -289,14 +289,14 @@ def parse_outputs(df: pd.DataFrame) -> dict:
 
     for _, row in df.iterrows():
         timePoint = row["timePoint"]
-        for variable, value in row["variables"].items():
-            if variable not in outputs:
-                outputs[variable] = {}
+        for indicator, value in row["indicators"].items():
+            if indicator not in outputs:
+                outputs[indicator] = {}
             output = {"geometryOutputId": row["geometryOutputId"], "value": value}
 
-            if timePoint not in outputs[variable]:
-                outputs[variable][timePoint] = []
+            if timePoint not in outputs[indicator]:
+                outputs[indicator][timePoint] = []
 
-            outputs[variable][timePoint].append(output)
+            outputs[indicator][timePoint].append(output)
 
     return outputs

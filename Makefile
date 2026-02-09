@@ -296,9 +296,9 @@ geometry-eez-provenance-local:
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
 		--id=65427160-c63c-4c24-a4ac-7013940fae9e \
-		--run-id=eez-test-run-id \
-		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--geometry-type=geoparquet \
@@ -419,7 +419,7 @@ product-gmw-v4-eez-list-geometries-s3:
 		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries_list.json
 
 # Product GMW EEZ V4 Process Geometries
-# variable-value=1.0 for mangrove presence. It is boolean raster with 1 for presence and 0 for absence.
+# indicator-value=1.0 for mangrove presence. It is boolean raster with 1 for presence and 0 for absence.
 # resolution=100 is 100m. 10 is max for GMW v4.
 # https://epsg.io/6933
 # Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
@@ -432,7 +432,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
@@ -448,7 +448,7 @@ product-gmw-v4-eez-process-geometry-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=7b628528-0f25-514a-884f-4d9750acccda \
@@ -462,7 +462,7 @@ product-gmw-v4-eez-process-all-geometries-dask-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -476,7 +476,7 @@ product-gmw-v4-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -490,8 +490,7 @@ product-gmw-v4-eez-consolidate-local:
 		--location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--variable-name=mangrove \
-		--datetime=2020
+		--indicator-name=mangrove \
 
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
@@ -499,17 +498,16 @@ product-gmw-v4-eez-consolidate-s3:
 		--location s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-product-gmw-v4-eez-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--variable-name=mangrove \
-		--datetime=2024
+		--indicator-name=mangrove \
 
 # You need to make a Product in the app before running provenance. Use that product ID here.
-# You also need to make a Variable. It must have the ID 'sum-mangrove-area'.
+# You also need to make a indicator. It must have the ID 'sum-mangrove-area'.
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=test-product-gmw-v4-eez-run-id \
-		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
+		--dataset-run-id=9d2cf140-1d6f-405a-93af-ba1a1dcd7029 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite
@@ -540,7 +538,7 @@ product-gmw-v3-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime-string-match=1996 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
@@ -553,7 +551,7 @@ product-gmw-v3-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "mangrove", "variable-value": 1.0}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime-string-match=2020 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
 		--overwrite \
@@ -567,7 +565,7 @@ product-gmw-v3-eez-consolidate-local:
 		--location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--variable-name=mangrove
+		--indicator-name=mangrove
 # No datetime because there are many
 
 product-gmw-v3-eez-provenance-local-db:
@@ -599,7 +597,7 @@ product-seagrass-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
+		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
@@ -614,7 +612,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
+		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
@@ -628,7 +626,7 @@ product-seagrass-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--variables-to-extract='{"sum-seagrass-area": {"variable-name": "seagrass", "variable-value": 1}}' \
+		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2021" \
 		--load-kwargs="resolution=500,crs=epsg:3832" \
 		--overwrite \
@@ -641,7 +639,7 @@ product-seagrass-eez-consolidate-local:
 			--location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-			--variable-name=seagrass			
+			--indicator-name=seagrass			
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
@@ -672,7 +670,7 @@ product-aca-eez-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
+		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
@@ -685,7 +683,7 @@ product-aca-eez-process-geometry-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
+		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
 		--overwrite
@@ -699,7 +697,7 @@ product-aca-eez-process-all-geometries-dask-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
+		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
 		--datetime=2022 \
 		--overwrite \
 		--use-dask \
@@ -711,8 +709,8 @@ product-aca-eez-consolidate-local:
 		--location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--variable-name=class
-# 'class' isn't the best variable-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
+		--indicator-name=class
+# 'class' isn't the best indicator-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
 
 product-aca-eez-provenance-local-db:
 	csdr provenance product \
@@ -733,7 +731,7 @@ product-aca-eez-provenance-local-db:
 # Germany a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b
 # Australia bdcf6908-2ad1-5451-80ef-d0a9994d8a78
 # Malaysia 698e177a-687f-5e72-8bd5-280b88d9ad19
-# Variable with id 'count-buildings' must exist in the app before running this.
+# indicator with id 'count-buildings' must exist in the app before running this.
 product-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
@@ -743,7 +741,7 @@ product-buildings-eez-process-geometry-local:
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
 		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
-		--variables-to-extract='{"count-buildings": {"variable-name": "count-buildings", "variable-value": null}}' \
+		--indicators-to-extract='{"count-buildings": {"indicator-name": "count-buildings", "indicator-value": null}}' \
 		--overwrite
 product-buildings-eez-consolidate-local:
 	csdr products consolidate \
@@ -751,7 +749,7 @@ product-buildings-eez-consolidate-local:
 		--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
-		--variable-name=count-buildings
+		--indicator-name=count-buildings
 product-buildings-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
@@ -764,7 +762,7 @@ product-buildings-eez-provenance-local-db:
 
 
 # Product ACEs by EEZ
-# First product with many variables. These must be added in the app as variables.
+# First product with many indicators. These must be added in the app as indicators.
 # Times: 2021 and 2022.
 # Geometries:
 # 446b9a00-e0e3-51be-934b-0df1c2c75b2c, b608c6ab-6ce4-5a89-9523-ee07d8dd4c22, 320d51fc-e195-5e45-9c2c-fd4fb38af9c7
@@ -777,7 +775,7 @@ product-ace-acsc2-process-geometry-local:
 		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
 		--datetime=2022 \
 		--geometry-id=b608c6ab-6ce4-5a89-9523-ee07d8dd4c22 \
-		--variables-to-extract='{"sum-mangrove-area": {"variable-name": "classification", "variable-value": 3}, "sum-intertidal-area": {"variable-name": "classification", "variable-value": 2}, "sum-saltmarsh-area": {"variable-name": "classification", "variable-value": 4}, "sum-seagrass-area": {"variable-name": "classification", "variable-value": 5}, "percent-mangrove-area": {"variable-name": null, "variable-value": null}, "percent-intertidal-area": {"variable-name": null, "variable-value": null}, "percent-saltmarsh-area": {"variable-name": null, "variable-value": null}, "percent-seagrass-area": {"variable-name": null, "variable-value": null}}' \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "classification", "indicator-value": 3}, "sum-intertidal-area": {"indicator-name": "classification", "indicator-value": 2}, "sum-saltmarsh-area": {"indicator-name": "classification", "indicator-value": 4}, "sum-seagrass-area": {"indicator-name": "classification", "indicator-value": 5}, "percent-mangrove-area": {"indicator-name": null, "indicator-value": null}, "percent-intertidal-area": {"indicator-name": null, "indicator-value": null}, "percent-saltmarsh-area": {"indicator-name": null, "indicator-value": null}, "percent-seagrass-area": {"indicator-name": null, "indicator-value": null}}' \
 		--overwrite
 product-ace-acsc2-consolidate-local:
 	csdr products consolidate \
@@ -785,11 +783,11 @@ product-ace-acsc2-consolidate-local:
 		--location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
 		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
-		--variable-name=many-variables
+		--indicator-name=many-indicators
 product-ace-acsc2-provenance-local-db:
 	csdr provenance product \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
-		--product-url=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id/many-variables/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
+		--product-url=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id/many-indicators/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
 		--run-id=test-ace-acsc2-run-id \
 		--dataset-run-id=b110a9cd-0052-4436-8504-3d55f6d79094 \
 		--geometries-run-id=acsc2-test-run-id \
