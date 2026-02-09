@@ -232,14 +232,14 @@ def load_xarray_stacgeoparquet(
 def xarray_calculate_area_m2(
     data: Dataset | DataArray,
     geom: Geometry,
-    variable: str | None = None,
+    indicator: str | None = None,
     value: int | float | None = None,
 ) -> float:
     # Work with a dataarray, not a dataset, so it's a singular thing
     if type(data) is not DataArray:
-        if variable is None:
-            raise CSDRException("Variable must be specified when data is a Dataset.")
-        data = data[variable]
+        if indicator is None:
+            raise CSDRException("Indicator must be specified when data is a Dataset.")
+        data = data[indicator]
 
     # Only select a specific value. This will convert to float, with nans
     if value is not None:

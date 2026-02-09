@@ -9,7 +9,6 @@ import pandas as pd
 import sedona.db
 import typer
 from dask.distributed import Client
-from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
 
 from csdr.io import (
@@ -20,25 +19,25 @@ from csdr.io import (
     write_gdf_to_parquet,
     write_json,
 )
-from csdr.products import process_variables_for_geometry
+from csdr.products import process_indicators_for_geometry
 from csdr.provenance import read_provenance
-from csdr.utils import CSDRException, get_geom_from_gdf, make_uuid
+from csdr.utils import CSDRException, make_uuid
 
 products_app = typer.Typer()
 
 # In future we will get indicators/variables from the DB.
-# In future variables will be called indicators and can be computed or derived (currently only computed).
-# There are currently 3 types of variables:
-# 1. sum-{}-area: for area-based variables
-# 2. count-{}: for count-based variables
-# 3. percent-{}-area: for percentage area-based variables
-# There will likely be a more diverse set of variables in the future.
-KNOWN_VARIABLES = [
+# In future indicators will be called indicators and can be computed or derived (currently only computed).
+# There are currently 3 types of indicators:
+# 1. sum-{}-area: for area-based indicators
+# 2. count-{}: for count-based indicators
+# 3. percent-{}-area: for percentage area-based indicators
+# There will likely be a more diverse set of indicators in the future.
+KNOWN_INDICATORS = [
     "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
     "sum-seagrass-area",
     "sum-reef-area",
     "count-buildings",
-    # ACE variables:
+    # ACE indicators:
     "sum-intertidal-area",
     "sum-saltmarsh-area",
     "sum-seagrass-area",
@@ -50,14 +49,14 @@ KNOWN_VARIABLES = [
 
 
 def _validate_parameters(
-    variables_to_extract: list[str],
+    indicators_to_extract: list[str],
     datetime: str | None,
     datetime_string_match: str | None,
 ) -> str:
     """Validate parameters and return the datetime to use."""
-    if set(variables_to_extract) - set(KNOWN_VARIABLES):
+    if set(indicators_to_extract) - set(KNOWN_INDICATORS):
         raise CSDRException(
-            f"Unknown variable to extract: {variables_to_extract}. Known variables are: {KNOWN_VARIABLES}"
+            f"Unknown indicator to extract: {indicators_to_extract}. Known indicators are: {KNOWN_INDICATORS}"
         )
     if datetime is None:
         if datetime_string_match is None:
@@ -121,7 +120,7 @@ def _create_product_output(
         "productRunId": run_id,
         "geometryOutputId": geometry_id,
         "timePoint": dateutil.parser.isoparse(datetime).isoformat() + "Z",
-        "variables": results,
+        "indicators": results,
         "metadata": {
             "geometryProvenanceUrl": geometry_provenance_url,
             "datasetProvenanceUrl": dataset_provenance_url,
@@ -134,11 +133,11 @@ def _create_product_output(
 #     geometry_id: str,
 #     geometry: Geometry,
 #     run_id: str,
-#     variables_to_extract: list[str],
+#     indicators_to_extract: list[str],
 #     dataset_provenance_url: str,
 #     datetime_string_match: str | None,
-#     variable_name: str,
-#     variable_value: float | None,
+#     indicator_name: str,
+#     indicator_value: float | None,
 #     load_kwargs: dict[str, Any],
 #     product_id: str,
 #     geometry_provenance_url: str,
@@ -157,13 +156,13 @@ def _create_product_output(
 #     # All the IO stuff is done in the parent process_all_geometries_dask, so we don't do it per geometry. It is passed in as params.
 
 #     logging.info(f"Processing geometry id '{geometry_id}'")
-#     results = process_variables_for_geometry(
+#     results = process_indicators_for_geometry(
 #         geometry,
-#         variables_to_extract,
+#         indicators_to_extract,
 #         dataset_provenance_url,
 #         datetime_string_match=datetime_string_match,
-#         variable_name=variable_name,
-#         variable_value=variable_value,
+#         indicator_name=indicator_name,
+#         indicator_value=indicator_value,
 #         load_kwargs=load_kwargs,
 #     )
 #     logging.info(f"Results for geometry {geometry_id}: {results}")
@@ -211,11 +210,11 @@ def version_parser(s: str) -> str:
 
 def get_product_path(
     product_id: str,
-    variable_name: str,
+    indicator_name: str,
     datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
-    path = f"{variable_name}"
+    path = f"{indicator_name}"
     if datetime is not None:
         path = f"{path}/{datetime}"
     # geometry id is just for the processing of single geometries
@@ -254,7 +253,7 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
-# Process a single geometry. Makes variables using variables_to_extract. Writes the results to a json file.
+# Process a single geometry. Makes indicators using indicators_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
 def process_geometry(
     product_id: str = typer.Option(
@@ -269,9 +268,9 @@ def process_geometry(
     dataset_provenance_url: str = typer.Option(
         ..., help="URL that points to the dataset provenance file"
     ),
-    variables_to_extract: str = typer.Option(
+    indicators_to_extract: str = typer.Option(
         ...,
-        help="JSON string specifying variables and values to extract from the dataset. Example: '{\"var1\": {\"variable-name\": \"foo\", \"variable-value\": 1}, \"var2\": {\"variable-name\": \"bar\", \"variable-value\": 2}}'",
+        help="JSON string specifying indicators and values to extract from the dataset. Example: '{\"indicator1\": {\"indicator-name\": \"foo\", \"indicator-value\": 1}, \"indicator2\": {\"indicator-name\": \"bar\", \"indicator-value\": 2}}'",
     ),
     # TODO: clarify difference between datetime_string_match and datetime
     datetime_string_match: str | None = typer.Option(
@@ -308,30 +307,30 @@ def process_geometry(
 ) -> None:
     logging.info(f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'")
     logging.info(f"Run ID: '{run_id}'")
-    logging.info(f"variables_to_extract (raw JSON): {variables_to_extract}")
+    logging.info(f"indicators_to_extract (raw JSON): {indicators_to_extract}")
 
-    # Parse variables_to_extract as JSON
+    # Parse indicators_to_extract as JSON
     try:
-        variables_dict = json.loads(variables_to_extract)
+        indicators_dict = json.loads(indicators_to_extract)
     except Exception as e:
-        raise CSDRException(f"Failed to parse variables_to_extract as JSON: {e}")
-    if not isinstance(variables_dict, dict):
-        raise CSDRException("variables_to_extract must be a JSON object mapping variable keys to variable info dicts.")
+        raise CSDRException(f"Failed to parse indicators_to_extract as JSON: {e}")
+    if not isinstance(indicators_dict, dict):
+        raise CSDRException("indicators_to_extract must be a JSON object mapping indicator keys to indicator info dicts.")
     # Validate parameters (use keys for validation, e.g. 'sum-mangrove-area')
-    variable_names = list(variables_dict.keys())
-    datetime_val = _validate_parameters(variable_names, datetime, datetime_string_match)
+    indicator_names = list(indicators_dict.keys())
+    datetime_val = _validate_parameters(indicator_names, datetime, datetime_string_match)
 
     # Prepare target location and check for existing output and overwrite flag
     target_location = target_location.rstrip("/") # Remove trailing slash if present
-    # Write output for each variable (or all in one file)
+    # Write output for each indicator (or all in one file)
     target_store = get_store_with_prefix_from_url(target_location)
-    if len(variable_names) == 1:
-        variable_for_path = next(iter(variables_dict.values()))['variable-name'] # Use the only item's variable-name
+    if len(indicator_names) == 1:
+        indicator_for_path = next(iter(indicators_dict.values()))['indicator-name'] # Use the only item's indicator-name
     else:
-        variable_for_path = "many-variables"
+        indicator_for_path = "many-indicators"
     target_path = get_product_path(
         product_id,
-        variable_for_path,
+        indicator_for_path,
         datetime=datetime_val,
         geometry_id=geometry_id,
     )
@@ -361,9 +360,9 @@ def process_geometry(
     client = _setup_dask_client(use_dask, dask_client_opts)
 
     try:
-        results = process_variables_for_geometry(
+        results = process_indicators_for_geometry(
             geometry,
-            variables_dict,
+            indicators_dict,
             dataset_provenance_url,
             datetime_string_match=datetime_string_match,
             load_kwargs=load_kwargs,
@@ -405,9 +404,9 @@ def process_geometry(
 #     dataset_provenance_url: str = typer.Option(
 #         ..., help="URL that points to the dataset provenance file"
 #     ),
-#     variables_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
+#     indicators_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
 #         ...,
-#         help="Comma-separated list of variables to extract from the dataset",
+#         help="Comma-separated list of indicators to extract from the dataset",
 #         parser=parse_csv_list
 #     ),
 #     # TODO: clarify difference between datetime_string_match and datetime
@@ -423,11 +422,11 @@ def process_geometry(
 #         ...,
 #         help="Location to write the results to",
 #     ),
-#     variable_name: str = typer.Option(
-#         "asset", help="Name of the variable to use for calculations (if applicable)"
+#     indicator_name: str = typer.Option(
+#         "asset", help="Name of the indicator to use for calculations (if applicable)"
 #     ),
-#     variable_value: str | None = typer.Option(
-#         None, help="Value of the variable to use for calculations (if applicable)"
+#     indicator_value: str | None = typer.Option(
+#         None, help="Value of the indicator to use for calculations (if applicable)"
 #     ),
 #     load_kwargs: dict[str, str] = typer.Option(
 #         {},
@@ -455,12 +454,12 @@ def process_geometry(
 #     logging.info(f"Run ID: {run_id}")
 
 #     try:
-#         variable_value = float(variable_value) if variable_value is not None else None # If variable_value can be converted to float, do so.
+#         indicator_value = float(indicator_value) if indicator_value is not None else None # If indicator_value can be converted to float, do so.
 #     except ValueError:
 #         # Else it is a string, leave it as is.
-#         logging.info(f"variable_value is not parseable as a float so keeping it as a string: '{variable_value}'")
+#         logging.info(f"indicator_value is not parseable as a float so keeping it as a string: '{indicator_value}'")
 #     datetime = _validate_parameters(
-#         variables_to_extract, datetime, datetime_string_match
+#         indicators_to_extract, datetime, datetime_string_match
 #     )
 
 #     # Get paths for writing result JSONs
@@ -468,7 +467,7 @@ def process_geometry(
 #     # this path includes the filename (because geometry_id is provided to get_product_path)
 #     target_path = get_product_path(
 #         product_id,
-#         variable_name,
+#         indicator_name,
 #         datetime=datetime,
 #     )
 
@@ -489,7 +488,7 @@ def process_geometry(
 #             geometry = get_geom_from_gdf(gdf, geometry_id)
 #             path = get_product_path(
 #                 product_id,
-#                 variable_name,
+#                 indicator_name,
 #                 datetime=datetime,
 #                 geometry_id=geometry_id,
 #             )
@@ -499,11 +498,11 @@ def process_geometry(
 #                 geometry_id=geometry_id,
 #                 geometry=geometry,
 #                 run_id=run_id,
-#                 variables_to_extract=variables_to_extract,
+#                 indicators_to_extract=indicators_to_extract,
 #                 dataset_provenance_url=dataset_provenance_url,
 #                 datetime_string_match=datetime_string_match,
-#                 variable_name=variable_name,
-#                 variable_value=variable_value,
+#                 indicator_name=indicator_name,
+#                 indicator_value=indicator_value,
 #                 load_kwargs=load_kwargs,
 #                 product_id=product_id,
 #                 geometry_provenance_url=geometry_provenance_url,
@@ -533,8 +532,8 @@ def consolidate_product(
     dataset_provenance_url: str = typer.Option(
         ..., help="URL that points to the dataset provenance file"
     ),
-    variable_name: str = typer.Option(
-        "asset", help="Name of the variable to use for calculations (if applicable)"
+    indicator_name: str = typer.Option(
+        "asset", help="Name of the indicator to use for calculations (if applicable)"
     ),
     datetime: str | None = typer.Option(
         None,
@@ -544,7 +543,7 @@ def consolidate_product(
     logging.info(f"Consolidating product {product_id} from {location}")
     location = location.rstrip("/")
     store = get_store_with_prefix_from_url(location)
-    path = get_product_path(product_id, variable_name, datetime=datetime)
+    path = get_product_path(product_id, indicator_name, datetime=datetime)
     logging.info(f"path {path}")
     url = f"{location}/{path}"
     logging.info(f"Looking for product files in {url}")
