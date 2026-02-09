@@ -2,8 +2,6 @@
 
 This project is... TODO: Complete basic description.
 
-An earlier version of this project used Data Version Control (DVC). There may be minor artifacts remaining.
-
 ## Installation
 
 Create Python environment with GDAL and install the dependencies
@@ -84,43 +82,5 @@ docker buildx build . --tag csdr-cloud-spatial:latest
 Once built, you can run the container:
 
 ```bash
-docker run -it --rm
-  -e GIT_USER_NAME="Your Name"
-  -e GIT_USER_EMAIL="your_email@example.com"
-  -e GIT_DEPLOY_KEY_B64="base64-encoded-private-key"
-  csdr-cloud-spatial:latest
+docker run -it --rm csdr-cloud-spatial:latest
 ```
-
-### Providing GitHub Deploy Key
-
-This project requires access to a private GitHub repository (`git@github.com:SustainableDevelopmentReform/csdr-cloud-spatial.git`) during execution. This is managed through a **GitHub Deploy Key**, stored in **base64 format**.
-
-You can provide the key in two ways:
-
-1. **Via Environment Variable (Local Development):**
-
-   ```bash
-   export GIT_DEPLOY_KEY_B64=$(base64 -w 0 ~/.ssh/csdr-cloud-spatial-deploy-key)
-   docker run -e GIT_DEPLOY_KEY_B64="$GIT_DEPLOY_KEY_B64" csdr-cloud-spatial:latest
-   ```
-
-2. **Via AWS Secrets Manager (Production / AWS Batch):**
-
-   If `GIT_DEPLOY_KEY_B64` is not provided as an environment variable, the container will attempt to fetch the key from AWS Secrets Manager. The secret should be in this format:
-
-   ```json
-   {
-     "private_key_b64": "BASE64_STRING_FOR_PRIVATE_KEY",
-     "public_key_b64": "BASE64_STRING_FOR_PUBLIC_KEY"
-   }
-   ```
-
-   Make sure your container's IAM role has permission to read the secret:
-
-   ```json
-   {
-     "Effect": "Allow",
-     "Action": "secretsmanager:GetSecretValue",
-     "Resource": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:csdr/github-deploy-key-b64"
-   }
-   ```
