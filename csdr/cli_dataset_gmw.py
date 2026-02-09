@@ -353,7 +353,7 @@ async def run_index_gmw(
     logging.info(f"Parquet (arrow) write completed, wrote to {target_url}")
 
 
-# Writes a parquet index of all the GMW STAC items found at the source location.
+# Writes a STAC-Geoparquet index of all the GMW STAC items found at the source location.
 # Finds all STAC item jsons, reads them, writes a STAC-Geoparquet index file to the target location using rustac.
 @gmw_app.command("index")
 def index_gmw(
