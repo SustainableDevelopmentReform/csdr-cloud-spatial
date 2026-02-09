@@ -1,5 +1,0 @@
-# These values will be included in the provenance file
-
-out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/EEZ_land_union_v4_202410.parquet
-url: "https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip"
-name_property: "UNION"

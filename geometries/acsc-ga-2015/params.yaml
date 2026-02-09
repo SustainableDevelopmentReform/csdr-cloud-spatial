@@ -1,5 +1,0 @@
-# These values will be included in the provenance file
-
-out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/acsc-ga-2015.parquet
-url: https://d28rz98at9flks.cloudfront.net/87838/Shapefiles_v3.zip
-name_property: "Name"

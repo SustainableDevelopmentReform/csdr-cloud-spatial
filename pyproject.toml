@@ -17,8 +17,6 @@ dependencies = [
     "click",
     "dask",
     "distributed",
-    "dvc",
-    "dvc-s3",
     "fiona",
     "folium",
     "geopandas",
