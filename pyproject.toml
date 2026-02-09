@@ -36,17 +36,18 @@ dependencies = [
     "pystac",
     "pystac-client",
     "requests",
-    "rustac",
     "rio-stac",
     "rioxarray",
+    "rustac",
     "s3fs",
     "apache-sedona[db]",
     "scipy",
     "shapely",
+    "stac-geoparquet",
     "typer",
     "xarray",
     "xvec",
-    "zarr"
+    "zarr",
 ]
 
 [dependency-groups]

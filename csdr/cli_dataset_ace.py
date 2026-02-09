@@ -4,11 +4,13 @@ import asyncio
 import logging
 
 import typer
-from rustac import search_to
+from rustac import search
 
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
+    stac_items_to_arrow,
+    write_arrow_to_parquet,
 )
 from csdr.utils import suppress_rust_output
 
@@ -42,17 +44,20 @@ async def run_index_aus_coastal_ecosystems(
             logging.info("Parquet file does not exist, proceeding with indexing.")
 
     with suppress_rust_output():
-        # Use rustac search_to to get all items from the ACE STAC collection and write to parquet
-        # TODO: experiment with parquet_compression options for rustac write
-        items = await search_to(
-            target_filename,
+        # Use rustac search to get all items from the ACE STAC collection and write to parquet (arrow)
+
+        items = await search(
             source_stac_url,
             collections=["ga_s2_coastalecosystems_cyear_3_v1"],
-            store=target_store,
         )
-    logging.info(f"Retrieved {items} items from STAC collection and wrote them to {target_filename}.")
+        count_items = len(items)
 
-    logging.info(f"Finished writing parquet file to {target_url}")
+        arrow_table = stac_items_to_arrow(items)
+
+        logging.info(f"Writing {count_items} STAC items to parquet (arrow) at {target_url}")
+
+        write_arrow_to_parquet(arrow_table, target_store, target_filename)
+    logging.info(f"Wrote {count_items} items from STAC collection and wrote them as STAC-Geoparquet (arrow) to {target_filename}.")
 
 
 # Read all STAC items from ACE STAC Catalog and index them into a single STAC-Geoparquet file using rustac.

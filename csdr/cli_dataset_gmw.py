@@ -14,15 +14,16 @@ from obstore.store import ObjectStore
 from odc.geo.cog import write_cog
 from rio_stac import create_stac_item
 from rioxarray import open_rasterio
-from rustac import write
 
 from csdr.io import (
     exists,
     get_stac_item_dicts_from_store,
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
+    stac_items_to_arrow,
+    write_arrow_to_parquet,
 )
-from csdr.utils import CSDRException, suppress_rust_output
+from csdr.utils import CSDRException
 
 gmw_app = typer.Typer()
 
@@ -344,16 +345,15 @@ async def run_index_gmw(
     # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(source_store)
 
+    arrow_table = stac_items_to_arrow(item_dicts)
 
-    logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
-    with suppress_rust_output():
-        # TODO: experiment with parquet_compression options for rustac write
-        await write(file_name, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
+    logging.info(f"Writing {len(item_dicts)} STAC items to parquet (arrow) at {target_url}")
 
-    logging.info(f"Parquet write completed, wrote to {target_url}")
+    write_arrow_to_parquet(arrow_table, target_store, file_name)
+    logging.info(f"Parquet (arrow) write completed, wrote to {target_url}")
 
 
-# Writes a parquet index of all the GMW STAC items found at the source location.
+# Writes a STAC-Geoparquet index of all the GMW STAC items found at the source location.
 # Finds all STAC item jsons, reads them, writes a STAC-Geoparquet index file to the target location using rustac.
 @gmw_app.command("index")
 def index_gmw(
