@@ -25,10 +25,10 @@ logger = logging.getLogger()
 
 
 def _get_parquet_urls(source_location: str, source_proxy: str) -> pd.DataFrame:
-    logging.info(
-        f"Scraping country 2nd level admin parquet URLs from {source_location} ..."
-    )
+    logging.info(f"Getting parquet URLs from {source_location} ...")
     # List objects via Source Coop S3 proxy.
+    # TODO: In future we may want to support partitioned parquet datasets that aren't on Source Coop.
+    # To do this we can make source_proxy an optional param.
     store = get_store_with_prefix_from_url(
         source_location,
         region="us-east-1",
@@ -37,6 +37,7 @@ def _get_parquet_urls(source_location: str, source_proxy: str) -> pd.DataFrame:
     )
     # We could exclude the "country_iso=None" files because they are tiny and have no bbox metadata so we can't index them.
     # This weird data is handled below when fetching bboxes.
+    # TODO: Generalise this pattern so other datasets find their files.
     pattern = r"^country_iso=(?!None/).+\.parquet$"  # Starts with "country_iso=" and ends with ".parquet", but not "country_iso=None/" because that data is broken.
     parquet_files = find_matching_files(store, pattern=pattern)
     number_found = len(parquet_files)
@@ -44,6 +45,7 @@ def _get_parquet_urls(source_location: str, source_proxy: str) -> pd.DataFrame:
     if number_found == 0 or parquet_files is None:
         raise CSDRException("No parquet files found in Source Coop S3.")
     # Example file: "country_iso=IDN/3303671801652969472.parquet"
+    # TODO: Generalise parquet_data dataframe column names.
     parquet_data = pd.DataFrame(
         {
             "country_code": file.split("/")[0].replace(
@@ -105,7 +107,7 @@ async def _get_bounds_from_parquet(
             raise
 
 
-async def _run_index_buildings(
+async def _run_index(
     source_proxy: str,
     parquet_data: pd.DataFrame,
     target_store: ObjectStore,
@@ -138,18 +140,18 @@ async def _run_index_buildings(
     )
     parquet_data = gpd.GeoDataFrame(parquet_data, geometry="geometry", crs="EPSG:4326")
 
-    target_file_name = "buildings.parquet"
-    logging.info(f"Writing index buildings parquet to {target_file_name}")
+    logging.info(f"Writing index {target_file_name} to {target_file_name}")
     write_gdf_to_parquet(parquet_data, target_store, target_file_name)
-    logging.info("Index buildings dataset completed.")
+    logging.info(f"Index {target_file_name} dataset completed.")
 
 
-# Buildings Index gets all of the parquet files (one per country 2nd level admin area) from source coop, and writes their name, path, and bounds to a single buildings.parquet file at target_location.
+# Dataset partition parquets index gets all of the parquet files from S3 (or via Source Coop), and writes their name, path, and bounds to a single {dataset_name}.parquet file at target_location.
+# The VIDA Buildings from Source Coop are one parquet per country 2nd level admin area for example.
 @dataset_partition_parquets_app.command("index")
-def index_buildings(
+def index(
     source_location: str = typer.Option(
         ...,
-        help="S3 url containing parquet files to cache (e.g. s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/)",
+        help="S3 url containing parquet files to cache (e.g. s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/",
     ),
     source_proxy: str = typer.Option(
         "https://data.source.coop/",
@@ -157,17 +159,21 @@ def index_buildings(
     ),
     target_location: str = typer.Option(
         ...,
-        help="S3 or local path to write buildings.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)",
+        help="S3 or local path to write dataset_name.parquet index (e.g. s3://bucket/datasets/buildings/0-0-1/)",
+    ),
+    dataset_name: str = typer.Option(
+        ...,
+        help="Name of the dataset (e.g. 'buildings'). This will be used to name the output parquet file (e.g. buildings.parquet).",
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
     max_concurrent: int = typer.Option(
         32, help="Maximum number of files to process at once."
     ),
 ) -> None:
-    logging.info("Starting buildings index process ...")
+    logging.info(f"Starting {dataset_name} index process ...")
 
     target_store = get_store_with_prefix_from_url(target_location)
-    target_file_name = "buildings.parquet"
+    target_file_name = f"{dataset_name}.parquet"
     if exists(target_store, target_file_name) and not overwrite:
         logging.info(
             f"Skipping index: {target_file_name} already exists and overwrite is off."
@@ -179,7 +185,7 @@ def index_buildings(
 
     parquet_data = _get_parquet_urls(source_location, source_proxy)
     asyncio.run(
-        _run_index_buildings(
+        _run_index(
             source_proxy, parquet_data, target_store, target_file_name, max_concurrent
         )
     )
