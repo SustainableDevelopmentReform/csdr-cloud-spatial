@@ -5,11 +5,10 @@ import typer
 
 from csdr import get_version
 from csdr.cli_conversion import conversion_app
-from csdr.cli_dataset_aca import aca_app
-from csdr.cli_dataset_ace import ace_app
-from csdr.cli_dataset_buildings import buildings_app
-from csdr.cli_dataset_gmw import gmw_app
-from csdr.cli_dataset_seagrass import seagrass_app
+from csdr.cli_dataset_partition_parquets import dataset_partition_parquets_app
+from csdr.cli_dataset_stac import dataset_stac_app
+from csdr.cli_dataset_zip_cogs import dataset_zip_cogs_app
+from csdr.cli_dataset_zip_shp import dataset_zip_shp_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
@@ -38,23 +37,28 @@ app.add_typer(
 app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
 ## Datasets
-# GMW
-app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW datasets.")
-# Seagrass, including from DEP
+# TODO: Replace these dataset CLIs with generic 4 categories:
+# 1. STAC API - DEP Seagrass, ACE.
+# 2. Zipped COGs - GMW v3 and GMW v4.
+# 3. Partitioned Parquets - VIDA Buildings.
+# 4. Zipped Shapefile - ACA Reef.
+app.add_typer(dataset_stac_app, name="dataset-stac", help="Process STAC datasets.")
 app.add_typer(
-    seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
+    dataset_zip_cogs_app, name="dataset-zip-cogs", help="Process Zipped COGs datasets."
 )
-# ACA
-app.add_typer(aca_app, name="aca", help="Cache and process ACA dataset.")
-# ACE
-app.add_typer(ace_app, name="ace", help="Cache and process ACE dataset.")
-# MS Buildings
 app.add_typer(
-    buildings_app, name="buildings", help="Cache and process buildings dataset."
+    dataset_partition_parquets_app,
+    name="dataset-partition-parquets",
+    help="Process Partitioned Parquets datasets.",
+)
+app.add_typer(
+    dataset_zip_shp_app,
+    name="dataset-zip-shp",
+    help="Process Zipped Shapefile datasets.",
 )
 
+
 ## Geometries
-# geometry_app processes ACSC2 and CWA
 app.add_typer(
     geometry_app, name="geometries", help="Commands for processing geometries."
 )
