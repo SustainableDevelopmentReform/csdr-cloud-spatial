@@ -9,7 +9,6 @@ import pandas as pd
 import sedona.db
 import typer
 from dask.distributed import Client
-from obstore.store import HTTPStore, LocalStore, S3Store
 from odc.geo.geom import Geometry
 
 from csdr.io import (
@@ -22,7 +21,7 @@ from csdr.io import (
 )
 from csdr.products import process_variables_for_geometry
 from csdr.provenance import read_provenance
-from csdr.utils import CSDRException, get_geom_from_gdf, make_uuid
+from csdr.utils import CSDRException, make_uuid
 
 products_app = typer.Typer()
 
@@ -34,14 +33,13 @@ products_app = typer.Typer()
 # 3. percent-{}-area: for percentage area-based variables
 # There will likely be a more diverse set of variables in the future.
 KNOWN_VARIABLES = [
-    "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
+    "sum-mangrove-area",  # Used for GMW v3, GMW v4, and ACE
     "sum-seagrass-area",
     "sum-reef-area",
     "count-buildings",
     # ACE variables:
     "sum-intertidal-area",
     "sum-saltmarsh-area",
-    "sum-seagrass-area",
     "percent-mangrove-area",
     "percent-intertidal-area",
     "percent-saltmarsh-area",
@@ -110,7 +108,7 @@ def _create_product_output(
     dataset_provenance_url: str,
     datetime: str,
     results: dict[str, Any],
-    run_id: str
+    run_id: str,
 ) -> dict[str, Any]:
     """Create the product output dictionary."""
     return {
@@ -127,6 +125,7 @@ def _create_product_output(
             "datasetProvenanceUrl": dataset_provenance_url,
         },
     }
+
 
 # # Outdated code.
 # # _process_geometry is just for local development debugging dask. It is not used in the workflow. It is a bit redundant, but helpful.
@@ -153,7 +152,7 @@ def _create_product_output(
 #             f"Product already exists at {target_store}/{path}, skipping processing for geometry {geometry_id}."
 #         )
 #         return False
-    
+
 #     # All the IO stuff is done in the parent process_all_geometries_dask, so we don't do it per geometry. It is passed in as params.
 
 #     logging.info(f"Processing geometry id '{geometry_id}'")
@@ -212,7 +211,8 @@ def version_parser(s: str) -> str:
 def get_product_path(
     product_id: str,
     variable_name: str,
-    datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
+    datetime: str
+    | None = None,  # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
     path = f"{variable_name}"
@@ -220,7 +220,7 @@ def get_product_path(
         path = f"{path}/{datetime}"
     # geometry id is just for the processing of single geometries
     if geometry_id is not None:
-        path = f"{path}/{product_id}-{geometry_id}.json" # Is product_id needed in filename because the path includes the run-id which is more specific.
+        path = f"{path}/{product_id}-{geometry_id}.json"  # Is product_id needed in filename because the path includes the run-id which is more specific.
     return path
 
 
@@ -254,15 +254,14 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
+
 # Process a single geometry. Makes variables using variables_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
 def process_geometry(
     product_id: str = typer.Option(
         "example-product", help="ID of the product being generated (UUID)"
     ),
-    run_id: str = typer.Option(
-        ..., help="ID of the product run"
-    ),
+    run_id: str = typer.Option(..., help="ID of the product run"),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
     ),
@@ -271,7 +270,7 @@ def process_geometry(
     ),
     variables_to_extract: str = typer.Option(
         ...,
-        help="JSON string specifying variables and values to extract from the dataset. Example: '{\"var1\": {\"variable-name\": \"foo\", \"variable-value\": 1}, \"var2\": {\"variable-name\": \"bar\", \"variable-value\": 2}}'",
+        help='JSON string specifying variables and values to extract from the dataset. Example: \'{"var1": {"variable-name": "foo", "variable-value": 1}, "var2": {"variable-name": "bar", "variable-value": 2}}\'',
     ),
     # TODO: clarify difference between datetime_string_match and datetime
     datetime_string_match: str | None = typer.Option(
@@ -286,7 +285,9 @@ def process_geometry(
         ...,
         help="Location to write the JSON result to",
     ),
-    geometry_id: str = typer.Option(..., help="ID of the geometry to process."), # This is the actual single geometry being processed. Not to be confused with the EEZ Geometry. This is one geometry within that i.e. one EEZ e.g. Fiji.
+    geometry_id: str = typer.Option(
+        ..., help="ID of the geometry to process."
+    ),  # This is the actual single geometry being processed. Not to be confused with the EEZ Geometry. This is one geometry within that i.e. one EEZ e.g. Fiji.
     load_kwargs: dict[str, str] = typer.Option(
         {},
         "--load-kwargs",
@@ -299,14 +300,16 @@ def process_geometry(
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
-        help="Options to pass to Dask client, in the form --dask-opts=\"n_workers=8,threads_per_worker=1,memory_limit=3GB\"",
+        help='Options to pass to Dask client, in the form --dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"',
         parser=opt_dict_parser,
     ),
     overwrite: bool = typer.Option(
         False, help="If true, overwrite existing product file"
     ),
 ) -> None:
-    logging.info(f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'")
+    logging.info(
+        f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'"
+    )
     logging.info(f"Run ID: '{run_id}'")
     logging.info(f"variables_to_extract (raw JSON): {variables_to_extract}")
 
@@ -316,17 +319,21 @@ def process_geometry(
     except Exception as e:
         raise CSDRException(f"Failed to parse variables_to_extract as JSON: {e}")
     if not isinstance(variables_dict, dict):
-        raise CSDRException("variables_to_extract must be a JSON object mapping variable keys to variable info dicts.")
+        raise CSDRException(
+            "variables_to_extract must be a JSON object mapping variable keys to variable info dicts."
+        )
     # Validate parameters (use keys for validation, e.g. 'sum-mangrove-area')
     variable_names = list(variables_dict.keys())
     datetime_val = _validate_parameters(variable_names, datetime, datetime_string_match)
 
     # Prepare target location and check for existing output and overwrite flag
-    target_location = target_location.rstrip("/") # Remove trailing slash if present
+    target_location = target_location.rstrip("/")  # Remove trailing slash if present
     # Write output for each variable (or all in one file)
     target_store = get_store_with_prefix_from_url(target_location)
     if len(variable_names) == 1:
-        variable_for_path = next(iter(variables_dict.values()))['variable-name'] # Use the only item's variable-name
+        variable_for_path = next(iter(variables_dict.values()))[
+            "variable-name"
+        ]  # Use the only item's variable-name
     else:
         variable_for_path = "many-variables"
     target_path = get_product_path(
@@ -347,15 +354,28 @@ def process_geometry(
     provenance = read_provenance(geometry_provenance_url)
     geometry_file_url = provenance.get("dataUrl")
     aws_region = "ap-southeast-2"  # TODO: Get this from env/config.
-    sd.read_parquet(geometry_file_url, options={"aws.skip_signature": True, "aws.region": aws_region}).to_view("geometries", overwrite=True)
-    geometry_df = sd.sql(f"SELECT st_srid(geometry) as crs, geometry, \"csdr-name\", \"csdr-id\" FROM geometries WHERE \"csdr-id\" = '{geometry_id}'").to_pandas()
+    sd.read_parquet(
+        geometry_file_url,
+        options={"aws.skip_signature": True, "aws.region": aws_region},
+    ).to_view("geometries", overwrite=True)
+    geometry_df = sd.sql(
+        f'SELECT st_srid(geometry) as crs, geometry, "csdr-name", "csdr-id" FROM geometries WHERE "csdr-id" = \'{geometry_id}\''
+    ).to_pandas()
     if len(geometry_df) == 0:
-        raise CSDRException(f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'")
+        raise CSDRException(
+            f"Geometry id '{geometry_id}' not found in geometry file '{geometry_file_url}'"
+        )
     if len(geometry_df) > 1:
-        raise CSDRException(f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'")
+        raise CSDRException(
+            f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'"
+        )
     geometry_row = geometry_df.iloc[0]
-    logging.info(f"Processing geometry '{geometry_row['csdr-name']}' with id '{geometry_id}'") # Name is helpful for debugging logs.
-    geometry = Geometry(geometry_row.geometry, crs=f"EPSG:{geometry_row.crs}") # ODC Geometry object. This is just one geometry.
+    logging.info(
+        f"Processing geometry '{geometry_row['csdr-name']}' with id '{geometry_id}'"
+    )  # Name is helpful for debugging logs.
+    geometry = Geometry(
+        geometry_row.geometry, crs=f"EPSG:{geometry_row.crs}"
+    )  # ODC Geometry object. This is just one geometry.
 
     # Set up Dask client
     client = _setup_dask_client(use_dask, dask_client_opts)
@@ -525,7 +545,8 @@ def consolidate_product(
         "example-product", help="ID of the product being consolidated (UUID)"
     ),
     location: str = typer.Option(
-        "./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id", help="Location to read the product files from"
+        "./cache/products/gmw-v3-eez/0-0-1/runs/test-product-run-id",
+        help="Location to read the product files from",
     ),
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"

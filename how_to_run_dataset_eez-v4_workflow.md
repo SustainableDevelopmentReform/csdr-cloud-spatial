@@ -55,7 +55,7 @@ export CSDR_API_KEY=...
 
 # any of these will work
 csdr <subcommand> ...
-python -m csdr.cli  eez cache \ 
+python -m csdr.cli  geometries cache \
   --target-location ./cache/eez-v4/0-0-1/raw \
   --overwrite
 make geometry-eez-cache-local
@@ -99,7 +99,7 @@ docker run --rm -it -v "$PWD":/code \ ...
 ```
 I had issues with this overwriting the files so the command wasn't available any more.
 
-### Try to update container code without having to exit, rebuild, and restart container. 
+### Try to update container code without having to exit, rebuild, and restart container.
 ```bash
 rm -rf /code/csdr # within container
 docker cp ./csdr <container_id>:/code/ # locally

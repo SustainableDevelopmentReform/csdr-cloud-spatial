@@ -35,7 +35,7 @@ def _meta_provenance(
     id: str,
     type: Literal["dataset", "geometry", "product"],
     data_url: str,
-    data_type: str, # TODO: make this a Literal[...]
+    data_type: Literal["geoparquet", "stac-geoparquet"],
     overwrite: bool,
     post_to_database: bool,
     source_url: str | None = None,
@@ -83,16 +83,16 @@ def _meta_provenance(
     )
 
     # Write json next to the input dataset/geometry/product
-    target_file = f"{file_name}.provenance.json" # Name includes the input file extension e.g. "EEZ_land_union_v4_202410.parquet.provenance.json"
+    target_file = f"{file_name}.provenance.json"  # Name includes the input file extension e.g. "EEZ_land_union_v4_202410.parquet.provenance.json"
 
     if exists(store, target_file) and not overwrite:
         logging.warning(f"Provenance file already exists: {target_file}")
     else:
-        logging.info("Either provenance file doesn't exist or it does and overwrite is on.")
-        write_json(store, target_file, provenance)
         logging.info(
-            f"Wrote provenance for {file_name} to: {data_url}.provenance.json"
+            "Either provenance file doesn't exist or it does and overwrite is on."
         )
+        write_json(store, target_file, provenance)
+        logging.info(f"Wrote provenance for {file_name} to: {data_url}.provenance.json")
 
     if post_to_database:
         # Should the DB write respect the overwrite flag? Currently I am not sure what would happen if something was rerun. Duplicate entries or error?
@@ -140,7 +140,7 @@ def write_dataset_provenance(
     logging.info(f"Getting provenance for dataset: {dataset_url}")
 
     # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
-    dataset_run_id =_meta_provenance(
+    dataset_run_id = _meta_provenance(
         id=id,
         type="dataset",
         data_url=dataset_url,
@@ -165,9 +165,9 @@ def write_geometry_provenance(
         help="Run ID to associate geometry outputs with",
     ),
     geometry_url: str = typer.Option(..., help="URL that points to the geometry"),
-    geometry_type: str = typer.Option(
+    geometry_type: Literal["geoparquet", "stac-geoparquet"] = typer.Option(
         "not-set",
-        help="Type of geometry, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
+        help="Type of geometry, such as geoparquet, or stac-geoparquet.",
     ),
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry (optional)"
@@ -206,8 +206,12 @@ def write_geometry_provenance(
     extra_info_dict = {}
     extra_info_dict["geometriesRunId"] = run_id
 
-    if pmtiles_url is not None: # This is optional because geometries can optionally have PMTiles
-        extra_info_dict["dataPmtilesUrl"] = pmtiles_url # Need to check how these are written to the db. They could be nullable fields there instead of a loose json.
+    if (
+        pmtiles_url is not None
+    ):  # This is optional because geometries can optionally have PMTiles
+        extra_info_dict["dataPmtilesUrl"] = (
+            pmtiles_url  # Need to check how these are written to the db. They could be nullable fields there instead of a loose json.
+        )
 
     # Should run_id be passed as a prop instead of nested in extra_info_dict?
     run_id_created = _meta_provenance(
@@ -233,6 +237,7 @@ def write_geometry_provenance(
         else:
             logging.info("Posting geometry outputs to database one at a time...")
             post_geometry_outputs_to_database(geometry_url, run_id=consolidated_run_id)
+
 
 @provenance_app.command("product")
 def write_product_provenance(
@@ -294,7 +299,9 @@ def write_product_provenance(
         for variable, output in parsed_outputs.items():
             for timePoint in output.keys():
                 outputs = output[timePoint]
-                logging.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
+                logging.info(
+                    f"Posting {len(outputs)} outputs for timePoint {timePoint}"
+                )
                 content = {
                     "productRunId": consolidated_run_id,
                     "timePoint": timePoint,
