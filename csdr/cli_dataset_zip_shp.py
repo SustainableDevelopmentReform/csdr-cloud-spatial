@@ -25,56 +25,55 @@ async def _unzip_single_zip(
     zip_path_and_file_name: str,
     source_store: ObjectStore,
     target_store: ObjectStore,
+    dataset_name: str,
     overwrite: bool,
     semaphore: asyncio.Semaphore,
 ) -> None:
     async with semaphore:
-        source_file_name = os.path.basename(
+        source_zipfile_name = os.path.basename(
             zip_path_and_file_name
         )  # Remove nested path folders (if any). Keep only zip file name and extension
-        path_without_extension = os.path.splitext(source_file_name)[
+        path_without_extension = os.path.splitext(source_zipfile_name)[
             0
         ]  # Remove .zip extension
-        if (
-            exists(
-                target_store, f"{path_without_extension}/Reef-Extent/reefextent.gpkg"
-            )
-            and not overwrite
-        ):
+        # TODO: Make this handle any zipped geodata files, not just geopackage.
+        target_path = f"{path_without_extension}/{dataset_name}.gpkg"
+        if exists(target_store, target_path) and not overwrite:
             logging.info(
-                f"Skipping {zip_path_and_file_name}; output exists at target store and overwrite is off."
+                f"Skipping {target_path} because it exists at target store and overwrite is off."
             )
             return
-        logging.info(
-            f"Unzipping {zip_path_and_file_name} to target store (overwrite={'on' if overwrite else 'off'}) ..."
-        )
+        logging.info(f"Unzipping {zip_path_and_file_name} to {target_path}...")
         zip_bytes = BytesIO(source_store.get(zip_path_and_file_name).bytes())
         with ZipFile(zip_bytes) as zip_item:
             for (
-                zip_source_file_name
+                file_in_zip
             ) in zip_item.namelist():  # Iterate through each file in the zip
-                if zip_source_file_name.endswith("/"):  # Skip directories
-                    continue
-                data = zip_item.read(zip_source_file_name)
-                target_path = f"{path_without_extension}/{zip_source_file_name}"  # Add the original zip file name (without .zip) as a folder prefix
-                # TODO: Is this exists check needed? It is a bit redundant but could be a good safeguard in case parial unzips occured.
-                if exists(target_store, target_path) and not overwrite:
+                # if file_in_zip.endswith("/"):  # Skip directories
+                #     continue
+                if not file_in_zip.endswith(f"{dataset_name}.gpkg"):
+                    # Big performance optimisation: Only unzip {dataset_name}.gpkg because the whole of ACA Northern Caribbean data is 11.84 GB (unzipped) but the reefextent.gpkg is only 38 MB.
                     logging.info(
-                        f"Skipping file {target_path}, already exists and overwrite is off."
+                        f"Skipping file {file_in_zip} in zip {zip_path_and_file_name} because it does not match the dataset name {dataset_name}."
                     )
                     continue
+                logging.info(
+                    f"Extracting {file_in_zip} because it matches the dataset name."
+                )
+                data = zip_item.read(file_in_zip)
+
                 target_store.put(target_path, data)
         logging.info(f"Finished unzipping {zip_path_and_file_name} to target store.")
 
 
-async def _run_extract_aca(
+async def _run_extract(
     source_location: str,
     target_location: str,
+    dataset_name: str,
     overwrite: bool,
     max_concurrent: int,
 ) -> None:
-    logging.info("Finding zip files to extract...")
-    # TODO: We could make this much more efficient by somehow just getting the reefextent.gpkg because the whole of Northern Caribbean data is 11.84 GB (unzipped) but the reefextent.gpkg is only 38 MB.
+    logging.info(f"Finding zip files to extract for {dataset_name}...")
     source_store = get_store_with_prefix_from_url(
         source_location, client_options={"timeout": "2 hours"}
     )  # timeout is increased because we need to download large files
@@ -92,6 +91,7 @@ async def _run_extract_aca(
             zip_path_and_file_name=zip_file_path,
             source_store=source_store,
             target_store=target_store,
+            dataset_name=dataset_name,
             overwrite=overwrite,
             semaphore=semaphore,
         )
@@ -101,9 +101,9 @@ async def _run_extract_aca(
     logging.info("Completed unzipping all region zips.")
 
 
-# ACA Extract gets all zip files from source_location, unzips them to target_location, preserving folder structure.
+# dataset_zip_shp extract gets all zip files from source_location, unzips them to target_location, preserving folder structure.
 @dataset_zip_shp_app.command("extract")
-def extract_aca(
+def extract(
     source_location: str = typer.Option(
         ...,
         help="S3 or local path containing zip files to extract (e.g. s3://bucket/datasets/aca/0-0-1/raw)",
@@ -112,6 +112,10 @@ def extract_aca(
         ...,
         help="S3 or local path to write unzipped files (e.g. s3://bucket/datasets/aca/0-0-1/data)",
     ),
+    dataset_name: str = typer.Option(
+        ...,
+        help="Name of the dataset (e.g. 'reefextent'). This should be a geopackage file inside the zip files, and will be used to identify the geopackage file in the zip and name the output geopackage file (e.g. reefextent.gpkg)",
+    ),
     overwrite: bool = typer.Option(
         True, help="Overwrite files if they exist at target."
     ),
@@ -119,13 +123,15 @@ def extract_aca(
         16, help="Maximum number of unzips to process at once."
     ),
 ) -> None:
-    logging.info("Starting ACA extraction process ...")
+    logging.info("Starting zipped shapefile extraction process ...")
     source_location = source_location.rstrip("/")
     target_location = target_location.rstrip("/")
     asyncio.run(
-        _run_extract_aca(source_location, target_location, overwrite, max_concurrent)
+        _run_extract(
+            source_location, target_location, dataset_name, overwrite, max_concurrent
+        )
     )
-    logging.info("ACA extraction process completed.")
+    logging.info("Zipped shapefile extraction process completed.")
 
 
 # _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
@@ -133,6 +139,7 @@ def extract_aca(
 def _partition_parquet(
     target_store: ObjectStore,
     gdf: gpd.GeoDataFrame,
+    dataset_name: str,
     grid_chunks: int = 10,
     overwrite: bool = True,
 ) -> None:
@@ -149,6 +156,7 @@ def _partition_parquet(
     lon_edges = np.linspace(-180, 180, grid_size_lon)
     lat_edges = np.linspace(-90, 90, grid_size_lat)
     # Get centroid coordinates
+    # TODO: Handle: UserWarning: Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
     gdf["lon"] = gdf.geometry.centroid.x
     gdf["lat"] = gdf.geometry.centroid.y
 
@@ -175,7 +183,7 @@ def _partition_parquet(
 
     # Write each partition to a separate Parquet file
     for partition, group in gdf.groupby("partition"):
-        file_name = f"partition/reefextent_{partition}.parquet"
+        file_name = f"partition/{dataset_name}_{partition}.parquet"
         file_exists = exists(target_store, file_name)
         if (file_exists and overwrite) or not file_exists:
             # Remove columns, then write partitioned file
@@ -189,23 +197,27 @@ def _partition_parquet(
             )
 
 
-async def _run_index_aca(
+async def _run_index(
     source_location: str,
     target_location: str,
+    dataset_name: str,
     overwrite: bool,
 ) -> None:
     target_store = get_store_with_prefix_from_url(target_location)
-    target_file_name = "reefextent.parquet"
+    target_file_name = f"{dataset_name}.parquet"
+    search_file_name = f"{dataset_name}.gpkg"
     if exists(target_store, target_file_name) and not overwrite:
         logging.info(
             f"Skipping index: {target_file_name} already exists and overwrite is off."
         )
         return
     source_store = get_store_with_prefix_from_url(source_location)
-    logging.info(f"Searching for all reefextent.gpkg under {source_location} ...")
-    gpkg_paths = find_matching_files(source_store, "reefextent.gpkg")
     logging.info(
-        f"Found {len(gpkg_paths)} reefextent.gpkg files to merge into {target_file_name}"
+        f"Searching for all {dataset_name}.gpkg files under {source_location} ..."
+    )
+    gpkg_paths = find_matching_files(source_store, search_file_name)
+    logging.info(
+        f"Found {len(gpkg_paths)} {search_file_name} files to merge into {target_file_name}"
     )
     dfs = []
     for path in gpkg_paths:
@@ -216,7 +228,7 @@ async def _run_index_aca(
         gdf = gpd.read_file(BytesIO(bytes_obj))
         dfs.append(gdf)
     if not dfs:
-        raise CSDRException("No GPKG files found, nothing to merge.")
+        raise CSDRException(f"No {search_file_name} files found, nothing to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
     logging.info(f"Writing merged GeoParquet to {target_file_name}")
     with BytesIO() as f:
@@ -225,26 +237,32 @@ async def _run_index_aca(
         target_store.put(target_file_name, f.read())
     logging.info("Merge and export to GeoParquet completed.")
     logging.info("Starting partitioning of the merged GeoParquet ...")
-    _partition_parquet(target_store, merged_gdf, grid_size=10, overwrite=overwrite)
+    _partition_parquet(
+        target_store, merged_gdf, dataset_name, grid_chunks=10, overwrite=overwrite
+    )
     logging.info("Partitioning completed.")
 
 
-# ACA Index gets all of the nested reefextent.gpkg files (one per region folder), and merges them into a single reefextent.parquet file at target_location.
+# Dataset Zip Shapefile Index gets all of the nested {dataset_name}.gpkg files (one per region folder), and merges them into a single {dataset_name}.parquet file at target_location.
 @dataset_zip_shp_app.command("index")
-def index_aca(
+def index(
     source_location: str = typer.Option(
         ...,
-        help="S3 or local path to extracted ACA files (e.g. s3://bucket/datasets/aca/0-0-1/data)",
+        help="S3 or local path to extracted dataset geopackage files (e.g. s3://bucket/datasets/aca/0-0-1/data)",
     ),
     target_location: str = typer.Option(
         ...,
-        help="S3 or local path to write reefextent.parquet index (e.g. s3://bucket/datasets/aca/0-0-1/)",
+        help="S3 or local path to write dataset_name.parquet index (e.g. s3://bucket/datasets/aca/0-0-1/)",
+    ),
+    dataset_name: str = typer.Option(
+        ...,
+        help="Name of the dataset, used to identify .gpkg files and name the output .parquet file (e.g. 'reefextent')",
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
 ) -> None:
-    logging.info("Starting ACA merge/index process ...")
-    asyncio.run(_run_index_aca(source_location, target_location, overwrite))
-    logging.info("ACA merge/index process completed.")
+    logging.info(f"Starting dataset '{dataset_name}' merge/index process ...")
+    asyncio.run(_run_index(source_location, target_location, dataset_name, overwrite))
+    logging.info(f"Dataset '{dataset_name}' merge/index process completed.")
 
 
 if __name__ == "__main__":
