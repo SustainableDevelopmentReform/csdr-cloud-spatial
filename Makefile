@@ -255,15 +255,17 @@ dataset-buildings-provenance-local-db:
 # Geometry EEZ
 ### EEZ cache
 geometry-eez-cache-local:
-	csdr eez cache \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
 		--target-location=./cache/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 
 geometry-eez-cache-s3:
-	csdr eez cache \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
 		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
 		--overwrite
-		
+
 ### EEZ convert
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
@@ -375,7 +377,8 @@ geometry-cwa-provenance-local-db:
 
 # Geometry Australian States and Territories
 geometry-aus-states-cache-local:
-	csdr aus-states cache \
+	csdr geometries cache \
+		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \
 		--target-location=./cache/geometries/aus-states/0-0-1/raw \
 		--overwrite
 geometry-aus-states-convert-local:

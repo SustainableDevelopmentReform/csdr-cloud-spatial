@@ -2,21 +2,25 @@ import asyncio
 import glob
 import logging
 import os
+import zipfile
 from io import BytesIO
 
 import geopandas as gpd
 import typer
+from obstore.exceptions import GenericError, PermissionDeniedError
 from requests import get
 
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
+    split_path_and_file_name_from_url,
 )
 from csdr.utils import CSDRException
 
 geometry_app = typer.Typer()
 
 
+# I think convert-vector is unused.
 @geometry_app.command("convert-vector")
 def convert_vector(
     input_dir: str = typer.Option(
@@ -56,7 +60,9 @@ def convert_vector(
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        raise CSDRException("--input-dir, --output-path, and --target-crs are required.")
+        raise CSDRException(
+            "--input-dir, --output-path, and --target-crs are required."
+        )
 
     try:
         # Find input vector file using glob relative to input_dir
@@ -66,7 +72,9 @@ def convert_vector(
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            raise CSDRException(f"No files matching '{input_glob}' found within {input_dir}")
+            raise CSDRException(
+                f"No files matching '{input_glob}' found within {input_dir}"
+            )
 
         vector_file_path = found_files[0]  # Use the first found file
         if len(found_files) > 1:
@@ -110,6 +118,7 @@ def convert_vector(
         raise CSDRException(f"An error occurred during vector conversion: {e}")
 
 
+# I think validate is unused.
 @geometry_app.command("validate")
 def validate(
     input_file: str = typer.Option(
@@ -140,53 +149,75 @@ def validate(
 
     except Exception as e:
         raise CSDRException(f"An error occurred during validation: {e}")
-    
 
-# Caching CWA and ACSC2 geometries
-# "GA Coastal Waters Areas", or "Australian Coastal Sediment Compartments - Secondary Compartments"
-async def run_cache(
+
+# Caching CWA, EEZ, ACSC2, ABS Aus States geometries
+async def _run_cache(
     source_url: str,
     target_location: str,
     overwrite: bool,
 ) -> str:
-    # Downloads the cwa/acsc2 zip of shapefile from source_url and stores it at target_location
-    # Source url is http://
-    # Target location can be s3:// or local file path
     target_location = target_location.rstrip("/")
-    target_path = target_location # This is the path, there is no file name
+    target_path = target_location  # This is the path, there is no file name
 
-    # Get the name of the file
-    if "2af87180973d44b0b5b73583e3c06957_2" in source_url:
-        logging.info("Detected ACSC2 geometry based on source URL.")
-        target_file_name = "Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip"
-    elif "37a401e932544c88828a7d099880afb5_1" in source_url:
-        logging.info("Detected CWA geometry based on source URL.")
-        target_file_name = "CW_1970_1980_Areas.zip"
-    else:
-        logging.error("Unknown geometry source URL.")
-        raise CSDRException("Unknown geometry source URL.")
+    # We have 2 types of source urls:
+    # 1. Ones that work with obstore.get (e.g. s3 URLs) - EEZ
+    # 2. Ones that don't (e.g. ESRI ArcGIS Online REST API URLs) - Aus States, CWA, ACSC2.
 
     target_store = get_store_with_prefix_from_url(target_path)
 
-    if exists(target_store, target_file_name) and not overwrite:
-        logging.info("File already exists at target location and overwrite is off, skipping download.")
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+    try:
+        # This is for category 1 source_url
+        source_path, source_name = split_path_and_file_name_from_url(source_url)
+        source_store = get_store_with_prefix_from_url(source_path)
+        target_file_name = source_name
+        target_path_and_name = f"{target_path}/{target_file_name}"
 
-    logging.info("File doesn't exist or overwrite is on. Re-downloading.")
+        if exists(target_store, target_file_name) and not overwrite:
+            logging.info(
+                "File already exists at target location and overwrite is off, skipping download."
+            )
+            raise typer.Exit(code=0)  # Exit successfully, nothing to do
+        logging.info(
+            f"File doesn't exist or overwrite is on. Re-downloading {target_file_name} from {source_url} to {target_location}..."
+        )
 
-    logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
+        await target_store.put_async(target_file_name, source_store.get(source_name))
+        logging.info("Successfully cached using obstore")
+    except (
+        GenericError,
+        PermissionDeniedError,
+    ):  # Aus States gives GenericError, ACSC2 gives PermissionDeniedError
+        logging.warning("Failed to get using obstore, falling back to requests.get.")
+        # This is for category 2 source_url
+        response = get(source_url)
+        response.raise_for_status()  # Raise an error if the download failed
+        # Get file name
+        zip_bytes = BytesIO(response.content)
+        with zipfile.ZipFile(zip_bytes) as zf:
+            file_names = zf.namelist()
+            target_file_name = (
+                f"{file_names[0].split('.')[0]}.zip" if file_names else None
+            )
+        if not target_file_name:
+            raise CSDRException(
+                "Could not determine file name from zip content. Cannot cache."
+            )
+        target_path_and_name = f"{target_path}/{target_file_name}"
 
-    # Download zip
-    response = get(source_url)
-    response.raise_for_status()  # Raise an error if the download failed
-    zip_bytes = BytesIO(response.content)
+        if exists(target_store, target_file_name) and not overwrite:
+            logging.info(
+                "File already exists at target location and overwrite is off, skipping download."
+            )
+            raise typer.Exit(code=0)  # Exit successfully, nothing to do
+        logging.info(
+            f"File doesn't exist or overwrite is on. Re-downloading {target_file_name} from {source_url} to {target_location}..."
+        )
 
-    # TODO: Should get the file name dynamically here, but that would mean that the overwrite functionality would not be as effective in preventing re-downloads.
+        await target_store.put_async(target_file_name, response.content)
+        logging.info("Successfully cached (without using obstore.get).")
 
-    # Get the file name
-    await target_store.put_async(target_file_name, zip_bytes)
-
-    return target_location
+    return target_path_and_name
 
 
 # Download zipped shapefile.
@@ -194,11 +225,11 @@ async def run_cache(
 def cache(
     source_url: str = typer.Option(
         ...,
-        help="URL of the source zipped shapefile geometry to cache.",
+        help="URL of the zipped shapefile geometry to cache.",
     ),
     target_location: str = typer.Option(
         ...,
-        help="Local or remote path (like 's3://csdr-public-dev/geometries/acsc2/0-0-1/raw' or s3://csdr-public-dev/geometries/cwa/0-0-1/raw) to store the cached geometry file.",
+        help="Local or remote path (like 's3://csdr-public-dev/geometries/acsc2/0-0-1/raw' or s3://csdr-public-dev/geometries/cwa/0-0-1/raw) to store the cached geometry zipped shapefile.",
     ),
     overwrite: bool = typer.Option(
         True, help="Replace existing zip file if it exists."
@@ -206,8 +237,10 @@ def cache(
 ) -> None:
     logging.info(f"Starting caching process for '{source_url}'...")
 
-    result_path = asyncio.run(run_cache(source_url, target_location, overwrite))
-    logging.info(f"Caching process completed. Cached to '{result_path}'")
+    result_path_and_name = asyncio.run(
+        _run_cache(source_url, target_location, overwrite)
+    )
+    logging.info(f"Caching process completed. Cached to '{result_path_and_name}'")
 
 
 if __name__ == "__main__":

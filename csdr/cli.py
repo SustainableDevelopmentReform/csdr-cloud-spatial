@@ -13,8 +13,6 @@ from csdr.cli_dataset_seagrass import seagrass_app
 from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
-from csdr.cli_geometry_aus_states import aus_states_app
-from csdr.cli_geometry_eez import eez_app
 from csdr.cli_helpers import helpers_app
 from csdr.cli_products import products_app
 from csdr.cli_provenance import provenance_app
@@ -47,13 +45,9 @@ app.add_typer(
     seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
 )
 # ACA
-app.add_typer(
-    aca_app, name="aca", help="Cache and process ACA dataset."
-)
+app.add_typer(aca_app, name="aca", help="Cache and process ACA dataset.")
 # ACE
-app.add_typer(
-    ace_app, name="ace", help="Cache and process ACE dataset."
-)
+app.add_typer(ace_app, name="ace", help="Cache and process ACE dataset.")
 # MS Buildings
 app.add_typer(
     buildings_app, name="buildings", help="Cache and process buildings dataset."
@@ -64,10 +58,6 @@ app.add_typer(
 app.add_typer(
     geometry_app, name="geometries", help="Commands for processing geometries."
 )
-# EEZ
-app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
-# ABS Australian States
-app.add_typer(aus_states_app, name="aus-states", help="Cache and process the ABS Australian States dataset.")
 
 # Generic conversion tools
 app.add_typer(conversion_app, name="convert", help="Data conversion tools.")
