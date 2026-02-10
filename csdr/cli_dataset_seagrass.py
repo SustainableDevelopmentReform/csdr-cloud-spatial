@@ -46,7 +46,7 @@ async def run_index_dep_seagrass(
     logging.info(f"Written {count_items} STAC items to parquet at {target_url}")
     if count_items == 0:
         logging.error("No STAC items found, nothing to index.")
-        exit(1) # Exit with error code
+        exit(1)  # Exit with error code
 
     logging.info(f"Finished writing parquet file to {target_url}")
 
@@ -67,3 +67,6 @@ def index_dep_seagrass(
     logging.info("Starting DEP Seagrass indexing process...")
     asyncio.run(run_index_dep_seagrass(stac_api_url, target_location, overwrite))
     logging.info("DEP Seagrass indexing process completed.")
+
+
+# TODO: Consolidate this with the ACE index command.

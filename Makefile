@@ -6,14 +6,14 @@
 
 # Dataset GMW v4
 cache-gmw-v4-local:
-	csdr gmw cache \
+	csdr dataset-zip-cogs cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 cache-gmw-v4-s3:
-	csdr gmw cache \
+	csdr dataset-zip-cogs cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
@@ -22,14 +22,14 @@ cache-gmw-v4-s3:
 # Extracting takes a few minutes
 # Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
 extract-gmw-v4-local:
-	csdr gmw extract \
+	csdr dataset-zip-cogs extract \
 		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
 extract-gmw-v4-s3:
-	csdr gmw extract \
+	csdr dataset-zip-cogs extract \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
@@ -37,13 +37,13 @@ extract-gmw-v4-s3:
 
 # TODO: Check whether index source and target locations must be absolute paths (for local store) too for STAC hrefs to be correct. Using absolute paths just in case.
 index-gmw-v4-local:
-	csdr gmw index \
+	csdr dataset-zip-cogs index \
 		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
 		--overwrite
 
 index-gmw-v4-s3:
-	csdr gmw index \
+	csdr dataset-zip-cogs index \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1 \
 		--overwrite
@@ -74,7 +74,7 @@ provenance-gmw-v4-s3-db:
 # https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
 # One file/year
 cache-gmw-v3-local-single-file:
-	csdr gmw cache \
+	csdr dataset-zip-cogs cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
@@ -84,14 +84,14 @@ cache-gmw-v3-local-single-file:
 # https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
 # https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip
 cache-gmw-v3-local-multiple-files:
-	csdr gmw cache \
+	csdr dataset-zip-cogs cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--no-overwrite
 
 cache-gmw-v3-s3-multiple-files:
-	csdr gmw cache \
+	csdr dataset-zip-cogs cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
@@ -103,7 +103,7 @@ cache-gmw-v3-s3-multiple-files:
 ## Extract v3
 # Local paths must be absolute for STAC hrefs to be correct!!
 extract-gmw-v3-local:
-	csdr gmw extract \
+	csdr dataset-zip-cogs extract \
 		--source-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
@@ -111,7 +111,7 @@ extract-gmw-v3-local:
 # 		--source-zip-name=gmw_v3_2020_gtiff.zip \
 
 extract-gmw-v3-s3:
-	csdr gmw extract \
+	csdr dataset-zip-cogs extract \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
@@ -120,13 +120,13 @@ extract-gmw-v3-s3:
 ## Index v3
 # This is recursive over all subfolders (one for each year). Makes just one STAC-geoparquet for all years.
 index-gmw-v3-local:
-	csdr gmw index \
+	csdr dataset-zip-cogs index \
 		--source-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1 \
 		--overwrite
 
 index-gmw-v3-s3:
-	csdr gmw index \
+	csdr dataset-zip-cogs index \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1 \
 		--overwrite
@@ -156,12 +156,12 @@ provenance-gmw-v3-s3-db:
 
 # Dataset Seagrass
 dataset-seagrass-index-local:
-	csdr seagrass index \
+	csdr dataset-stac index \
 		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=./cache/datasets/seagrass/0-0-1 \
 		--overwrite
 dataset-seagrass-index-s3:
-	csdr seagrass index \
+	csdr dataset-stac index \
 		--stac-api-url=https://stac.prod.digitalearthpacific.io \
 		--target-location=s3://csdr-public-dev/datasets/seagrass/0-0-1 \
 		--overwrite
@@ -188,7 +188,7 @@ dataset-seagrass-provenance-s3:
 
 # Dataset ACE - Australian Coastal Ecosystems
 dataset-ace-index-local:
-	csdr ace index \
+	csdr dataset-stac index \
 		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
 		--target-location=./cache/datasets/ace/0-0-1 \
 		--overwrite
@@ -205,20 +205,20 @@ dataset-ace-provenance-local:
 
 # Dataset ACA - reef extent
 dataset-aca-extract-local:
-	csdr aca extract \
+	dataset-zip-shp extract \
 		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/raw \
 		--target-location=./cache/datasets/aca/0-0-1/data \
 		--no-overwrite
 # 		--overwrite
 
 dataset-aca-index-local:
-	csdr aca index \
+	dataset-zip-shp index \
 		--source-location=./cache/datasets/aca/0-0-1/data \
 		--target-location=./cache/datasets/aca/0-0-1 \
 		--overwrite
 
 dataset-aca-index-s3:
-	csdr aca index \
+	dataset-zip-shp index \
 		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
 		--overwrite
@@ -236,7 +236,7 @@ dataset-aca-provenance-local-db:
 # Dataset MS Buildings
 # Index is done in-place in Source Coop.
 dataset-buildings-index-local:
-	csdr buildings index \
+	dataset-partition-parquets index \
 		--target-location=./cache/datasets/buildings/0-0-1 \
 		--overwrite
 dataset-buildings-provenance-local-db:

@@ -19,6 +19,7 @@ ace_app = typer.Typer()
 # 2021: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1/items/830cf127-61c4-465a-92a5-8fc65188a9d7
 # 2022: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1/items/19eb5a11-986f-4e09-acc7-c9669bb7147a
 
+
 async def run_index_aus_coastal_ecosystems(
     source_stac_url: str, target_location: str, overwrite: bool = True
 ) -> None:
@@ -50,7 +51,9 @@ async def run_index_aus_coastal_ecosystems(
             collections=["ga_s2_coastalecosystems_cyear_3_v1"],
             store=target_store,
         )
-    logging.info(f"Retrieved {items} items from STAC collection and wrote them to {target_filename}.")
+    logging.info(
+        f"Retrieved {items} items from STAC collection and wrote them to {target_filename}."
+    )
 
     logging.info(f"Finished writing parquet file to {target_url}")
 
@@ -69,5 +72,10 @@ def index_aus_coastal_ecosystems(
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
     logging.info("Starting ACE indexing process...")
-    asyncio.run(run_index_aus_coastal_ecosystems(source_stac_url, target_location, overwrite))
+    asyncio.run(
+        run_index_aus_coastal_ecosystems(source_stac_url, target_location, overwrite)
+    )
     logging.info("ACE indexing process completed.")
+
+
+# TODO: Consolidate this with the seagrass index command.
