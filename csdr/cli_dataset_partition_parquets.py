@@ -19,7 +19,7 @@ from csdr.io import (
 )
 from csdr.utils import CSDRException
 
-buildings_app = typer.Typer()
+dataset_partition_parquets_app = typer.Typer()
 
 logger = logging.getLogger()
 
@@ -145,7 +145,7 @@ async def _run_index_buildings(
 
 
 # Buildings Index gets all of the parquet files (one per country 2nd level admin area) from source coop, and writes their name, path, and bounds to a single buildings.parquet file at target_location.
-@buildings_app.command("index")
+@dataset_partition_parquets_app.command("index")
 def index_buildings(
     source_location_s3: str = typer.Option(
         "s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/",
@@ -187,4 +187,4 @@ def index_buildings(
 
 
 if __name__ == "__main__":
-    buildings_app()
+    dataset_partition_parquets_app()

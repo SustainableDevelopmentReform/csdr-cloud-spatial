@@ -18,7 +18,7 @@ from csdr.io import (
 )
 from csdr.utils import CSDRException
 
-aca_app = typer.Typer()
+dataset_zip_shp_app = typer.Typer()
 
 
 async def _unzip_single_zip(
@@ -102,7 +102,7 @@ async def _run_extract_aca(
 
 
 # ACA Extract gets all zip files from source_location, unzips them to target_location, preserving folder structure.
-@aca_app.command("extract")
+@dataset_zip_shp_app.command("extract")
 def extract_aca(
     source_location: str = typer.Option(
         ...,
@@ -230,7 +230,7 @@ async def _run_index_aca(
 
 
 # ACA Index gets all of the nested reefextent.gpkg files (one per region folder), and merges them into a single reefextent.parquet file at target_location.
-@aca_app.command("index")
+@dataset_zip_shp_app.command("index")
 def index_aca(
     source_location: str = typer.Option(
         ...,
@@ -248,4 +248,4 @@ def index_aca(
 
 
 if __name__ == "__main__":
-    aca_app()
+    dataset_zip_shp_app()

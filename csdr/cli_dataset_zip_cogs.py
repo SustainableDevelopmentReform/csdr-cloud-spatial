@@ -24,7 +24,7 @@ from csdr.io import (
 )
 from csdr.utils import CSDRException, suppress_rust_output
 
-gmw_app = typer.Typer()
+dataset_zip_cogs_app = typer.Typer()
 
 
 async def cache_single_source(
@@ -121,7 +121,7 @@ async def run_cache_gmw(
 
 # Takes a list of source locations of one or more zip files containing many geotiff files
 # Writes these to the target location. Also writes a temporary file with list of target locations for the workflow to read.
-@gmw_app.command("cache")
+@dataset_zip_cogs_app.command("cache")
 def cache_gmw(
     source_locations: str = typer.Option(
         ...,
@@ -299,7 +299,7 @@ async def run_extract_gmw(
 
 # This is run on a single source zip of many geotiffs.
 # Unzips. For each geotiff, writes COG and STAC item. Uses Rasterio to read geotiff into memory as xarray. writes COG using ODC. Make json using rio-stac and write it.
-@gmw_app.command("extract")
+@dataset_zip_cogs_app.command("extract")
 def extract_gmw(
     source_location: str = typer.Option(
         ...,
@@ -364,7 +364,7 @@ async def run_index_gmw(
 
 # Writes a parquet index of all the GMW STAC items found at the source location.
 # Finds all STAC item jsons, reads them, writes a STAC-Geoparquet index file to the target location using rustac.
-@gmw_app.command("index")
+@dataset_zip_cogs_app.command("index")
 def index_gmw(
     source_location: str = typer.Option(
         ...,
