@@ -24,13 +24,13 @@ dataset_partition_parquets_app = typer.Typer()
 logger = logging.getLogger()
 
 
-def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFrame:
+def _get_parquet_urls(source_location: str, source_proxy: str) -> pd.DataFrame:
     logging.info(
-        f"Scraping country 2nd level admin parquet URLs from {source_location_s3} ..."
+        f"Scraping country 2nd level admin parquet URLs from {source_location} ..."
     )
     # List objects via Source Coop S3 proxy.
     store = get_store_with_prefix_from_url(
-        source_location_s3,
+        source_location,
         region="us-east-1",
         skip_signature=True,
         endpoint_url=source_proxy,
@@ -52,8 +52,8 @@ def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFram
             "s2_code": file.split("/")[1].replace(
                 ".parquet", ""
             ),  # Example s2_code: "3303671801652969472"
-            "url": f"{source_proxy}{source_location_s3.replace('s3://', '')}{file}",
-            "s3_url": f"{source_location_s3}{file}",
+            "url": f"{source_proxy}{source_location.replace('s3://', '')}{file}",
+            "s3_url": f"{source_location}{file}",
         }
         for file in parquet_files
     )
@@ -147,8 +147,8 @@ async def _run_index_buildings(
 # Buildings Index gets all of the parquet files (one per country 2nd level admin area) from source coop, and writes their name, path, and bounds to a single buildings.parquet file at target_location.
 @dataset_partition_parquets_app.command("index")
 def index_buildings(
-    source_location_s3: str = typer.Option(
-        "s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/",
+    source_location: str = typer.Option(
+        ...,
         help="S3 url containing parquet files to cache (e.g. s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/)",
     ),
     source_proxy: str = typer.Option(
@@ -177,7 +177,7 @@ def index_buildings(
         "Either file does not exist or overwrite is on, proceeding with indexing."
     )
 
-    parquet_data = _get_parquet_urls(source_location_s3, source_proxy)
+    parquet_data = _get_parquet_urls(source_location, source_proxy)
     asyncio.run(
         _run_index_buildings(
             source_proxy, parquet_data, target_store, target_file_name, max_concurrent

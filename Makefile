@@ -237,6 +237,7 @@ dataset-aca-provenance-local-db:
 # Index is done in-place in Source Coop.
 dataset-buildings-index-local:
 	dataset-partition-parquets index \
+		--source-location="s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
 		--target-location=./cache/datasets/buildings/0-0-1 \
 		--overwrite
 dataset-buildings-provenance-local-db:

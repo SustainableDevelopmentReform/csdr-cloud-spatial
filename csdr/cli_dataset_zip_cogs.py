@@ -83,7 +83,7 @@ async def cache_single_source(
 
 
 async def run_cache_gmw(
-    source_locations: list[str],
+    source_location: list[str],
     target_location: str,
     overwrite: bool,
     max_concurrent: int,
@@ -97,13 +97,13 @@ async def run_cache_gmw(
     # Create tasks for parallel processing
     tasks = [
         cache_single_source(
-            source_location,
+            sl,
             target_location.rstrip("/"),
-            (source_location.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
+            (sl.rsplit("/", 1)[-1].rsplit("?", 1)[0]),
             overwrite,
             semaphore,
         )
-        for source_location in source_locations
+        for sl in source_location
     ]
     # Execute all tasks concurrently
     results = await asyncio.gather(*tasks)
@@ -123,7 +123,7 @@ async def run_cache_gmw(
 # Writes these to the target location. Also writes a temporary file with list of target locations for the workflow to read.
 @dataset_zip_cogs_app.command("cache")
 def cache_gmw(
-    source_locations: str = typer.Option(
+    source_location: str = typer.Option(
         ...,
         help="Location of the source GMW file/s to cache.",
     ),
@@ -143,7 +143,7 @@ def cache_gmw(
     ),
 ) -> None:
     logging.info("Starting async GMW caching process...")
-    source_locations_list = source_locations.split(",")  # Get list of source_locations
+    source_locations_list = source_location.split(",")
     asyncio.run(
         run_cache_gmw(
             source_locations_list,
