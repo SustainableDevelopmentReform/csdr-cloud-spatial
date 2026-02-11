@@ -14,20 +14,6 @@ from csdr.utils import CSDRException, run_command
 dataset_app = typer.Typer()
 
 
-@dataset_app.command("validate-zarr")
-def validate_zarr(
-    zarr_path: str = typer.Option(
-        ..., "--input-zarr", help="Path to the Zarr file to validate."
-    ),
-) -> None:
-    logging.info(f"Validating Zarr {zarr_path}...")
-
-    xr.open_zarr(zarr_path)
-
-    # Add actual validation logic here
-    pass
-
-
 def _run_gdalwarp(
     input_file: str,
     output_dir: str,
@@ -132,7 +118,8 @@ def warp_raster(
                 except Exception as exc:
                     # Log the exception details, breaking the line
                     logging.error(
-                        f"{input_file} generated an exception during processing: {exc}", exc_info=True
+                        f"{input_file} generated an exception during processing: {exc}",
+                        exc_info=True,
                     )
                     failed_warps += 1
 

@@ -12,6 +12,7 @@ from requests import get
 
 from csdr.io import (
     exists,
+    get_file_info,
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
@@ -118,39 +119,6 @@ def convert_vector(
         raise CSDRException(f"An error occurred during vector conversion: {e}")
 
 
-# I think validate is unused.
-@geometry_app.command("validate")
-def validate(
-    input_file: str = typer.Option(
-        ..., "--input-file", help="Path to the GeoParquet file to validate."
-    ),
-    schema_path: str = typer.Option(
-        None, "--schema", help="Path to the GeoParquet schema file to validate against."
-    ),
-) -> None:
-    """
-    Validate the GeoParquet file against the provided schema.
-    """
-    if not input_file:
-        raise CSDRException("Input file is required.")
-
-    try:
-        # Read the GeoParquet file
-        # TODO: Use io.read_geospatial_file
-        gdf = gpd.read_parquet(input_file)
-
-        # Fail if no geometry column
-        if "geometry" not in gdf.columns:
-            raise CSDRException("No geometry column found in the GeoParquet file.")
-
-        # Validate the GeoParquet file
-        # validate_geoparquet(gdf, schema_path)
-        logging.info("Validation complete.")
-
-    except Exception as e:
-        raise CSDRException(f"An error occurred during validation: {e}")
-
-
 # Caching CWA, EEZ, ACSC2, ABS Aus States geometries
 async def _run_cache(
     source_url: str,
@@ -220,6 +188,21 @@ async def _run_cache(
     return target_path_and_name
 
 
+def _pre_cache_validation(source_url: str) -> None:
+    # Get the file size.
+    total_file_size_limit_bytes = 100 * 1024 * 1024  # 100 MB in bytes
+    source_path, source_name = split_path_and_file_name_from_url(source_url)
+    source_store = get_store_with_prefix_from_url(source_path)
+    parquet_info = get_file_info(source_store, source_name)
+    if "size" in parquet_info and parquet_info["size"] > total_file_size_limit_bytes:
+        raise CSDRException(
+            f"File size {parquet_info['size']} bytes exceeds maximum limit of {total_file_size_limit_bytes} bytes. Cannot cache."
+        )
+    logging.info(
+        f"Pre-cache validation passed: file size ({parquet_info['size']} bytes) is within the limit."
+    )
+
+
 # Download zipped shapefile.
 @geometry_app.command("cache")
 def cache(
@@ -236,6 +219,8 @@ def cache(
     ),
 ) -> None:
     logging.info(f"Starting caching process for '{source_url}'...")
+
+    _pre_cache_validation(source_url)
 
     result_path_and_name = asyncio.run(
         _run_cache(source_url, target_location, overwrite)
