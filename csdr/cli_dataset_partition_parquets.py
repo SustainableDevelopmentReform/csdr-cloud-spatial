@@ -93,9 +93,6 @@ async def _get_bounds_from_parquet(
                 return bbox
             finally:
                 if parquet_file is not None:
-                    logging.info(
-                        f"Closing ReadableStream for {s3_url} to avoid resource leaks."
-                    )
                     parquet_file.close()
 
         try:

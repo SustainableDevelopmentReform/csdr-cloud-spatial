@@ -5,30 +5,30 @@
 ### DATASETS ###
 
 # Dataset GMW v4
-cache-gmw-v4-local:
+dataset-cache-gmw-v4-local:
 	csdr dataset-zip-cogs cache \
-		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
-cache-gmw-v4-s3:
+dataset-cache-gmw-v4-s3:
 	csdr dataset-zip-cogs cache \
-		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 # Extracting takes a few minutes
 # Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
-extract-gmw-v4-local:
+dataset-extract-gmw-v4-local:
 	csdr dataset-zip-cogs extract \
 		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--overwrite
 
-extract-gmw-v4-s3:
+dataset-extract-gmw-v4-s3:
 	csdr dataset-zip-cogs extract \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
@@ -36,20 +36,20 @@ extract-gmw-v4-s3:
 		--overwrite
 
 # TODO: Check whether index source and target locations must be absolute paths (for local store) too for STAC hrefs to be correct. Using absolute paths just in case.
-index-gmw-v4-local:
+dataset-index-gmw-v4-local:
 	csdr dataset-zip-cogs index \
 		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
 		--overwrite
 
-index-gmw-v4-s3:
+dataset-index-gmw-v4-s3:
 	csdr dataset-zip-cogs index \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1 \
 		--overwrite
 
 # Make a Dataset in the app and use the ID here
-provenance-gmw-v4-local-db:
+dataset-provenance-gmw-v4-local-db:
 	csdr provenance dataset \
 		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
@@ -59,7 +59,7 @@ provenance-gmw-v4-local-db:
 		--post-to-database \
 		--overwrite
 
-provenance-gmw-v4-s3-db:
+dataset-provenance-gmw-v4-s3-db:
 	csdr provenance dataset \
 		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
 		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet \
@@ -73,9 +73,9 @@ provenance-gmw-v4-s3-db:
 # Dataset GMW v3
 # https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
 # One file/year
-cache-gmw-v3-local-single-file:
+dataset-cache-gmw-v3-local-single-file:
 	csdr dataset-zip-cogs cache \
-		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
@@ -83,16 +83,16 @@ cache-gmw-v3-local-single-file:
 # Not sure if we should use the Zenodo or Auspatious links.
 # https://zenodo.org/records/6894273/files/gmw_v3_1996_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2007_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2008_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2009_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2010_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2015_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2016_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2017_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2018_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2019_gtiff.zip,https://zenodo.org/records/6894273/files/gmw_v3_2020_gtiff.zip
 # https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip
-cache-gmw-v3-local-multiple-files:
+dataset-cache-gmw-v3-local-multiple-files:
 	csdr dataset-zip-cogs cache \
-		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--no-overwrite
 
-cache-gmw-v3-s3-multiple-files:
+dataset-cache-gmw-v3-s3-multiple-files:
 	csdr dataset-zip-cogs cache \
-		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
+		--source-location=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
 		--no-overwrite
@@ -102,7 +102,7 @@ cache-gmw-v3-s3-multiple-files:
 
 ## Extract v3
 # Local paths must be absolute for STAC hrefs to be correct!!
-extract-gmw-v3-local:
+dataset-extract-gmw-v3-local:
 	csdr dataset-zip-cogs extract \
 		--source-location=./cache/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
@@ -110,7 +110,7 @@ extract-gmw-v3-local:
 		--overwrite
 # 		--source-zip-name=gmw_v3_2020_gtiff.zip \
 
-extract-gmw-v3-s3:
+dataset-extract-gmw-v3-s3:
 	csdr dataset-zip-cogs extract \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
@@ -119,13 +119,13 @@ extract-gmw-v3-s3:
 
 ## Index v3
 # This is recursive over all subfolders (one for each year). Makes just one STAC-geoparquet for all years.
-index-gmw-v3-local:
+dataset-index-gmw-v3-local:
 	csdr dataset-zip-cogs index \
 		--source-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1 \
 		--overwrite
 
-index-gmw-v3-s3:
+dataset-index-gmw-v3-s3:
 	csdr dataset-zip-cogs index \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1 \
@@ -133,7 +133,7 @@ index-gmw-v3-s3:
 
 ## Provenance v3
 # Make a Dataset in the app and use the ID here
-provenance-gmw-v3-local-db:
+dataset-provenance-gmw-v3-local-db:
 	csdr provenance dataset \
 		--id=36fff098-96f9-4b98-b728-10b2d71a4149 \
 		--dataset-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet \
@@ -143,7 +143,7 @@ provenance-gmw-v3-local-db:
 		--post-to-database \
 		--overwrite
 
-provenance-gmw-v3-s3-db:
+dataset-provenance-gmw-v3-s3-db:
 	csdr provenance dataset \
 		--id=36fff098-96f9-4b98-b728-10b2d71a4149 \
 		--dataset-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet \
@@ -206,30 +206,30 @@ dataset-ace-provenance-local:
 # Dataset ACA - reef extent
 dataset-aca-reef-extract-local:
 	csdr dataset-zip-shp extract \
-		--source-location=s3://csdr-public-dev/datasets/aca-reef/0-0-1/raw \
-		--target-location=./cache/datasets/aca-reef/0-0-1/data \
+		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/raw \
+		--target-location=./cache/datasets/reefextent/0-0-1/data \
 		--overwrite \
 		--dataset-name=reefextent
 # 		--no-overwrite # 500MB data to download.
 
 dataset-aca-reef-index-local:
 	csdr dataset-zip-shp index \
-		--source-location=./cache/datasets/aca-reef/0-0-1/data \
-		--target-location=./cache/datasets/aca-reef/0-0-1 \
+		--source-location=./cache/datasets/reefextent/0-0-1/data \
+		--target-location=./cache/datasets/reefextent/0-0-1 \
 		--overwrite \
 		--dataset-name=reefextent
 
 dataset-aca-reef-index-s3:
 	csdr dataset-zip-shp index \
-		--source-location=s3://csdr-public-dev/datasets/aca-reef/0-0-1/data \
-		--target-location=s3://csdr-public-dev/datasets/aca-reef/0-0-1 \
+		--source-location=s3://csdr-public-dev/datasets/reefextent/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/reefextent/0-0-1 \
 		--overwrite \
 		--dataset-name=reefextent
 
 dataset-aca-reef-provenance-local-db:
 	csdr provenance dataset \
 		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
-		--dataset-url=./cache/datasets/aca-reef/0-0-1/reefextent.parquet \
+		--dataset-url=./cache/datasets/reefextent/0-0-1/reefextent.parquet \
 		--source-url="https://allencoralatlas.org/atlas/" \
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
@@ -238,15 +238,16 @@ dataset-aca-reef-provenance-local-db:
 
 # Dataset MS Buildings
 # Index is done in-place in Source Coop.
-dataset-buildings-index-local:
+dataset-vida-buildings-index-local:
 	csdr dataset-partition-parquets index \
 		--source-location="s3://vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
-		--target-location=./cache/datasets/buildings/0-0-1 \
+		--target-location=./cache/datasets/vida-buildings/0-0-1 \
+		--dataset-name=vida-buildings \
 		--overwrite
-dataset-buildings-provenance-local-db:
+dataset-vida-buildings-provenance-local-db:
 	csdr provenance dataset \
 		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
-		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
+		--dataset-url=./cache/datasets/vida-buildings/0-0-1/vida-buildings.parquet \
 		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
@@ -678,7 +679,7 @@ product-aca-reef-eez-process-geometry-local:
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--run-id=test-aca-reef-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca-reef/0-0-1/reefextent.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/reefextent/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-reef-eez/0-0-1/runs/test-aca-reef-eez-run-id \
 		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
@@ -691,7 +692,7 @@ product-aca-reef-eez-process-geometry-s3:
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--run-id=test-aca-reef-eez-run-id \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca-reef/0-0-1/reefextent.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/reefextent/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=s3://csdr-public-dev/products/aca-reef-eez/0-0-1/runs/test-aca-reef-eez-run-id \
 		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
@@ -705,7 +706,7 @@ product-aca-reef-eez-process-all-geometries-dask-local:
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--run-id=test-aca-reef-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca-reef/0-0-1/reefextent.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/reefextent/0-0-1/reefextent.parquet.provenance.json \
 		--target-location=./cache/products/aca-reef-eez/0-0-1/runs/test-aca-reef-eez-run-id \
 		--variables-to-extract='{"sum-reef-area": {"variable-name": "class", "variable-value": "Reef"}}' \
 		--datetime=2022 \
@@ -718,7 +719,7 @@ product-aca-reef-eez-consolidate-local:
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--location=./cache/products/aca-reef-eez/0-0-1/runs/test-aca-reef-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca-reef/0-0-1/reefextent.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/reefextent/0-0-1/reefextent.parquet.provenance.json \
 		--variable-name=class
 # 'class' isn't the best variable-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
 
@@ -733,7 +734,7 @@ product-aca-reef-eez-provenance-local-db:
 		--overwrite
 
 
-# Product buildings by EEZ
+# Product VIDA Buildings by EEZ
 # Count how many buildings per EEZ.
 # South Sudan b1b00b2e-2739-5215-a18c-eb72c5798034
 # South Sudan geometry hits 9 building parquet bboxes.
@@ -742,29 +743,29 @@ product-aca-reef-eez-provenance-local-db:
 # Australia bdcf6908-2ad1-5451-80ef-d0a9994d8a78
 # Malaysia 698e177a-687f-5e72-8bd5-280b88d9ad19
 # Variable with id 'count-buildings' must exist in the app before running this.
-product-buildings-eez-process-geometry-local:
+product-vida-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--run-id=test-buildings-eez-run-id \
+		--run-id=test-vida-buildings-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
-		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--dataset-provenance-url=./cache/datasets/vida-buildings/0-0-1/vida-buildings.parquet.provenance.json \
+		--target-location=./cache/products/vida-buildings-eez/0-0-1/runs/test-vida-buildings-eez-run-id \
 		--datetime=2025 \
 		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
 		--variables-to-extract='{"count-buildings": {"variable-name": "count-buildings", "variable-value": null}}' \
 		--overwrite
-product-buildings-eez-consolidate-local:
+product-vida-buildings-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--location=./cache/products/vida-buildings-eez/0-0-1/runs/test-vida-buildings-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/vida-buildings/0-0-1/vida-buildings.parquet.provenance.json \
 		--variable-name=count-buildings
-product-buildings-eez-provenance-local-db:
+product-vida-buildings-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/count-buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
-		--run-id=test-buildings-eez-run-id \
+		--product-url=./cache/products/vida-buildings-eez/0-0-1/runs/test-vida-buildings-eez-run-id/count-buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
+		--run-id=test-vida-buildings-eez-run-id \
 		--dataset-run-id=c77dd12e-875b-4d05-b9de-0958f1a4d7ec \
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
