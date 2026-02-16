@@ -10,7 +10,6 @@ from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
-from csdr.cli_datasets import dataset_app
 from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_helpers import helpers_app
@@ -29,7 +28,6 @@ logging.basicConfig(
 )
 
 # Add the subcommands
-app.add_typer(dataset_app, name="datasets", help="Commands for processing datasets.")
 app.add_typer(
     vector_cube_app,
     name="vector-cube",

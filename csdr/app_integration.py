@@ -1,5 +1,5 @@
 import os
-from typing import Literal
+from typing import Literal, TypedDict
 
 import requests
 from requests import Response
@@ -31,7 +31,8 @@ def _post(url: str, json: dict) -> Response:
 
 
 def post_provenance(
-    provenance: dict[str, str | int | dict[str, str | int]], type: Literal["dataset", "geometry", "product"] 
+    provenance: dict[str, str | int | dict[str, str | int]],
+    type: Literal["dataset", "geometry", "product"],
 ) -> Response:
     # Check for API key
     _check_api_key()
@@ -44,7 +45,9 @@ def post_provenance(
         path = "api/v0/geometries-run"
         # We are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
         # Change id to geometryId
-        provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
+        provenance["geometriesId"] = provenance.pop(
+            "id"
+        )  # id is actually the geometry id.
         # Change runId to id if it exists
         geometriesRunId = provenance.pop("geometriesRunId", None)
         if geometriesRunId:
@@ -103,3 +106,18 @@ def post_product_output_bulk(bulk_product_output: dict) -> Response:
     url = f"{HOSTNAME}/api/v0/product-output/bulk"
 
     return _post(url, bulk_product_output)
+
+
+class WorkflowStatus(TypedDict):
+    workflowId: str
+    status: Literal["Succeeded", "Failed", "Error"]
+
+
+def post_workflow_status(workflow_status: WorkflowStatus) -> Response:
+    # Check for API key
+    _check_api_key()
+
+    # TODO: Add this endpoint to the API. It needs workflowId and status
+    url = f"{HOSTNAME}/api/v0/workflow-status"
+
+    return _post(url, workflow_status)
