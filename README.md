@@ -22,7 +22,7 @@ This toolkit is part of a larger system. Additional repositories for the applica
 
 Each of datasets, geometries, and products have runs. A single run is a workflow that calls commands from this toolkit. Each of these can have many runs. Each run has its own provenance and is written to the target store, and the app's PostgreSQL database.
 
-### Formats used:
+### Data formats used:
 - [SpatioTemporal Asset Catalogs (STAC)](https://stacspec.org/)
 - [Cloud Optimized GeoTIFFs (COG)](https://cogeo.org/)
 - [STAC-Geoparquet](https://stac-geoparquet.org/)
@@ -51,7 +51,7 @@ The first step is to get the app running. The app repo is not yet available publ
 
 #### Setting up the app
 1. Clone, install. and run the app
-2. Create an api key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
+2. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
 
 #### Environment Variables
 3. Add env vars. Use your AWS credentials which you can find at a URL like https://{your-aws}.awsapps.com/start/
@@ -69,7 +69,9 @@ export CSDR_API_KEY=...
 
 #### Clone and install this toolkit
 
-4. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
+4. Ensure GDAL is installed locally https://gdal.org/en/stable/download.html
+
+5. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
 
 ```bash
 git clone https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial.git
@@ -123,7 +125,7 @@ import pdb; pdb.set_trace()
 ```
 
 ### Testing
-```sh
+```bash
   source .venv/bin/activate
   # uv pip install --editable .
   uv pip install --editable '.[dev]' # for the dev dependencies too
@@ -151,7 +153,7 @@ docker run -it --rm csdr-cloud-spatial:latest
 
 #### Run the image (for python):
 
-```
+```bash
 docker run --rm -it \
   -e AWS_ACCESS_KEY_ID="" \
   -e AWS_SECRET_ACCESS_KEY="/" \
@@ -166,7 +168,7 @@ When changing test_script.py, you then need to rebuild the docker image before r
 
 #### Run the image (for make command):
 
-```
+```bash
 docker run --rm -it \
   -e AWS_ACCESS_KEY_ID="" \
   -e AWS_SECRET_ACCESS_KEY="/" \
@@ -208,7 +210,9 @@ Formats Python, YAML, and JSON.
 
 To use pre-commit to automatically run ruff, mypy and other checks on each commit, make sure the development dependencies are installed and then run:
 
-`pre-commit install`
+```bash
+pre-commit install
+```
 
 Note that you will need to run `pre-commit run --all-files` if any of the hooks in `.pre-commit-config.yaml` change.
 

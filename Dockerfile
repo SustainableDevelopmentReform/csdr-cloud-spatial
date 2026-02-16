@@ -1,4 +1,4 @@
-# Use GDAL base image.å
+# Use GDAL base image.
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3
 
 ARG DEV=false
