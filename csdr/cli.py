@@ -10,7 +10,6 @@ from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
-from csdr.cli_datasets import dataset_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_acsc2 import acsc2_app
 from csdr.cli_geometry_aus_states import aus_states_app
@@ -31,7 +30,6 @@ logging.basicConfig(
 )
 
 # Add the subcommands
-app.add_typer(dataset_app, name="datasets", help="Commands for processing datasets.")
 app.add_typer(
     geometry_app, name="geometries", help="Commands for processing geometries."
 )
