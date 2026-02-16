@@ -8,6 +8,7 @@ from typing import Any
 
 import geopandas as gpd
 import pystac
+import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
 import rustac
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
