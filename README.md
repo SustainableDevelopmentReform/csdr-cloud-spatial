@@ -89,6 +89,8 @@ For development, install with this command:
 pip install -e ".[dev]"
 ```
 
+To update the .venv and uv.lock files run `uv sync`.
+
 #### Install using Poetry
 
 If you prefer using Poetry for dependency management:
@@ -132,7 +134,7 @@ import pdb; pdb.set_trace()
   pytest # simple as that to test all.
   pytest -s tests/test_io.py # for a specific test file. Also print output (-s).
   pytest --pdb tests/test_io.py # This opens a debugger on error.
-  pytest --pdb -k test_split_path_and_file_name_from_url -s tests/test_io.py # This tests only specific functions.
+  pytest --pdb -k test_intersection_raster -s tests/test_product.py # This tests only a specific function in a specific file.
 ```
 
 ### Run containerised commands
