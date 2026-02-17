@@ -1,32 +1,97 @@
-# CSDR Cloud Spatial Data Repository
+# University of New South Wales (UNSW) Centre for Sustainable Development Reform (CSDR) Cloud Spatial Data Toolkit
 
-Please note that this documentation is outdated. DVC is an artifact of a previous version. We have pivoted away from DVC.
+## Information
+
+### Partners
+This is a project by the University of New South Wales [Centre for Sustainable Development Reform](https://www.unsw.edu.au/research/centre-for-sustainable-development-reform) and [Auspatious](https://auspatious.com/).
+
+### Description
+This toolkit provides cloud-native geospatial data processing and workflow automation. It supports spatial data ingestion, transformation, calculation, and output, with provenance tracking for reliable and repeatable results.
+
+### License
+This project is licensed under the terms of the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+
+### Repositories
+This toolkit is part of a larger system. Additional repositories for the application and workflow templates will be open-sourced and linked here when available. This toolkit is reliant on the app running either locally or hosted somewhere.
+
+### Schema:
+- **Datasets**: the data that will be analysed. Example: [Global Mangrove Watch's (GMW) global mangrove habitat extents](https://www.globalmangrovewatch.org/)
+- **Geometries**: the data that will be used to segment/summarise/analyse datasets. Example: Global Exclusive Economic Zones (EEZ) (one multipolygon per country or territory).
+- **Products**: A combination of any dataset and geometry. For example the GWM dataset and the EEZ geometry making the product "GMW per EEZ".
+- **Indicators**: The one or more variables that are calculated for a product. For example, for the example product, an indicator would be the sum of mangrove habitat extent per EEZ.
+
+Each of datasets, geometries, and products have runs. A single run is a workflow that calls commands from this toolkit. Each of these can have many runs. Each run has its own provenance and is written to the target store, and the app's PostgreSQL database.
+
+### Data formats used:
+- [SpatioTemporal Asset Catalogs (STAC)](https://stacspec.org/)
+- [Cloud Optimized GeoTIFFs (COG)](https://cogeo.org/)
+- [STAC-Geoparquet](https://stac-geoparquet.org/)
+- [Parquet](https://parquet.apache.org/docs/overview/)
+- [Arrow](https://arrow.apache.org/)
+- [PMTiles](https://docs.protomaps.com/pmtiles/)
+
+This pipeline toolkit also ingests zipped `.shp`s and `.tiff`s for interoperability.
+
+### Storage
+The system supports local and cloud (S3) storage (via [obstore](https://developmentseed.org/obstore/latest/)).
+
+
+### Processing
+
+Processing is supported via:
+
+- **Dask:** For scalable, parallel geospatial computation and data processing.
+- **Argo Workflows:** For orchestrating complex, reproducible pipelines in Kubernetes environments. Integration is provided via the `csdr-flux` repository (not yet open-source).
 
 ## Quickstart
 
-- Create Python environment with GDAL and install the dependencies
-- Read [DVC](https://dvc.org/doc/start) docs
-  - [Install DVC](https://dvc.org/doc/install)
-  - Alternatively, change it to a local directory (ideally outside the git repo) - for example `out_s3_path: /tmp/csdr/`
-- Run `csdr dvc status` - it should list all pipelines need to be run
-- Run `dvc dag` - have a look at the graph of compute
-- Then run `dvc repro -P` at root dir to run all compute
-- Finally, run `csdr dvc publish --no-commit` to generate the provenance JSON files
+### Installation
 
-Make some changes to some `params.yaml` - or create a new datasets/geometries/products pipeline! - and then repeat
+The first step is to get the app running. The app repo is not yet available publicly.
 
-## Installation
+#### Setting up the app
+1. Clone, install. and run the app
+2. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
 
-First, ensure that GDAL is installed in your environment. To install the dependencies for this project, you can use pip with the pyproject.toml file:
-
-### Using pip
-
+#### Environment Variables
+3. Add env vars. Use your AWS credentials which you can find at a URL like https://{your-aws}.awsapps.com/start/
 ```bash
-# Install directly from pyproject.toml
-pip install -e .
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_SESSION_TOKEN=...
+export AWS_DEFAULT_REGION=ap-southeast-2
+export CSDR_API_HOSTNAME=http://localhost:4000
+export CSDR_API_KEY=...
+# Or:
+export CSDR_API_HOSTNAME=https://csdr.dev.oceandevelopmentdata.org
+export CSDR_API_KEY=...
 ```
 
-### Using Poetry
+#### Clone and install this toolkit
+
+4. Ensure GDAL is installed locally https://gdal.org/en/stable/download.html
+
+5. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
+
+```bash
+git clone https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial.git
+cd csdr-cloud-spatial
+curl -Ls https://astral.sh/uv/install.sh | sh
+python3 -m venv .venv
+source .venv/bin/activate
+
+uv pip install --editable .
+brew install tippecanoe
+```
+
+For development, install with this command:
+```bash
+pip install -e ".[dev]"
+```
+
+To update the .venv and uv.lock files run `uv sync`.
+
+#### Install using Poetry
 
 If you prefer using Poetry for dependency management:
 
@@ -38,135 +103,43 @@ pip install poetry
 poetry install
 ```
 
-## Development
 
-For development purposes, you can install the package with development dependencies:
+#### Run premade commands
 
-```bash
-# Using pip
-pip install -e ".[dev]"
-
-# Using Poetry
-poetry install --with dev
-```
-
-To use pre-commit to automatically run ruff, mypy and other checks on each commit, make sure the development dependencies are installed and then run:
-
-`pre-commit install`
-
-Note that you will need to run `pre-commit run --all-files` if any of the hooks in `.pre-commit-config.yaml` change.
-
-## Pipeline
-
-We are using [DVC](https://dvc.org/doc/start) to manage the pipeline, this allows, us to track the dependencies between the datasets and geometries, and chain multiple pipelines together.
-
-See installation instructions on the [DVC website](https://dvc.org/doc/install).
-
-There are a few components to each pipeline
-
-- `params.yaml` - contains the parameters for the pipeline - these will be put into provenance files for visibility
-- `dvc.yaml` - contains the stages for the pipeline (and internal variables)
-- `dvc.lock` - contains the resolved dependencies for the pipeline - this is generated by `dvc repro`
-- `provenance.json` - contains the provenance for the pipeline - this is generated by `csdr dvc publish`
-
-### Data S3 bucket
-
-This is used for storing intermediary datasets, geometries, and products - it does not cache input data, and it not a DVC remote (see DVC limitations). It is currently specified in each `params.yaml` file.
-
-Alternatively, change it to a local directory (ideally outside the git repo) - for example `/tmp/csdr/`
-
-### Check status of the pipeline
-
-This will print a list of pipelines that have changed, and need to be recomputed. If you want to not track input datasets (that need to be ingested), you can use the `--allow-missing` flag, it will only track other dependencies - including code, intermediary datasets and geometries, etc.
+5. Run a basic geometry cache command (see [Makefile](Makefile) for more):
 
 ```bash
-csdr dvc status
+make geometry-eez-cache-local
 ```
-
-You can also filter by pipeline type:
-
-- `csdr dvc status datasets`
-- `csdr dvc status geometries`
-- `csdr dvc status products`
-
-### Reproducing the pipelines (locally)
-
-You can compute all datasets and geometries by running:
-
+or make your own command:
 ```bash
-dvc repro -P
+csdr <subcommand> ...
+python -m csdr.cli  eez cache \
+  --target-location ./cache/eez-v4/0-0-1/raw \
+  --overwrite
 ```
 
-**Note** if you do not have input/ingested datasets, these will all be downloaded locally - you can use the `--allow-missing` [flag](https://dvc.org/doc/command-reference/repro#--allow-missing) skip stages with no other changes than missing data
+### Debugging
 
-- This is useful if you are using existing intermediary datasets/geometries and only want to compute the products. Otherwise you will need to ingest and recompute the intermediary datasets/geometries, if the input data doesn't exist.
+Debug any command by adding this to a line in Python before running:
+```python
+import pdb; pdb.set_trace()
+```
 
-### Datasets
-
-You can compute all datasets by running:
-
+### Testing
 ```bash
-dvc repro -R datasets/
+  source .venv/bin/activate
+  # uv pip install --editable .
+  uv pip install --editable '.[dev]' # for the dev dependencies too
+  pytest # simple as that to test all.
+  pytest -s tests/test_io.py # for a specific test file. Also print output (-s).
+  pytest --pdb tests/test_io.py # This opens a debugger on error.
+  pytest --pdb -k test_intersection_raster -s tests/test_product.py # This tests only a specific function in a specific file.
 ```
 
-Note, you can also reproduce a specific pipeline by running:
+### Run containerised commands
 
-```bash
-dvc repro <pipeline-type>/<dataset-name>/dvc.yaml
-
-# For example
-dvc repro datasets/global-mangrove-watch-annual-extent/dvc.yaml
-```
-
-### Geometries
-
-You can compute all geometries by running:
-
-```bash
-dvc repro -R geometries/
-```
-
-### Products
-
-You can compute all products by running:
-
-```bash
-dvc repro -R products/
-```
-
-### Using outputs
-
-There is an example of how to use the outputs in the `examples` folder.
-
-- [Global Mangrove Watch + ABS ASGS States](examples/global-mangrove-watch/abs-asgs-ste.ipynb)
-
-### Provenance
-
-The `csdr dvc publish` command will generate a provenance file for each pipeline. This will include the pipeline file, the git commit hash, the git commit date, and the dependencies.
-
-```bash
-csdr dvc publish
-```
-
-**Note** this will also commit the changes to the git repository (it makes two commits, one before and one after the provenance generation). You can skip this by using the `--no-commit` flag.
-
-### DVC Limitations
-
-- You can't template params/variables in an entire repo - so there is no easy way to have a high-level variable and apply to all pipelines.
-- Datasets stored on DVC Remotes can't be used in the same way as direct S3 access (eg zarr or geoparquet files), so we are using datasets in S3 as ["external dependencies"](https://dvc.org/doc/user-guide/pipelines/external-dependencies-and-outputs).
-- DVC is known to have performance issues hashing larger datasets, when we come across this we will need to wrap up large datasets with some placeholder file for DVC to track - this isn't too difficult, but still work that needs to be done when we hit this issue
-
-## Build and Push Workflow
-
-This workflow builds a Docker container image and pushes it to Amazon ECR in two scenarios:
-
-- **Main Branch:** A merge to `main` automatically triggers the workflow. The image is tagged with a version (based on git tags) and additionally gets a `latest` tag.
-
-- **Manual Trigger:** Developers can manually trigger the workflow (using `workflow_dispatch`) to create and push a test build from their feature branch without the `latest` tag.
-
-**Note:** If you build from a feature branch, you will need to visit AWS Batch and create a new revision of the job definition `csdr-dev-env-csdr-cloud-spatial` that uses your custom container image tag.
-
-## Building and Running the Docker Image
+To test the code containerised (this is helpful for debugging if issues arise in Argo for example).
 
 To build the Docker image locally using [Buildx](https://docs.docker.com/buildx/working-with-buildx/), run:
 
@@ -177,54 +150,99 @@ docker buildx build . --tag csdr-cloud-spatial:latest
 Once built, you can run the container:
 
 ```bash
-docker run -it --rm 
-  -e GIT_USER_NAME="Your Name" 
-  -e GIT_USER_EMAIL="your_email@example.com" 
-  -e GIT_DEPLOY_KEY_B64="base64-encoded-private-key" 
-  csdr-cloud-spatial:latest
+docker run -it --rm csdr-cloud-spatial:latest
 ```
 
-### Providing GitHub Deploy Key
-
-This project requires access to a private GitHub repository (`git@github.com:SustainableDevelopmentReform/csdr-cloud-spatial.git`) during execution. This is managed through a **GitHub Deploy Key**, stored in **base64 format**.
-
-You can provide the key in two ways:
-
-1. **Via Environment Variable (Local Development):**
-
-   ```bash
-   export GIT_DEPLOY_KEY_B64=$(base64 -w 0 ~/.ssh/csdr-cloud-spatial-deploy-key)
-   docker run -e GIT_DEPLOY_KEY_B64="$GIT_DEPLOY_KEY_B64" csdr-cloud-spatial:latest
-   ```
-
-2. **Via AWS Secrets Manager (Production / AWS Batch):**
-
-   If `GIT_DEPLOY_KEY_B64` is not provided as an environment variable, the container will attempt to fetch the key from AWS Secrets Manager. The secret should be in this format:
-
-   ```json
-   {
-     "private_key_b64": "BASE64_STRING_FOR_PRIVATE_KEY",
-     "public_key_b64": "BASE64_STRING_FOR_PUBLIC_KEY"
-   }
-   ```
-
-   Make sure your container's IAM role has permission to read the secret:
-
-   ```json
-   {
-     "Effect": "Allow",
-     "Action": "secretsmanager:GetSecretValue",
-     "Resource": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:csdr/github-deploy-key-b64"
-   }
-   ```
-
-### Setting Git Identity (Optional)
-
-For provenance generation or Git interactions that require user identity, you can set the following environment variables:
+#### Run the image (for python):
 
 ```bash
--e GIT_USER_NAME="CI Bot" 
--e GIT_USER_EMAIL="ci@example.com"
+docker run --rm -it \
+  -e AWS_ACCESS_KEY_ID="" \
+  -e AWS_SECRET_ACCESS_KEY="/" \
+  -e AWS_SESSION_TOKEN="" \
+  -e AWS_DEFAULT_REGION=ap-southeast-2 \
+  -e CSDR_API_HOSTNAME="http://localhost:4000" \
+  -e CSDR_API_KEY="" \
+  csdr-cloud-spatial:latest python test_script.py`
 ```
 
-If not set, the container will proceed without Git user identity.
+When changing test_script.py, you then need to rebuild the docker image before running again.
+
+#### Run the image (for make command):
+
+```bash
+docker run --rm -it \
+  -e AWS_ACCESS_KEY_ID="" \
+  -e AWS_SECRET_ACCESS_KEY="/" \
+  -e AWS_SESSION_TOKEN="" \
+  -e AWS_DEFAULT_REGION=ap-southeast-2 \
+  -e CSDR_API_HOSTNAME="http://localhost:4000" \
+  -e CSDR_API_KEY="" \
+  csdr-cloud-spatial:latest sh -c "make product-gmw-v4-eez-process-geometry-s3"
+```
+#### Skip steps by copying earlier outputs to container
+
+Run commands locally, then copy to Docker container using `docker cp <container_id>:/code/cache ./cache`, then when running the docker image, this cache is copied to the container so that they are ready to test dependent steps in a workflow.
+
+
+
+## CI/CD
+
+Github Actions Lint, Test, Build, and Push Docker Image to to Amazon ECR. This happens in two scenarios:
+
+- **Main Branch:** A merge to `main` automatically triggers the workflow. The image is tagged with a version (based on git tags) and additionally gets a `latest` tag.
+
+- **Manual Trigger:** Developers can manually trigger the workflow (using `workflow_dispatch`) to create and push a test build from their feature branch without the `latest` tag.
+
+
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests for bug fixes, new features, or documentation improvements.
+
+To contribute:
+- Fork the repository and create a feature branch.
+- Follow the code style and pre-commit hooks (`pre-commit install`).
+- Add or update tests as appropriate.
+- Open a pull request with a clear description of your changes.
+
+
+#### Pre commit hooks
+
+Formats Python, YAML, and JSON.
+
+To use pre-commit to automatically run ruff, mypy and other checks on each commit, make sure the development dependencies are installed and then run:
+
+```bash
+pre-commit install
+```
+
+Note that you will need to run `pre-commit run --all-files` if any of the hooks in `.pre-commit-config.yaml` change.
+
+
+## Details of a single workflow
+
+How to run a whole EEZ Geometries workflow. This was documented to develop the Argo Workflow template for this geometry.
+
+1. Manual step. Create geometry (writes to db.geometry table). Do this here: http://localhost:3000/console/geometries or in the deployed app. Leave ID blank to be autogenerated. Name is the only needed field.
+2. CLI Command. Run cache command (writes zipped shapefile to S3) `make geometry-eez-cache-s3`.
+3. CLI Command. Convert command (writes zipped shapefile's data as parquet and PMTiles to S3). Replace run ID with the id . `make geometry-eez-convert-s3`.
+4. CLI Command. Provenance (writes provenance and geometries to S3 and to db.geometries_run and geometries_outputs tables). `make geometry-eez-provenance-s3-db`.
+5. Manual step: in the app, see the new geometry run. Click on it and then click the button to make this run the main run.
+
+
+### Outputs:
+
+Running the EEZ workflow creates or overwrites these files, and inserts records to these DB tables (no update in DB):
+
+#### Files:
+
+- `Bucket/geometries/eez-v4/0-0-1/raw/{file_name}.zip` (note no run_id)
+- `Bucket/geometries/eez-v4/0-0-1/runs/{run_id}/{file_name}.parquet`
+- `Bucket/geometries/eez-v4/0-0-1/runs/{run_id}/{file_name}.pmtiles`
+- `Bucket/geometries/eez-v4/0-0-1/runs/{run_id}/{file_name}.parquet.provenance.json`
+
+#### DB tables:
+
+- `geometries`. This is what you created in the app.
+- `geometries_run`. This is what the provenance command created.
+- `geometry_output`. This is a record for each geometry in a run. For example one EEZ geometry output is Australia.

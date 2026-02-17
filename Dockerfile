@@ -1,12 +1,7 @@
+# Use GDAL base image.
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3
 
-# Build args include DOCKER_IMAGE and COMMIT
-ARG DOCKER_IMAGE=unknown
 ARG DEV=false
-ARG COMMIT=unknown
-ENV COMMIT=${COMMIT}
-ENV IMAGE_TAG="${DOCKER_IMAGE}"
-ENV IMAGE_REPO="https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/${COMMIT}/"
 
 # Don't use old pygeos
 ENV USE_PYGEOS=0
@@ -18,7 +13,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
     build-essential \
-    jq \
     libsqlite3-dev \
     && apt-get autoclean \
     && apt-get autoremove \
@@ -46,10 +40,11 @@ ENV PATH="/root/.local/bin/:$PATH"
 # Make bash the default shell
 RUN ln -sf /bin/bash /bin/sh
 
+# Create a folder and copy this project's code there.
 WORKDIR /code
 COPY . .
 
-# Install dependencies in a separate layer
+# Install dependencies (with UV) in a separate layer
 RUN --mount=type=cache,target=/root/.cache/uv \
     if [ "$DEV" = "true" ] ; then \
         uv sync --no-progress; \
@@ -61,5 +56,3 @@ ENV PATH="/code/.venv/bin:$PATH"
 
 # Smoketest
 RUN csdr --help
-
-RUN echo "Image: ${IMAGE_TAG}" && echo "Repo: ${IMAGE_REPO}"

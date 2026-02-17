@@ -1,4 +1,0 @@
-# These values will be included in the provenance file
-
-out_s3_path: s3://csdr-dev-env-data-ap-southeast-2/nesp36_seagrass_baseline.zarr
-url: https://drive.google.com/uc?export=download&id=15F4qz9fHgcBN4b7UdjPTigfIfeYDggx-

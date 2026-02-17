@@ -10,8 +10,6 @@ from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
-from csdr.cli_datasets import dataset_app
-from csdr.cli_dvc import dvc_app
 from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_acsc2 import acsc2_app
 from csdr.cli_geometry_aus_states import aus_states_app
@@ -20,7 +18,6 @@ from csdr.cli_geometry_eez import eez_app
 from csdr.cli_helpers import helpers_app
 from csdr.cli_products import products_app
 from csdr.cli_provenance import provenance_app
-from csdr.cli_vector_cube import vector_cube_app
 
 app = typer.Typer()
 
@@ -33,16 +30,9 @@ logging.basicConfig(
 )
 
 # Add the subcommands
-app.add_typer(dataset_app, name="datasets", help="Commands for processing datasets.")
 app.add_typer(
     geometry_app, name="geometries", help="Commands for processing geometries."
 )
-app.add_typer(
-    vector_cube_app,
-    name="vector-cube",
-    help="Commands for vector-cube operations like zonal statistics.",
-)
-app.add_typer(dvc_app, name="dvc", help="Commands for DVC operations.")
 
 ## Datasets
 # GMW
@@ -52,13 +42,9 @@ app.add_typer(
     seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
 )
 # ACA
-app.add_typer(
-    aca_app, name="aca", help="Cache and process ACA dataset."
-)
+app.add_typer(aca_app, name="aca", help="Cache and process ACA dataset.")
 # ACE
-app.add_typer(
-    ace_app, name="ace", help="Cache and process ACE dataset."
-)
+app.add_typer(ace_app, name="ace", help="Cache and process ACE dataset.")
 # MS Buildings
 app.add_typer(
     buildings_app, name="buildings", help="Cache and process buildings dataset."
@@ -66,13 +52,23 @@ app.add_typer(
 
 ## Geometries
 # ACSC2
-app.add_typer(acsc2_app, name="acsc2", help="Cache and process the Australian Coastal Sediment Compartments - Secondary Compartments dataset.")
+app.add_typer(
+    acsc2_app,
+    name="acsc2",
+    help="Cache and process the Australian Coastal Sediment Compartments - Secondary Compartments dataset.",
+)
 # CWA
-app.add_typer(cwa_app, name="cwa", help="Cache and process the GA Coastal Waters Areas dataset.")
+app.add_typer(
+    cwa_app, name="cwa", help="Cache and process the GA Coastal Waters Areas dataset."
+)
 # EEZ
 app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
 # ABS Australian States
-app.add_typer(aus_states_app, name="aus-states", help="Cache and process the ABS Australian States dataset.")
+app.add_typer(
+    aus_states_app,
+    name="aus-states",
+    help="Cache and process the ABS Australian States dataset.",
+)
 
 # Generic conversion tools
 app.add_typer(conversion_app, name="convert", help="Data conversion tools.")

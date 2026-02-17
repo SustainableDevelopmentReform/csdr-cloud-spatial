@@ -8,6 +8,7 @@ license = { file = "LICENSE" }
 authors = [
     { name = "Alex Leith", email = "alex@auspatious.com" },
     { name = "Nick Forbes-Smith", email = "nick@forbes-smith.com" },
+    { name = "Will Jones", email = "will@auspatious.com" },
 ]
 keywords = ["data"]
 
@@ -17,8 +18,6 @@ dependencies = [
     "click",
     "dask",
     "distributed",
-    "dvc",
-    "dvc-s3",
     "fiona",
     "folium",
     "geopandas",
