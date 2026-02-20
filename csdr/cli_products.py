@@ -33,14 +33,13 @@ products_app = typer.Typer()
 # 3. percent-{}-area: for percentage area-based indicators
 # There will likely be a more diverse set of indicators in the future.
 KNOWN_INDICATORS = [
-    "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
-    "sum-seagrass-area",
+    "sum-mangrove-area",  # Used for GMW v3, GMW v4, and ACE
+    "sum-seagrass-area",  # Used for seagrass and ACE
     "sum-reef-area",
     "count-buildings",
     # ACE indicators:
     "sum-intertidal-area",
     "sum-saltmarsh-area",
-    "sum-seagrass-area",
     "percent-mangrove-area",
     "percent-intertidal-area",
     "percent-saltmarsh-area",
@@ -212,7 +211,8 @@ def version_parser(s: str) -> str:
 def get_product_path(
     product_id: str,
     indicator_name: str,
-    datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
+    datetime: str
+    | None = None,  # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
     path = f"{indicator_name}"
@@ -254,6 +254,7 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
+
 # Process a single geometry. Makes indicators using indicators_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
 def process_geometry(
@@ -269,7 +270,7 @@ def process_geometry(
     ),
     indicators_to_extract: str = typer.Option(
         ...,
-        help="JSON string specifying indicators and values to extract from the dataset. Example: '{\"indicator1\": {\"indicator-name\": \"foo\", \"indicator-value\": 1}, \"indicator2\": {\"indicator-name\": \"bar\", \"indicator-value\": 2}}'",
+        help='JSON string specifying indicators and values to extract from the dataset. Example: \'{"indicator1": {"indicator-name": "foo", "indicator-value": 1}, "indicator2": {"indicator-name": "bar", "indicator-value": 2}}\'',
     ),
     # TODO: clarify difference between datetime_string_match and datetime
     datetime_string_match: str | None = typer.Option(
@@ -318,17 +319,23 @@ def process_geometry(
     except Exception as e:
         raise CSDRException(f"Failed to parse indicators_to_extract as JSON: {e}")
     if not isinstance(indicators_dict, dict):
-        raise CSDRException("indicators_to_extract must be a JSON object mapping indicator keys to indicator info dicts.")
+        raise CSDRException(
+            "indicators_to_extract must be a JSON object mapping indicator keys to indicator info dicts."
+        )
     # Validate parameters (use keys for validation, e.g. 'sum-mangrove-area')
     indicator_names = list(indicators_dict.keys())
-    datetime_val = _validate_parameters(indicator_names, datetime, datetime_string_match)
+    datetime_val = _validate_parameters(
+        indicator_names, datetime, datetime_string_match
+    )
 
     # Prepare target location and check for existing output and overwrite flag
-    target_location = target_location.rstrip("/") # Remove trailing slash if present
+    target_location = target_location.rstrip("/")  # Remove trailing slash if present
     # Write output for each indicator (or all in one file)
     target_store = get_store_with_prefix_from_url(target_location)
     if len(indicator_names) == 1:
-        indicator_for_path = next(iter(indicators_dict.values()))['indicator-name'] # Use the only item's indicator-name
+        indicator_for_path = next(iter(indicators_dict.values()))[
+            "indicator-name"
+        ]  # Use the only item's indicator-name
     else:
         indicator_for_path = "many-indicators"
     target_path = get_product_path(

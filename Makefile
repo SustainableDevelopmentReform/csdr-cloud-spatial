@@ -190,7 +190,9 @@ dataset-seagrass-provenance-s3:
 dataset-ace-index-local:
 	csdr ace index \
 		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
+		--stac-collection=ga_s2_coastalecosystems_cyear_3_v1 \
 		--target-location=./cache/datasets/ace/0-0-1 \
+		--target-filename=ace \
 		--overwrite
 dataset-ace-provenance-local:
 	csdr provenance dataset \
@@ -198,6 +200,24 @@ dataset-ace-provenance-local:
 		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
 		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
 		--source-metadata-url="https://knowledge.dea.ga.gov.au/data/product/dea-coastal-ecosystems" \
+		--dataset-type=stac-geoparquet \
+		--post-to-database \
+		--overwrite
+
+# Dataset DEP Pacific Mangrove
+dataset-dep-mangrove-index-local:
+	csdr ace index \
+		--source-stac-url="https://stac.digitalearthpacific.org" \
+		--stac-collection=dep_s2_mangroves \
+		--target-location=./cache/datasets/dep-mangrove/0-0-1 \
+		--target-filename=dep-mangrove \
+		--overwrite
+dataset-dep-mangrove-provenance-local:
+	csdr provenance dataset \
+		--id=6e88d2d4-2cc8-46ab-9741-e7cfc20a6330 \
+		--dataset-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet \
+		--source-url="https://data.digitalearthpacific.org/#dep_s2_mangroves/" \
+		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_mangroves/" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
 		--overwrite
@@ -263,7 +283,7 @@ geometry-eez-cache-s3:
 	csdr eez cache \
 		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
 		--overwrite
-		
+
 ### EEZ convert
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
@@ -639,7 +659,7 @@ product-seagrass-eez-consolidate-local:
 			--location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-			--indicator-name=seagrass			
+			--indicator-name=seagrass
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
