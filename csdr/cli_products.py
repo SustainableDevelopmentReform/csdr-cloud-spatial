@@ -33,14 +33,13 @@ products_app = typer.Typer()
 # 3. percent-{}-area: for percentage area-based indicators
 # There will likely be a more diverse set of indicators in the future.
 KNOWN_INDICATORS = [
-    "sum-mangrove-area", # Used for GMW v3, GMW v4, and ACE
-    "sum-seagrass-area",
+    "sum-mangrove-area",  # Used for GMW v3, GMW v4, and ACE
+    "sum-seagrass-area",  # Used for seagrass and ACE
     "sum-reef-area",
     "count-buildings",
     # ACE indicators:
     "sum-intertidal-area",
     "sum-saltmarsh-area",
-    "sum-seagrass-area",
     "percent-mangrove-area",
     "percent-intertidal-area",
     "percent-saltmarsh-area",
@@ -128,60 +127,6 @@ def _create_product_output(
     }
 
 
-# # Outdated code.
-# # _process_geometry is just for local development debugging dask. It is not used in the workflow. It is a bit redundant, but helpful.
-# def _process_geometry(
-#     geometry_id: str,
-#     geometry: Geometry,
-#     run_id: str,
-#     indicators_to_extract: list[str],
-#     dataset_provenance_url: str,
-#     datetime_string_match: str | None,
-#     indicator_name: str,
-#     indicator_value: float | None,
-#     load_kwargs: dict[str, Any],
-#     product_id: str,
-#     geometry_provenance_url: str,
-#     datetime: str,
-#     target_store: HTTPStore | LocalStore | S3Store,
-#     path: str,
-#     overwrite: bool,
-# ) -> bool:
-#     """Process a single geometry and return True if processed, False if skipped."""
-#     if exists(target_store, path) and not overwrite:
-#         logging.info(
-#             f"Product already exists at {target_store}/{path}, skipping processing for geometry {geometry_id}."
-#         )
-#         return False
-
-#     # All the IO stuff is done in the parent process_all_geometries_dask, so we don't do it per geometry. It is passed in as params.
-
-#     logging.info(f"Processing geometry id '{geometry_id}'")
-#     results = process_indicators_for_geometry(
-#         geometry,
-#         indicators_to_extract,
-#         dataset_provenance_url,
-#         datetime_string_match=datetime_string_match,
-#         indicator_name=indicator_name,
-#         indicator_value=indicator_value,
-#         load_kwargs=load_kwargs,
-#     )
-#     logging.info(f"Results for geometry {geometry_id}: {results}")
-
-#     product_output = _create_product_output(
-#         product_id,
-#         geometry_id,
-#         geometry_provenance_url,
-#         dataset_provenance_url,
-#         datetime,
-#         results,
-#         run_id,
-#     )
-#     write_json(target_store, path, product_output)
-#     # logging.info(f"Wrote results to {target_url}")
-#     return True
-
-
 def parse_csv_list(value: str) -> list[str]:
     return value.split(",") if value else []
 
@@ -212,7 +157,8 @@ def version_parser(s: str) -> str:
 def get_product_path(
     product_id: str,
     indicator_name: str,
-    datetime: str | None = None, # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
+    datetime: str
+    | None = None,  # This is not the current datetime but rather the parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01'). Parameter could be more explicitly named.
     geometry_id: str | None = None,
 ) -> str:
     path = f"{indicator_name}"
@@ -254,6 +200,7 @@ def list_geometries(
     else:
         sys.stdout.write(json.dumps(ids_list, indent=4))
 
+
 # Process a single geometry. Makes indicators using indicators_to_extract. Writes the results to a json file.
 @products_app.command("process-geometry")
 def process_geometry(
@@ -269,7 +216,7 @@ def process_geometry(
     ),
     indicators_to_extract: str = typer.Option(
         ...,
-        help="JSON string specifying indicators and values to extract from the dataset. Example: '{\"indicator1\": {\"indicator-name\": \"foo\", \"indicator-value\": 1}, \"indicator2\": {\"indicator-name\": \"bar\", \"indicator-value\": 2}}'",
+        help='JSON string specifying indicators and values to extract from the dataset. Example: \'{"indicator1": {"indicator-name": "foo", "indicator-value": 1}, "indicator2": {"indicator-name": "bar", "indicator-value": 2}}\'',
     ),
     # TODO: clarify difference between datetime_string_match and datetime
     datetime_string_match: str | None = typer.Option(
@@ -318,17 +265,23 @@ def process_geometry(
     except Exception as e:
         raise CSDRException(f"Failed to parse indicators_to_extract as JSON: {e}")
     if not isinstance(indicators_dict, dict):
-        raise CSDRException("indicators_to_extract must be a JSON object mapping indicator keys to indicator info dicts.")
+        raise CSDRException(
+            "indicators_to_extract must be a JSON object mapping indicator keys to indicator info dicts."
+        )
     # Validate parameters (use keys for validation, e.g. 'sum-mangrove-area')
     indicator_names = list(indicators_dict.keys())
-    datetime_val = _validate_parameters(indicator_names, datetime, datetime_string_match)
+    datetime_val = _validate_parameters(
+        indicator_names, datetime, datetime_string_match
+    )
 
     # Prepare target location and check for existing output and overwrite flag
-    target_location = target_location.rstrip("/") # Remove trailing slash if present
+    target_location = target_location.rstrip("/")  # Remove trailing slash if present
     # Write output for each indicator (or all in one file)
     target_store = get_store_with_prefix_from_url(target_location)
     if len(indicator_names) == 1:
-        indicator_for_path = next(iter(indicators_dict.values()))['indicator-name'] # Use the only item's indicator-name
+        indicator_for_path = next(iter(indicators_dict.values()))[
+            "indicator-name"
+        ]  # Use the only item's indicator-name
     else:
         indicator_for_path = "many-indicators"
     target_path = get_product_path(
@@ -402,136 +355,6 @@ def process_geometry(
         # Release resources
         if client is not None:
             client.close()
-
-
-# Outdated code.
-# # process-all-geometries-dask is for debugging parallel processing of all geometries. It is not used in the product workflow template.
-# @products_app.command("process-all-geometries-dask")
-# def process_all_geometries_dask(
-#     product_id: str = typer.Option(
-#         "example-product", help="ID of the product being generated (UUID)"
-#     ),
-#     run_id: str = typer.Option(
-#         ..., help="ID of the product run"
-#     ),
-#     geometry_provenance_url: str = typer.Option(
-#         ..., help="URL that points to the geometry provenance file"
-#     ),
-#     dataset_provenance_url: str = typer.Option(
-#         ..., help="URL that points to the dataset provenance file"
-#     ),
-#     indicators_to_extract: str = typer.Option( # This type needs to be str to accept the param but then it is incorrectly str instead of list[str] in the function
-#         ...,
-#         help="Comma-separated list of indicators to extract from the dataset",
-#         parser=parse_csv_list
-#     ),
-#     # TODO: clarify difference between datetime_string_match and datetime
-#     datetime_string_match: str = typer.Option(
-#         None,
-#         help="If set, only process data from items whose datetime string contains this value (e.g. '2024' to get all items from 2024)",
-#     ),
-#     datetime: str | None = typer.Option(
-#         None,
-#         help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
-#     ),
-#     target_location: str = typer.Option(
-#         ...,
-#         help="Location to write the results to",
-#     ),
-#     indicator_name: str = typer.Option(
-#         "asset", help="Name of the indicator to use for calculations (if applicable)"
-#     ),
-#     indicator_value: str | None = typer.Option(
-#         None, help="Value of the indicator to use for calculations (if applicable)"
-#     ),
-#     load_kwargs: dict[str, str] = typer.Option(
-#         {},
-#         "--load-kwargs",
-#         help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
-#         parser=opt_dict_parser,
-#     ),
-#     use_dask: bool = typer.Option(
-#         False, help="Whether to use Dask distributed for processing"
-#     ),
-#     dask_client_opts: dict[str, str] = typer.Option(
-#         {},
-#         "--dask-opts",
-#         help="Options to pass to Dask client, in the form --dask-opts=\"n_workers=8,threads_per_worker=1,memory_limit=3GB\"",
-#         parser=opt_dict_parser,
-#     ),
-#     overwrite: bool = typer.Option(
-#         False, help="If true, overwrite existing product file"
-#     ),
-# ) -> None:
-#     # This logic is the same as in process_geometry, but loops through all geometries.
-#     logging.info(
-#         f"Processing all geometries from {geometry_provenance_url} for product {product_id}"
-#     )
-#     logging.info(f"Run ID: {run_id}")
-
-#     try:
-#         indicator_value = float(indicator_value) if indicator_value is not None else None # If indicator_value can be converted to float, do so.
-#     except ValueError:
-#         # Else it is a string, leave it as is.
-#         logging.info(f"indicator_value is not parseable as a float so keeping it as a string: '{indicator_value}'")
-#     datetime = _validate_parameters(
-#         indicators_to_extract, datetime, datetime_string_match
-#     )
-
-#     # Get paths for writing result JSONs
-#     target_store = get_store_with_prefix_from_url(target_location)
-#     # this path includes the filename (because geometry_id is provided to get_product_path)
-#     target_path = get_product_path(
-#         product_id,
-#         indicator_name,
-#         datetime=datetime,
-#     )
-
-#     target_url = f"{target_store}/{target_path}"
-#     logging.info(f"target_url: {target_url}")
-
-#     # Load geometry data
-#     gdf, _ = _load_geometry_data(geometry_provenance_url) # GeoDataFrame
-#     logging.info(f"Found {len(gdf)} geometries")
-
-#     # Set up Dask client. This parallelizes the processing of all geometries (which would otherwise be done sequentially and slowly).
-#     client = _setup_dask_client(use_dask, dask_client_opts)
-
-#     try:
-#         for _, row in gdf.iterrows():
-#             geometry_id = row["csdr-id"]
-#             logging.info(f"geometry_id: '{geometry_id}'")
-#             geometry = get_geom_from_gdf(gdf, geometry_id)
-#             path = get_product_path(
-#                 product_id,
-#                 indicator_name,
-#                 datetime=datetime,
-#                 geometry_id=geometry_id,
-#             )
-
-#             # Dask does not natively parallelize async functions. We can wrap the process_geometry call in a sync function and use dask.delayed to parallelize it if needed.
-#             _process_geometry(
-#                 geometry_id=geometry_id,
-#                 geometry=geometry,
-#                 run_id=run_id,
-#                 indicators_to_extract=indicators_to_extract,
-#                 dataset_provenance_url=dataset_provenance_url,
-#                 datetime_string_match=datetime_string_match,
-#                 indicator_name=indicator_name,
-#                 indicator_value=indicator_value,
-#                 load_kwargs=load_kwargs,
-#                 product_id=product_id,
-#                 geometry_provenance_url=geometry_provenance_url,
-#                 datetime=datetime,
-#                 target_store=target_store,
-#                 path=path,
-#                 overwrite=overwrite,
-#             )
-#     finally:
-#         if client is not None:
-#             client.close()
-
-#     logging.info(f"Wrote results to {target_url}")
 
 
 @products_app.command("consolidate")

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import subprocess
 import uuid
@@ -9,13 +8,10 @@ from typing import Any
 import geopandas as gpd
 import pystac
 import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
-import rustac
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
-
-from csdr.io import get_store_with_prefix_from_url, split_path_and_file_name_from_url
 
 
 class CSDRException(Exception):
@@ -62,42 +58,17 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", str(e)
 
 
-def read_stacgeoparquet(dataset_url: str) -> pystac.ItemCollection:
-    # This could be refactored to use rustac.DuckdbClient.search so that less data is loaded however it gets errors sometimes such as "RustacError: External error: General error: Invalid byte order"
-    path, file_name = split_path_and_file_name_from_url(dataset_url)
-    store = get_store_with_prefix_from_url(path)
-
-    async def _rustac_read() -> dict[str, Any]:
-        stac_items = await rustac.read(file_name, store=store)
-        print(f"Read {len(stac_items['features'])} STAC items from {dataset_url}")
-        return stac_items
-
-    stac_items = asyncio.run(_rustac_read())
-
-    return pystac.ItemCollection.from_dict(stac_items)
-
-
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
-    geometry: Geometry,
-    datetime_string_match: str | None = None,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
-    # Temporal filter (if parameter is provided)
-    if datetime_string_match is not None:
-        all_items = items.clone()
-        items = []
-        for item in all_items:
-            if datetime_string_match in item.datetime.isoformat():
-                items.append(item)
-
     # Force the use of Dask. Redundant because it is already done in get_area_m2_from_dataset_geometry (parent function).
     if "chunks" not in load_kwargs:
         load_kwargs["chunks"] = {}
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
-    data = load(items, geopolygon=geometry, **load_kwargs)
+    data = load(items, **load_kwargs)
 
     return data
 

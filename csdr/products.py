@@ -4,41 +4,65 @@ import re
 import pandas as pd
 import sedona.db
 from odc.geo.geom import Geometry
+from pystac import ItemCollection
 from python_retry import retry
+from rustac import search_sync as rustac_search_sync
 
 from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
     CSDRException,
     load_xarray_stacgeoparquet,
-    read_stacgeoparquet,
     xarray_calculate_area_m2,
 )
 
 logger = logging.getLogger()
 
+
 # The _get_area_m2_from_stac_geoparquet function does the following:
 # 1. Loads a STAC-Geoparquet using rustac.
 # 2. If items found, loads the xarray dataset from the STAC items.
 # 4. Calculates the area where the specified indicators equals the given value within the geometry.
-def _get_area_m2_from_stac_geoparquet(dataset_url: str, geometry: Geometry, indicator: str, value: float, datetime_string_match: str | None = None, load_kwargs: dict = {}) -> float:
-    """ Calculate the area of the dataset within the given geometry. """
+def _get_area_m2_from_stac_geoparquet(
+    dataset_url: str,
+    geometry: Geometry,
+    indicator: str,
+    value: float,
+    datetime_string_match: str | None = None,
+    load_kwargs: dict = {},
+) -> float:
+    """Calculate the area of the dataset within the given geometry."""
     # Get the STAC items filtered by geometry and datetime
-    items = read_stacgeoparquet(dataset_url)
+    geom_bbox = geometry.boundingbox
+    geom_bbox_list = [geom_bbox.left, geom_bbox.bottom, geom_bbox.right, geom_bbox.top]
+    geom_geojson = geometry.geojson(simplify=0)["geometry"]
+    # TODO: Add to rustac_search_sync collections filter. use_duckdb?
+    items = rustac_search_sync(
+        dataset_url,
+        bbox=geom_bbox_list,
+        intersects=geom_geojson,
+        datetime=datetime_string_match,
+    )
 
     if not items or len(items) == 0:
-        raise ValueError("No STAC items found.")
+        logging.info(
+            "No STAC items found for the given geometry and datetime filter. Returning area of 0.0"
+        )
+        return 0.0
+    logging.info(
+        f"Found {len(items)} STAC items for the given geometry and datetime filter."
+    )
+
+    items = ItemCollection(items)
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
     logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
-    
+
     # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
     data = load_xarray_stacgeoparquet(
         items,
-        geometry=geometry,
-        datetime_string_match=datetime_string_match,
         **load_kwargs,
     )
 
@@ -59,13 +83,13 @@ def _get_area_m2_from_stac_geoparquet(dataset_url: str, geometry: Geometry, indi
 
 # TODO: Generalise this to work for any geoparquet dataset, not just ACA reef.
 def _get_area_m2_from_geoparquet_sedona(
-        sd: sedona.db.context.SedonaContext,
-        dataset_url: str,
-        geometry_wkt: str,
-        indicator: str | None = None,
-        value: float | None = None,
-        datetime_string_match: str | None = None
-    ) -> float:
+    sd: sedona.db.context.SedonaContext,
+    dataset_url: str,
+    geometry_wkt: str,
+    indicator: str | None = None,
+    value: float | None = None,
+    datetime_string_match: str | None = None,
+) -> float:
     # This should already handle the bbox intersection optimization internally
     # This does predicate pushdown and spatial filtering using Sedona rather than loading everything into memory
     # Local for development testing
@@ -74,10 +98,12 @@ def _get_area_m2_from_geoparquet_sedona(
     # TODO: Add filters for indicator, value, and datetime_string_match
 
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
-    region = "ap-southeast-2" # TODO: Get this from env/config.
+    region = "ap-southeast-2"  # TODO: Get this from env/config.
 
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
-    sd.read_parquet(dataset_url, options={"aws.skip_signature": True, "aws.region": region}).to_view("dataset", overwrite=True)
+    sd.read_parquet(
+        dataset_url, options={"aws.skip_signature": True, "aws.region": region}
+    ).to_view("dataset", overwrite=True)
 
     area_result_m2 = sd.sql(
         f"""
@@ -87,7 +113,7 @@ def _get_area_m2_from_geoparquet_sedona(
         """
     ).to_pandas()
 
-    area_m2 = area_result_m2['total_area_m2'][0]
+    area_m2 = area_result_m2["total_area_m2"][0]
     if pd.isna(area_m2):
         logging.info("No intersected dataset geometries found.")
         return 0.0
@@ -99,10 +125,10 @@ def _get_area_m2_from_geoparquet_sedona(
 
 # TODO: Generalise this to work for any geoparquet dataset, not just VIDA Buildings.
 def _get_count_points_in_polygon_geoparquet(
-        sd: sedona.db.context.SedonaContext,
-        dataset_url: str,
-        geometry_wkt: str,
-    ) -> int:
+    sd: sedona.db.context.SedonaContext,
+    dataset_url: str,
+    geometry_wkt: str,
+) -> int:
     # buildings.parquet is in EPSG:4326.
 
     # This is for Source.coop data - VIDA Buildings dataset.
@@ -132,15 +158,18 @@ def _get_count_points_in_polygon_geoparquet(
     if intersected_partition_urls.empty:
         logging.info("No intersected dataset geometries found in index.")
         return 0
-    logging.info(f"Found {len(intersected_partition_urls)} intersected 2nd level country admin area parquet files from index.")
+    logging.info(
+        f"Found {len(intersected_partition_urls)} intersected 2nd level country admin area parquet files from index."
+    )
 
     total_count = 0
+
     # Retry on failure. This prevents the whole pod from rerunning, when just 1 or 2 of hundreds of requests fail because of Source Coop proxy.
     @retry(max_retries=3, retry_logger=logger)
     def count_points_parquet(row: pd.Series) -> int:
-        country_code = row['country_code']
-        s2_code = row['s2_code']
-        partition_url = row['url']
+        country_code = row["country_code"]
+        s2_code = row["s2_code"]
+        partition_url = row["url"]
         try:
             sd.read_parquet(partition_url).to_view("data", overwrite=True)
             count_result = sd.sql(
@@ -150,23 +179,29 @@ def _get_count_points_in_polygon_geoparquet(
                 WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
                 """
             ).to_pandas()
-            geom_count = count_result['geom_count'][0]
+            geom_count = count_result["geom_count"][0]
             if not pd.isna(geom_count):
                 logging.info(f"{geom_count} buildings for parquet.")
                 return int(geom_count)
             return 0
         except Exception:
-            logging.exception(f"Error processing 2nd level country admin area parquet {country_code}/{s2_code}")
+            logging.exception(
+                f"Error processing 2nd level country admin area parquet {country_code}/{s2_code}"
+            )
             raise
 
     for idx, (_, row) in enumerate(intersected_partition_urls.iterrows(), 1):
         try:
-            logging.info(f"Processing parquet {idx} of {len(intersected_partition_urls)}. Reading parquet: '{row.country_code}', '{row.s2_code}', '{row.url}'")
+            logging.info(
+                f"Processing parquet {idx} of {len(intersected_partition_urls)}. Reading parquet: '{row.country_code}', '{row.s2_code}', '{row.url}'"
+            )
             total_count += count_points_parquet(row)
         except Exception:
-            logging.exception(f"Failed to process 2nd level country admin area parquet {row.country_code}/{row.s2_code} after retries. Raising so workflow will retry.")
+            logging.exception(
+                f"Failed to process 2nd level country admin area parquet {row.country_code}/{row.s2_code} after retries. Raising so workflow will retry."
+            )
             raise
-    
+
     return int(total_count)
 
 
@@ -183,12 +218,26 @@ def _get_area_m2_from_dataset_geometry(
     """Calculate the area (m²) of the dataset within the given geometry."""
 
     if dataset_type == "stac-geoparquet":
-        return _get_area_m2_from_stac_geoparquet(dataset_url, geometry, indicator, value, datetime_string_match=datetime_string_match, load_kwargs=load_kwargs)
+        return _get_area_m2_from_stac_geoparquet(
+            dataset_url,
+            geometry,
+            indicator,
+            value,
+            datetime_string_match=datetime_string_match,
+            load_kwargs=load_kwargs,
+        )
     elif dataset_type == "geoparquet":
         # This path config is specific to the the partitioned ACA reef geoparquet structure.
         path, _file_name = split_path_and_file_name_from_url(dataset_url)
-        partition_path = f"{path}/partition/" # Needs trailing slash for Sedona to read all files in the partition folder
-        return _get_area_m2_from_geoparquet_sedona(sd, partition_path, geometry.wkt, indicator, value, datetime_string_match=datetime_string_match)
+        partition_path = f"{path}/partition/"  # Needs trailing slash for Sedona to read all files in the partition folder
+        return _get_area_m2_from_geoparquet_sedona(
+            sd,
+            partition_path,
+            geometry.wkt,
+            indicator,
+            value,
+            datetime_string_match=datetime_string_match,
+        )
     else:
         raise CSDRException(
             f"Unsupported dataset type: {dataset_type}. Only 'stac-geoparquet' and 'geoparquet' are supported."
@@ -213,7 +262,9 @@ def process_indicators_for_geometry(
     dataset_type = provenance.get("dataType")
 
     # Order sum area indicators first, then area percentages. Area percentages are dependent on area calculations.
-    indicators = dict(sorted(indicators.items(), key=lambda item: ("percent-" in item[0], item[0]))) # TODO: Make this more robust when there are non-area percent indicators.
+    indicators = dict(
+        sorted(indicators.items(), key=lambda item: ("percent-" in item[0], item[0]))
+    )  # TODO: Make this more robust when there are non-area percent indicators.
 
     sum_area_var_pattern = re.compile(r"^sum-.*-area$")
     area_percent_var_pattern = re.compile(r"^percent-.*-area$")
@@ -228,7 +279,9 @@ def process_indicators_for_geometry(
                 indicator_value = float(indicator_value)
         except Exception:
             pass
-        logging.info(f"Processing indicator: {var_key} with indicator name: {indicator_name} and value: {indicator_value}")
+        logging.info(
+            f"Processing indicator: {var_key} with indicator name: {indicator_name} and value: {indicator_value}"
+        )
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
@@ -236,7 +289,7 @@ def process_indicators_for_geometry(
 
         # These total_* indicators are the sums over all single geometries in the multipolygon
         # TODO: When doing the indicator refactor, generalise these.
-        total_multipolygon_area_m2 = 0.0 # Need for percent area calculations
+        total_multipolygon_area_m2 = 0.0  # Need for percent area calculations
         total_indicator_area_m2 = 0.0
         total_count = 0
         logging.info(f"Amount of single geometries: {len(geoms)}")
@@ -247,7 +300,9 @@ def process_indicators_for_geometry(
             geom_area_m2 = geometry_6933.area
             total_multipolygon_area_m2 += geom_area_m2
             # Area indicators
-            if sum_area_var_pattern.match(var_key): # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
+            if sum_area_var_pattern.match(
+                var_key
+            ):  # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
                 area_m2 = _get_area_m2_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -260,26 +315,38 @@ def process_indicators_for_geometry(
                 )
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2
-                logging.info(f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value {indicator_value}")
-            elif count_var_pattern.match(var_key): # ["count-buildings"]
+                logging.info(
+                    f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value {indicator_value}"
+                )
+            elif count_var_pattern.match(var_key):  # ["count-buildings"]
                 logging.info("Starting count indicator analysis...")
                 # TODO: Try to parallelise this to improve performance on multipolygons with many parts, that each intersect many parquet files.
                 count = _get_count_points_in_polygon_geoparquet(
-                    sd,
-                    dataset_url,
-                    geom.wkt
+                    sd, dataset_url, geom.wkt
                 )
                 total_count += count
                 results[var_key] = total_count
-                logging.info(f"Total count of intersected buildings for this multipolygon geometry so far: {total_count}")
-            
+                logging.info(
+                    f"Total count of intersected buildings for this multipolygon geometry so far: {total_count}"
+                )
+
         # Handle area percent indicators outside of the single geometry loop, since they depend on total area calculations
         if area_percent_var_pattern.match(var_key):
-            logging.info("Calculating percent area now that all geoms have been processed...")
-            indicator_area_m2 = results.get(f"sum-{var_key.replace('percent-', '')}", 0.0)
-            area_percent = (indicator_area_m2 / total_multipolygon_area_m2) * 100.0 if total_multipolygon_area_m2 > 0 else 0.0
+            logging.info(
+                "Calculating percent area now that all geoms have been processed..."
+            )
+            indicator_area_m2 = results.get(
+                f"sum-{var_key.replace('percent-', '')}", 0.0
+            )
+            area_percent = (
+                (indicator_area_m2 / total_multipolygon_area_m2) * 100.0
+                if total_multipolygon_area_m2 > 0
+                else 0.0
+            )
             results[var_key] = area_percent
-            logging.info(f"Calculated {var_key}: {area_percent:.2f}% (Indicator area: {indicator_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)")
+            logging.info(
+                f"Calculated {var_key}: {area_percent:.2f}% (Indicator area: {indicator_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)"
+            )
 
     return results
 
