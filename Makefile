@@ -443,8 +443,8 @@ product-gmw-v4-eez-list-geometries-s3:
 # resolution=100 is 100m. 10 is max for GMW v4.
 # https://epsg.io/6933
 # Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
-# Jordan 1cd8d5a6-8ba2-537a-9706-a6413e025b03
-# Australia b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2
+# Jordan 1cd8d5a6-8ba2-537a-9706-a6413e025b03. No mangrove (but might intersect bbox?).
+# Australia b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2. Has mangrove.
 product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
@@ -566,6 +566,8 @@ product-seagrass-eez-list-geometries-local:
 # We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
 # Seagrass: STAC-Parquet is 4326, but STAC items are 3832.
 # EEZ is 4326.
+# Nauru 1d7022dd-e6de-50b5-bee5-687df14be0a2. Has seagrass.
+# Russia b004a623-4187-5492-b4f5-daaabdfb66e4. No seagrass.
 product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -575,7 +577,7 @@ product-seagrass-eez-process-geometry-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
@@ -687,7 +689,7 @@ product-buildings-eez-process-geometry-local:
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
 		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
-		--indicators-to-extract='{"count-buildings": {"indicator-name": "count-buildings", "indicator-value": null}}' \
+		--indicators-to-extract='{"count-buildings": {"indicator-name": "buildings", "indicator-value": null}}' \
 		--overwrite
 product-buildings-eez-consolidate-local:
 	csdr products consolidate \
@@ -695,11 +697,12 @@ product-buildings-eez-consolidate-local:
 		--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
-		--indicator-name=count-buildings
+		--indicator-name=buildings
+# 		--indicator-name=count-buildings
 product-buildings-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/count-buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
+		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
 		--run-id=test-buildings-eez-run-id \
 		--dataset-run-id=c77dd12e-875b-4d05-b9de-0958f1a4d7ec \
 		--geometries-run-id=eez-test-run-id \

@@ -20,6 +20,7 @@ ace_app = typer.Typer()
 # 2022: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1/items/19eb5a11-986f-4e09-acc7-c9669bb7147a
 
 
+# TODO: Generalise this to cli_dataset_stac.py.
 async def run_index_aus_coastal_ecosystems(
     source_stac_url: str,
     stac_collection: str,
