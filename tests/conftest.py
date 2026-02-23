@@ -10,12 +10,19 @@ from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import LocalStore, S3Store
 from odc.geo.geom import polygon
 from pystac import ItemCollection
-
-from csdr.utils import read_stacgeoparquet
+from rustac import search_sync as rustac_search_sync
 
 DATA_DIR = Path(os.path.dirname(__file__), "data")
-GEOPARQUET_FILE = Path("gmw/gmw.parquet")
-GEOPARQUET_PATH = DATA_DIR / GEOPARQUET_FILE
+GEOPARQUET_FILE = Path(
+    "gmw/gmw.parquet"
+)  # Error: rustac.RustacError: External error: General error: Invalid byte order. This is just the old file. Possibly with an older rustac version.
+# GEOPARQUET_FILE1 = Path("gmw/gmw2.parquet") # AttributeError: 'str' object has no attribute 'pop'. .venv/lib/python3.14/site-packages/pystac/link.py:443: AttributeError. This is using QGIS to export just one item from GEOPARQUET_FILE3
+# GEOPARQUET_FILE2 = Path("dep_s2_seagrass.parquet") # Works. Was written by rustac.search_to
+GEOPARQUET_FILE3 = Path("gmw/gmw_new.parquet")  # Works. Was written by rustac.write
+# GEOPARQUET_PATH = DATA_DIR / GEOPARQUET_FILE
+# GEOPARQUET_PATH1 = DATA_DIR / GEOPARQUET_FILE1
+# GEOPARQUET_PATH2 = DATA_DIR / GEOPARQUET_FILE2
+GEOPARQUET_PATH3 = DATA_DIR / GEOPARQUET_FILE3
 
 
 @pytest.fixture
@@ -26,10 +33,14 @@ def sample_polygon() -> polygon:
         )
         return geom
 
-# Can't use gmw.parquet here because it errors "rustac.RustacError: External error: General error: Invalid byte order"
+
 @pytest.fixture
 def sample_stacgeoparquet() -> ItemCollection:
-    return read_stacgeoparquet(str(GEOPARQUET_PATH))
+    # items = rustac_search_sync(str(GEOPARQUET_PATH))
+    # items = rustac_search_sync(str(GEOPARQUET_PATH1))
+    # items = rustac_search_sync(str(GEOPARQUET_PATH2))
+    items = rustac_search_sync(str(GEOPARQUET_PATH3), ids="GMW_N00E008_v4019_mng.tif")
+    return ItemCollection(items)
 
 
 @pytest.fixture
@@ -37,6 +48,7 @@ def local_testdata_obstore() -> LocalStore:
     return LocalStore(DATA_DIR)
 
 
+# TODO: Use the new STAC-Geoparquet file here:
 @pytest.fixture
 def geoparquet_relative() -> Path:
     return str(GEOPARQUET_FILE)

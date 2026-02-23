@@ -1,3 +1,5 @@
+import os
+
 import sedona.db
 from odc.geo.geom import polygon
 from pystac import ItemCollection
@@ -23,20 +25,22 @@ def test_sample_stacgeoparquet(sample_stacgeoparquet: ItemCollection) -> None:
 def test_intersection_raster(
     sample_polygon: polygon, sample_stacgeoparquet: ItemCollection
 ) -> None:
+    os.environ["AWS_NO_SIGN_REQUEST"] = (
+        "YES"  # Needed because STAC-Geoparquet item's asset href points to our bucket that needs unsigned requests.
+    )
     # sample_polygon is in EPSG:4326.
     # This STAC-Geoparquet file contains a single item in EPSG:4326
-    data = load_xarray_stacgeoparquet(
-        sample_stacgeoparquet, geometry=sample_polygon, resolution=10, crs="epsg:6933"
-    )
+    kwargs = {"resolution": 10, "crs": "epsg:6933"}
+    data = load_xarray_stacgeoparquet(sample_stacgeoparquet, **kwargs)
     assert data is not None
 
     # This reprojects to 6933 internally for area calculation.
-    area = xarray_calculate_area_m2(data, sample_polygon, "asset", 1)
+    area = xarray_calculate_area_m2(data, sample_polygon, "mangrove", 1)
     assert area == 19827100.0
 
 
-def test_get_area_from_geoparquet_sedona(sample_polygon) -> None:
-    sd = sedona.db.connect() 
+def test_get_area_from_geoparquet_sedona(sample_polygon: polygon) -> None:
+    sd = sedona.db.connect()
     dataset_parquet_url = "tests/data/gmw/gmw.parquet"
 
     # variable = ""
