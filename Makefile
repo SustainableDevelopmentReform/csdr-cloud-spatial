@@ -474,35 +474,6 @@ product-gmw-v4-eez-process-geometry-s3:
 		--geometry-id=7b628528-0f25-514a-884f-4d9750acccda \
 		--overwrite
 
-# Process all geometries with Dask. The workflow does not use this but it is helpful for developing with Dask locally
-product-gmw-v4-eez-process-all-geometries-dask-s3:
-	csdr products process-all-geometries-dask \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-product-gmw-v4-eez-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
-		--datetime=2020 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
-		--overwrite \
-		--use-dask \
-		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
-
-product-gmw-v4-eez-process-all-geometries-dask-local:
-	csdr products process-all-geometries-dask \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--run-id=test-product-gmw-v4-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
-		--datetime=2020 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
-		--overwrite \
-		--use-dask \
-		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
-
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
@@ -564,21 +535,6 @@ product-gmw-v3-eez-process-geometry-local:
 		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
 		--overwrite
 
-product-gmw-v3-eez-process-all-geometries-dask-local:
-	csdr products process-all-geometries-dask \
-		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--run-id=test-product-gmw-v3-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
-		--datetime-string-match=2020 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
-		--overwrite \
-		--use-dask \
-		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
-# 		--datetime-string-match=2020 \
-
 product-gmw-v3-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
@@ -638,21 +594,6 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
 		--overwrite
 
-# We need to call this for 2017-2024 to process all seagrass data
-product-seagrass-eez-process-all-geometries-dask-local:
-	csdr products process-all-geometries-dask \
-		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--run-id=test-product-seagrass-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
-		--datetime-string-match="2021" \
-		--load-kwargs="resolution=500,crs=epsg:3832" \
-		--overwrite \
-		--use-dask \
-		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
-
 product-seagrass-eez-consolidate-local:
 	csdr products consolidate \
 			--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
@@ -707,21 +648,6 @@ product-aca-eez-process-geometry-s3:
 		--datetime=2022 \
 		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
 		--overwrite
-
-# Just one year of data.
- # There is only one year of data. We need to pass datetime anyway so the folder structure is the same as other products.
-product-aca-eez-process-all-geometries-dask-local:
-	csdr products process-all-geometries-dask \
-		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--run-id=test-aca-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
-		--datetime=2022 \
-		--overwrite \
-		--use-dask \
-		--dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"
 
 product-aca-eez-consolidate-local:
 	csdr products consolidate \
