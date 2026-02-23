@@ -15,12 +15,14 @@ from csdr.io import read_geospatial_file
 from csdr.utils import CSDRException, make_uuid
 
 
-def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: pyproj_crs.CRS) -> dict | None:
+def convert_gdf_row_to_geometry_output(
+    gdf_row: Series, crs: pyproj_crs.CRS
+) -> dict | None:
     if not gdf_row.geometry:
         # This occurs for example in the ABS Australian States dataset where there are some null geometries
         logging.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
         return None  # Skip if geometry is None or empty
-    
+
     poly = Geometry(gdf_row.geometry, crs=crs)
     properties = gdf_row.drop(labels=["geometry"]).to_dict()
 
@@ -37,7 +39,7 @@ def convert_gdf_row_to_geometry_output(gdf_row: Series, crs: pyproj_crs.CRS) -> 
     # Reproject geometry to 4326 because that is all the API supports right now.
     poly = poly.to_crs("EPSG:4326")
     geometry_wkb = wkb.dumps(poly.geom, hex=False, srid=4326)
-    base64_wkb_string = base64.b64encode(geometry_wkb).decode('utf-8')
+    base64_wkb_string = base64.b64encode(geometry_wkb).decode("utf-8")
 
     geometry_output = {
         "id": properties.get("csdr-id"),
@@ -105,14 +107,16 @@ def post_bulk_geometry_outputs_to_database(
             # Only append if geometry_output is not None
             outputs.append(geometry_output)
         else:
-            logging.warning(f"Skipping geometry output {row.get('id')} with null geometry.")
+            logging.warning(
+                f"Skipping geometry output {row.get('id')} with null geometry."
+            )
 
     if batch_size is None or batch_size <= 0:
         batch_size = len(outputs)
 
     for i in range(0, len(outputs), batch_size):
         bulk_output = {
-            "geometriesRunId": run_id, # This is plural but will be made singular in future DB refactor
+            "geometriesRunId": run_id,  # This is plural but will be made singular in future DB refactor
             "outputs": outputs[i : i + batch_size],
         }
         logging.info(
@@ -130,9 +134,7 @@ def post_bulk_geometry_outputs_to_database(
             raise
 
         # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
-        logging.info(
-            f"Wrote {len(outputs)} bulk geometry outputs to database."
-        )
+        logging.info(f"Wrote {len(outputs)} bulk geometry outputs to database.")
 
 
 def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
@@ -143,8 +145,10 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
         if geometry_output is None:
             errors += 1
-            logging.warning(f"Skipping geometry output {row.get('id')} with null geometry.")
-            continue # Skip geometry if geometry_output is None (handle null geometries)
+            logging.warning(
+                f"Skipping geometry output {row.get('id')} with null geometry."
+            )
+            continue  # Skip geometry if geometry_output is None (handle null geometries)
         geometry_output["geometriesRunId"] = run_id
         response = post_geometry_output(geometry_output)
 
@@ -155,14 +159,18 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
                 f"Failed to post geometry output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
                 exc_info=True,
             )
-            logging.error(f"Failed to post geometry output {geometry_output.get('id')} to database.")
+            logging.error(
+                f"Failed to post geometry output {geometry_output.get('id')} to database."
+            )
             errors += 1
         else:
             successes += 1
             logging.info(
                 f"Wrote geometry output {geometry_output.get('id')} to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
-            logging.info(f"Wrote geometry output {geometry_output.get('id')} to database.")
+            logging.info(
+                f"Wrote geometry output {geometry_output.get('id')} to database."
+            )
     logging.info(
         f"Posted {successes} geometry outputs to database with {errors} errors."
     )

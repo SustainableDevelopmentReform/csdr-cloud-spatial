@@ -17,6 +17,7 @@ acsc2_app = typer.Typer()
 
 geometry_name = "Australian Coastal Sediment Compartments - Secondary Compartments"
 
+
 # TODO: Make this a reusable function in csdr.io or csdr.utils so it can be used in other geometry caching CLIs
 # E.g. utils.cache_zipped_shapefile(source_url, target_location, target_file_name, overwrite)
 async def run_cache_acsc2(
@@ -28,21 +29,27 @@ async def run_cache_acsc2(
     # Source url is http://
     # Target location can be s3:// or local file path
     target_location = target_location.rstrip("/")
-    logging.info(f"Caching '{geometry_name}' from '{source_url}' to '{target_location}'...")
-    target_path = target_location # This is the path, there is no file name
+    logging.info(
+        f"Caching '{geometry_name}' from '{source_url}' to '{target_location}'..."
+    )
+    target_path = target_location  # This is the path, there is no file name
     target_file_name = "acsc2.zip"
     target_store = get_store_with_prefix_from_url(target_path)
 
     if exists(target_store, target_file_name) and not overwrite:
-        logging.info("File already exists at target location and overwrite is off, skipping download.")
+        logging.info(
+            "File already exists at target location and overwrite is off, skipping download."
+        )
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
     logging.info("File doesn't exist or overwrite is on. Re-downloading.")
 
-    logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
+    logging.info(
+        f"Downloading {target_file_name} from {source_url} to {target_location}..."
+    )
 
     # Dowload zip
-    
+
     response = get(source_url)
     response.raise_for_status()  # Raise an error if the download failed
     zip_bytes = BytesIO(response.content)
@@ -70,4 +77,6 @@ def cache_acsc2(
     logging.info(f"Starting '{geometry_name}' caching process...")
 
     result_path = asyncio.run(run_cache_acsc2(source_url, target_location, overwrite))
-    logging.info(f"'{geometry_name}' caching process completed. Cached to '{result_path}'")
+    logging.info(
+        f"'{geometry_name}' caching process completed. Cached to '{result_path}'"
+    )

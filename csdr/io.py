@@ -17,18 +17,20 @@ from pyarrow import ArrowInvalid
 class CSDRException(Exception):
     pass
 
-# We support three types of stores: 
+
+# We support three types of stores:
 # 1. S3Store for s3:// URLs
 # 2. HTTPStore for http:// and https:// URLs
 # 3. LocalStore for local file paths starting with / or ./
 
 # Store always includes prefix for all store types.
 
+
 # exists just works for files, not directories.
 def exists(store: ObjectStore, file_name: str) -> bool:
     # store includes prefix, but not file_name.
     try:
-        store.head(file_name) # Try get metadata
+        store.head(file_name)  # Try get metadata
     except FileNotFoundError:
         return False
     return True
@@ -44,9 +46,7 @@ def get_file_info(store: ObjectStore, file_name: str) -> dict[str, Any]:
     }
 
 
-def write_json(
-    store: ObjectStore, file_name: str, data: dict[str, Any]
-) -> None:
+def write_json(store: ObjectStore, file_name: str, data: dict[str, Any]) -> None:
     if type(store) is S3Store:
         # This should work for all store types according to obstore docs, but in reality only S3Store seems to support it.
         store.put(
@@ -62,19 +62,25 @@ def write_json(
             json.dump(data, f, indent=2)
     elif type(store) is HTTPStore:
         # This should be supported https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.put
-        raise CSDRException("HTTPStore does not support writing files (even though it is in the obstore docs).")
+        raise CSDRException(
+            "HTTPStore does not support writing files (even though it is in the obstore docs)."
+        )
 
 
 def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> ObjectStore:
-    url = url.rstrip("/").lower() # Handle uppercase letters or trailing slash
+    url = url.rstrip("/").lower()  # Handle uppercase letters or trailing slash
     if url.startswith("s3://"):
-        return from_url(url, credential_provider=Boto3CredentialProvider(), **kwargs) # S3 doesn't support mkdir
+        return from_url(
+            url, credential_provider=Boto3CredentialProvider(), **kwargs
+        )  # S3 doesn't support mkdir
     elif url.startswith("http://") or url.startswith("https://"):
         return from_url(url, **kwargs)
     elif url.startswith("file://"):
-        return from_url(url, mkdir=mkdir, **kwargs) # Can't have a credential provider for local
+        return from_url(
+            url, mkdir=mkdir, **kwargs
+        )  # Can't have a credential provider for local
     else:
         # File URLs that don't start with "file://" need it prepended for from_url and to be made absolute
         abs_url = os.path.abspath(url)
@@ -95,7 +101,7 @@ def get_url_from_store(store: ObjectStore) -> str:
 def split_path_and_file_name_from_url(url: str) -> tuple[str, str]:
     # Get last "/" and return everything after it as the file name
     file_name = url.rsplit("/", 1)[-1]
-    path = url[:-(len(file_name))].rstrip("/")
+    path = url[: -(len(file_name))].rstrip("/")
     return path, file_name
 
 
@@ -129,13 +135,13 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
                 gdf = gpd.read_file(buffer, **kwargs)
                 return gdf
             except Exception:
-                logging.exception(
-                    f"Failed to read geospatial file from {url}."
-                )
+                logging.exception(f"Failed to read geospatial file from {url}.")
                 raise
 
 
-def find_matching_files(store: ObjectStore, pattern: str, prefix: str | None = None) -> list[str]:
+def find_matching_files(
+    store: ObjectStore, pattern: str, prefix: str | None = None
+) -> list[str]:
     """
     Finds files in the store with a given glob pattern (recursively).
     """
@@ -146,22 +152,22 @@ def find_matching_files(store: ObjectStore, pattern: str, prefix: str | None = N
         logging.info(f"Batch number {i + 1} of {len(batch)} files...")
         for item in batch:
             if regex.search(item["path"]):
-                list_of_matching_files.append(item["path"]) # Append the path string.
+                list_of_matching_files.append(item["path"])  # Append the path string.
 
     logging.info(f"Found {len(list_of_matching_files)} matching items.")
 
     return list_of_matching_files
 
 
-async def get_stac_item_dicts_from_store(
-    store: ObjectStore
-) -> list[dict[str, Any]]:
+async def get_stac_item_dicts_from_store(store: ObjectStore) -> list[dict[str, Any]]:
     list_of_stac_files = []
 
     logging.info("Listing STAC items in store recursively")
 
     # TODO: There is a function io.find_matching_files that could be used instead of this part of get_stac_item_dicts_from_store.
-    for i, batch in enumerate(store.list(chunk_size=1000)): # default chunk_size is 50 which is very low just to list files
+    for i, batch in enumerate(
+        store.list(chunk_size=1000)
+    ):  # default chunk_size is 50 which is very low just to list files
         logging.info(f"Batch number {i + 1} of {len(batch)} files...")
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
@@ -171,12 +177,16 @@ async def get_stac_item_dicts_from_store(
 
     # Use semaphore to limit concurrent requests to prevent S3 from timing out. Otherwise it would request all concurrently and sometimes time out.
     semaphore = asyncio.Semaphore(1000)
+
     async def _fetch_item(store: ObjectStore, stac_file: dict) -> dict:
         async with semaphore:
             obj = await store.get_async(stac_file["path"])
             data = BytesIO(obj.bytes())
             return json.load(data)
-    return await asyncio.gather(*(_fetch_item(store, stac_file) for stac_file in list_of_stac_files))
+
+    return await asyncio.gather(
+        *(_fetch_item(store, stac_file) for stac_file in list_of_stac_files)
+    )
 
 
 def write_gdf_to_parquet(

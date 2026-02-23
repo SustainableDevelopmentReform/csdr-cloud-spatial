@@ -49,7 +49,9 @@ def convert_vector(
     --output-path with --target-crs.
     """
     if not input_dir or not output_path or not target_crs:
-        raise CSDRException("--input-dir, --output-path, and --target-crs are required.")
+        raise CSDRException(
+            "--input-dir, --output-path, and --target-crs are required."
+        )
 
     try:
         # Find input vector file using glob relative to input_dir
@@ -59,7 +61,9 @@ def convert_vector(
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
-            raise CSDRException(f"No files matching '{input_glob}' found within {input_dir}")
+            raise CSDRException(
+                f"No files matching '{input_glob}' found within {input_dir}"
+            )
 
         vector_file_path = found_files[0]  # Use the first found file
         if len(found_files) > 1:
