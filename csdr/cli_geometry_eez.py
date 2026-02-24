@@ -26,7 +26,7 @@ async def run_cache_eez(
     source_path, source_name = split_path_and_file_name_from_url(source_url)
     source_store = get_store_with_prefix_from_url(source_path)
     size = get_file_info(source_store, source_name).get("size", None)
-    target_path = target_location # This is the path, there is no file name
+    target_path = target_location  # This is the path, there is no file name
     target_file_name = source_name
     target_store = get_store_with_prefix_from_url(target_path)
 
@@ -46,7 +46,9 @@ async def run_cache_eez(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
                 )
 
-    logging.info(f"Downloading {target_file_name} from {source_url} to {target_location}...")
+    logging.info(
+        f"Downloading {target_file_name} from {source_url} to {target_location}..."
+    )
     await target_store.put_async(target_file_name, source_store.get(target_file_name))
 
     return target_location

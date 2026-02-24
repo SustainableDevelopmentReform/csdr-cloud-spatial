@@ -25,7 +25,10 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
     if geometry_id is None:
         geometry_id = (
             # Get the file name, replace spaces with dashes, lowercase, and remove extension
-            split_path_and_file_name_from_url(dataset_url)[1].replace(" ", "-").lower().split(".")[0]
+            split_path_and_file_name_from_url(dataset_url)[1]
+            .replace(" ", "-")
+            .lower()
+            .split(".")[0]
         )
     return geometry_id
 
@@ -34,11 +37,11 @@ def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
 def convert_zipfile_to_parquet(
     source_zip_location: str = typer.Option(
         help="Local or remote path (local or s3://) to the zip file containing the geospatial data.",
-        default="./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip", # EEZ is just an example
+        default="./cache/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip",  # EEZ is just an example
     ),
     source_internal_path_name: str = typer.Option(
         help="The internal path within the zip file to the data to extract.",
-        default="EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp", # EEZ is just an example
+        default="EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp",  # EEZ is just an example
     ),
     # run_id is already built into target_location
     target_location: str = typer.Option(
@@ -63,7 +66,9 @@ def convert_zipfile_to_parquet(
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
-    source_path, source_zip_name = split_path_and_file_name_from_url(source_zip_location)
+    source_path, source_zip_name = split_path_and_file_name_from_url(
+        source_zip_location
+    )
     source_store = get_store_with_prefix_from_url(source_path)
 
     # Check if source zip exists
@@ -71,7 +76,9 @@ def convert_zipfile_to_parquet(
         raise CSDRException(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
-    logging.info(f"Source zip file found at {source_zip_location}, proceeding with extraction.")
+    logging.info(
+        f"Source zip file found at {source_zip_location}, proceeding with extraction."
+    )
 
     target_location = target_location.rstrip("/")
 
@@ -87,19 +94,23 @@ def convert_zipfile_to_parquet(
         logging.info(
             f"Target parquet file already exists at {target_url} and overwrite is off. Use --overwrite to replace. Exiting successfully."
         )
-        raise typer.Exit(code=0) # Exit successfully, nothing to do
-    logging.info("Target parquet file does not exist or overwrite is on, proceeding with extraction.")
+        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+    logging.info(
+        "Target parquet file does not exist or overwrite is on, proceeding with extraction."
+    )
 
     # Pull the whole zip into memory
     zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
-    zip_bytes.seek(0) # Ensure pointer is at start
+    zip_bytes.seek(0)  # Ensure pointer is at start
 
     with ZipMemoryFile(zip_bytes) as z:
         files_in_zip = z.listdir()
         logging.info(f"Files in zip: {files_in_zip}")
         logging.info(f"Requested internal path: {source_internal_path_name}")
         if source_internal_path_name not in files_in_zip:
-            raise CSDRException(f"Internal path {source_internal_path_name} not found in zip file.")
+            raise CSDRException(
+                f"Internal path {source_internal_path_name} not found in zip file."
+            )
         # Open the shapefile within the ZIP
         with z.open(source_internal_path_name) as src:
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
@@ -208,7 +219,7 @@ def convert_geospatial_file_to_parquet(
         logging.warning(
             f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
-        raise typer.Exit(code=0) # Exit successfully, nothing to do
+        raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
     # Read the geospatial file into a GeoDataFrame
     gdf = read_geospatial_file(source_location)

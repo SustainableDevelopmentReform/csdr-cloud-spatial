@@ -428,15 +428,18 @@ geometry-aus-states-provenance-local-db:
 # 4. Provenance - generates provenance information for the product.
 
 # Product GMW EEZ V4 List Geometries
-product-gmw-v4-eez-list-geometries-local:
-	csdr products list-geometries \
+product-gmw-v4-eez-list-geometries-years-local:
+	csdr products list-geometries-years \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/tmp/geometries_list.json
+		--out-file=./cache/tmp/geometries-years.json \
+		--years="2020"
+# 		--exclude-ids="1cd8d5a6-8ba2-537a-9706-a6413e025b03,d0b2c60c-e347-5d0d-83fa-24db9db9f558"
 
-product-gmw-v4-eez-list-geometries-s3:
-	csdr products list-geometries \
+product-gmw-v4-eez-list-geometries-years-s3:
+	csdr products list-geometries-years \
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries_list.json
+		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries-years.json \
+		--years="2020"
 
 # Product GMW EEZ V4 Process Geometries
 # indicator-value=1.0 for mangrove presence. It is boolean raster with 1 for presence and 0 for absence.
@@ -517,10 +520,11 @@ product-gmw-v4-eez-provenance-s3-db:
 ### Product GMW v3 by EEZ ###
 
 # Lists the same geometries as GMW v4 EEZ
-product-gmw-v3-eez-list-geometries-local:
-	csdr products list-geometries \
+product-gmw-v3-eez-list-geometries-years-local:
+	csdr products list-geometries-years \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/tmp/geometries_list.json
+		--out-file=./cache/tmp/geometries-years.json \
+		--years="1996,2007,2008,2009,2010,2015,2016,2017,2018,2019,2020"
 
 product-gmw-v3-eez-process-geometry-local:
 	csdr products process-geometry \
@@ -558,10 +562,11 @@ product-gmw-v3-eez-provenance-local-db:
 ### Product Seagrass EEZ v4 ###
 
 # Lists the same geometries as GMW v4 EEZ but for seagrass product
-product-seagrass-eez-list-geometries-local:
-	csdr products list-geometries \
+product-seagrass-eez-list-geometries-years-local:
+	csdr products list-geometries-years \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/tmp/geometries_list.json
+		--out-file=./cache/tmp/geometries-years.json \
+		--years="2017,2018,2019,2020,2021,2022,2023,2024"
 
 # We need to run this for each year (just like we do for GMW v3). Seagrass has 2017-2024.
 # Seagrass: STAC-Parquet is 4326, but STAC items are 3832.
@@ -616,10 +621,11 @@ product-seagrass-eez-provenance-local-db:
 
 
 # Product ACA Reef Extent by EEZ
-product-aca-eez-list-geometries-local:
-	csdr products list-geometries \
+product-aca-eez-list-geometries-years-local:
+	csdr products list-geometries-years \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=./cache/tmp/geometries_list.json
+		--out-file=./cache/tmp/geometries-years.json \
+		--years="2022"
 
 # I think there is only one year of ACA reef extent data, so no need for datetime string match. It is 2022 I believe.
 # This is different to other products because the geometry and dataset are both vector (parquet), rather than the dataset being raster.

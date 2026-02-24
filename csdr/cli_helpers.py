@@ -8,6 +8,7 @@ from csdr.utils import make_uuid
 
 helpers_app = typer.Typer()
 
+
 @helpers_app.command("create-run-id")
 def create_run_id() -> None:
     logging.info("Creating run ID...")

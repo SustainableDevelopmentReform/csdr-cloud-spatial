@@ -39,11 +39,15 @@ async def cache_single_source(
         logging.info(f"Caching GMW from {source_url} to {target_location}...")
 
         source_path, source_file_name = split_path_and_file_name_from_url(source_url)
-        source_store = get_store_with_prefix_from_url(source_path, client_options={"timeout": "1 hour"}) # Only takes a couple of minutes.
+        source_store = get_store_with_prefix_from_url(
+            source_path, client_options={"timeout": "1 hour"}
+        )  # Only takes a couple of minutes.
 
         # Must check this file exists before proceeding
         if not exists(source_store, source_file_name):
-            raise CSDRException(f"Source file does not exist at {source_url}. Cannot extract.")
+            raise CSDRException(
+                f"Source file does not exist at {source_url}. Cannot extract."
+            )
         logging.info(f"Source file found at {source_url}, proceeding with extraction.")
 
         source_meta = source_store.head(source_file_name)
@@ -139,7 +143,7 @@ def cache_gmw(
     ),
 ) -> None:
     logging.info("Starting async GMW caching process...")
-    source_locations_list = source_locations.split(",") # Get list of source_locations
+    source_locations_list = source_locations.split(",")  # Get list of source_locations
     asyncio.run(
         run_cache_gmw(
             source_locations_list,
@@ -165,11 +169,13 @@ async def process_single_file(
     """Process a single file from the zip archive."""
     async with semaphore:
         out_cog_url = f"{target_location}/{out_cog_name}"
-        out_stac_name = out_cog_name.replace('.tif', '.stac-item.json')
+        out_stac_name = out_cog_name.replace(".tif", ".stac-item.json")
         out_stac_url = f"{target_location}/{out_stac_name}"
 
         if exists(target_store, out_stac_name) and not overwrite:
-            logging.info(f"STAC doc already exists for {out_stac_url}, skipping because overwrite is disabled.")
+            logging.info(
+                f"STAC doc already exists for {out_stac_url}, skipping because overwrite is disabled."
+            )
             return
         else:
             if overwrite:
@@ -210,7 +216,7 @@ async def process_single_file(
                 end_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             stac_doc = create_stac_item(
-                out_cog_url, # Absolute URL to the COG file
+                out_cog_url,  # Absolute URL to the COG file
                 input_datetime=mid_datetime,
                 collection="gmw",
                 properties={
@@ -227,7 +233,9 @@ async def process_single_file(
             stac_data = json.dumps(stac_doc.to_dict()).encode()
             await target_store.put_async(out_stac_name, stac_data)
 
-            logging.info(f"Finished processing {out_cog_name}. STAC doc is at {out_stac_url}")
+            logging.info(
+                f"Finished processing {out_cog_name}. STAC doc is at {out_stac_url}"
+            )
 
 
 async def run_extract_gmw(
@@ -238,7 +246,7 @@ async def run_extract_gmw(
     max_concurrent: int,
 ) -> None:
     """Async function to run the GMW extraction with parallel processing."""
-    source_location = source_location.rstrip("/") # Remove trailing slash if present
+    source_location = source_location.rstrip("/")  # Remove trailing slash if present
     store = get_store_with_prefix_from_url(source_location)
     logging.info(f"Checking for source zip file at path {source_zip_name}...")
     source_exists = exists(store, source_zip_name)
@@ -251,7 +259,9 @@ async def run_extract_gmw(
     )
 
     # Ensure that target_location is absolute path if local, otherwise STAC item href will be relative which is broken.
-    if not target_location.startswith("s3://") and not target_location.startswith("http"):
+    if not target_location.startswith("s3://") and not target_location.startswith(
+        "http"
+    ):
         # Make target location absolute path if local. Works for "./cache" and "file://cache" relative paths.
         target_location = str(Path(target_location).absolute())
 
@@ -330,9 +340,7 @@ async def run_index_gmw(
 
     # Check for existing geoparquet file
     if exists(target_store, file_name) and not overwrite:
-        logging.info(
-            f"Parquet file already exists at {target_url}, skipping indexing."
-        )
+        logging.info(f"Parquet file already exists at {target_url}, skipping indexing.")
         return
     else:
         if overwrite:
@@ -344,11 +352,12 @@ async def run_index_gmw(
     # Searches recursively. It needs to for v3 (and v4)
     item_dicts = await get_stac_item_dicts_from_store(source_store)
 
-
     logging.info(f"Writing {len(item_dicts)} STAC items to parquet at {target_url}")
     with suppress_rust_output():
         # TODO: experiment with parquet_compression options for rustac write
-        await write(file_name, item_dicts, store=target_store) # rustac infers that it is writing a parquet format from filename
+        await write(
+            file_name, item_dicts, store=target_store
+        )  # rustac infers that it is writing a parquet format from filename
 
     logging.info(f"Parquet write completed, wrote to {target_url}")
 

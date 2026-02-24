@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import sys
 from typing import Any
 
@@ -16,6 +15,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     read_dict,
     read_geospatial_file,
+    split_path_and_file_name_from_url,
     write_gdf_to_parquet,
     write_json,
 )
@@ -170,10 +170,16 @@ def get_product_path(
     return path
 
 
-@products_app.command("list-geometries")
-def list_geometries(
+@products_app.command("list-geometries-years")
+def list_geometries_years(
     geometry_provenance_url: str = typer.Option(
         ..., help="URL that points to the geometry provenance file"
+    ),
+    years: str | None = typer.Option(
+        ..., help="Comma-separated list of years to cross with geometries"
+    ),
+    exclude_ids: str = typer.Option(
+        None, help="Comma-separated list of geometry IDs to exclude"
     ),
     out_file: str = typer.Option(
         None, help="Tempfile to write list of IDs to (otherwise print to console)"
@@ -189,16 +195,31 @@ def list_geometries(
     gdf = read_geospatial_file(geometry_file_url)
     logging.info(f"Found {len(gdf)} geometries")
 
+    # Filter geometries by IDs.
     ids_list = gdf["csdr-id"].tolist()
+    logging.info(f"Geometry contains {len(ids_list)} features.")
+    if exclude_ids:
+        exclude_ids_list = parse_csv_list(exclude_ids)
+        ids_list = [id for id in ids_list if id not in exclude_ids_list]
+        logging.info(
+            f"Excluded {len(exclude_ids_list)} geometry features. {len(ids_list)} features remaining."
+        )
 
-    # TODO: use write_json utility function?
+    # Cross geometries with years.
+    years_list = parse_csv_list(years)
+    geometries_years = []
+    for year in years_list:
+        for id in ids_list:
+            item = {"year": year, "id": id}
+            geometries_years.append(item)
+
     if out_file is not None:
-        os.makedirs(os.path.dirname(out_file), exist_ok=True)
-        with open(out_file, "w") as f:
-            json.dump(ids_list, f, indent=4)
-        logging.info(f"Wrote geometry ids to {out_file}")
+        target_path, target_file_name = split_path_and_file_name_from_url(out_file)
+        target_store = get_store_with_prefix_from_url(target_path)
+        write_json(target_store, target_file_name, geometries_years)
+        logging.info(f"Wrote geometry ids crossed with years to {out_file}")
     else:
-        sys.stdout.write(json.dumps(ids_list, indent=4))
+        sys.stdout.write(json.dumps(geometries_years, indent=4))
 
 
 # Process a single geometry. Makes indicators using indicators_to_extract. Writes the results to a json file.

@@ -31,7 +31,8 @@ def _post(url: str, json: dict) -> Response:
 
 
 def post_provenance(
-    provenance: dict[str, str | int | dict[str, str | int]], type: Literal["dataset", "geometry", "product"] 
+    provenance: dict[str, str | int | dict[str, str | int]],
+    type: Literal["dataset", "geometry", "product"],
 ) -> Response:
     # Check for API key
     _check_api_key()
@@ -44,7 +45,9 @@ def post_provenance(
         path = "api/v0/geometries-run"
         # We are writing a provenance for a geometry so the id is actually the geometry run id, and the geometry id needs to be stored separately.
         # Change id to geometryId
-        provenance["geometriesId"] = provenance.pop("id") # id is actually the geometry id.
+        provenance["geometriesId"] = provenance.pop(
+            "id"
+        )  # id is actually the geometry id.
         # Change runId to id if it exists
         geometriesRunId = provenance.pop("geometriesRunId", None)
         if geometriesRunId:

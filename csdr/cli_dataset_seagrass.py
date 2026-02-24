@@ -46,7 +46,7 @@ async def run_index_dep_seagrass(
     logging.info(f"Written {count_items} STAC items to parquet at {target_url}")
     if count_items == 0:
         logging.error("No STAC items found, nothing to index.")
-        exit(1) # Exit with error code
+        exit(1)  # Exit with error code
 
     logging.info(f"Finished writing parquet file to {target_url}")
 
