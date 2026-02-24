@@ -750,6 +750,35 @@ product-ace-acsc2-provenance-local-db:
 		--overwrite
 
 
+# Product DEP Mangrove per EEZ
+product-dep-mangrove-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--datetime=2024 \
+		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": 2.0}}' \
+		--overwrite
+product-dep-mangrove-eez-consolidate-local:
+	csdr products consolidate \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--indicator-name=mangroves
+product-dep-mangrove-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
+		--geometries-run-id=eez-test-run-id \
+		--post-to-database \
+		--overwrite
+
 
 
 ### OTHER ###
