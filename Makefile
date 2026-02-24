@@ -417,6 +417,14 @@ geometry-aus-states-provenance-local-db:
 		--post-geometry-outputs \
 		--overwrite
 
+geometry-pacific-eez-filter:
+	csdr helpers filter-geometries-by-name \
+		--source-url=https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
+		--target-url=s3://csdr-public-dev/geometries/eez-pacific/0-0-1/eez-pacific.parquet \
+		--name-fields="csdr-name,SOVEREIGN1,SOVEREIGN2" \
+		--geometry-names="American Samoa,Cook Islands,Fiji,French Polynesia,Guam,Kiribati,Marshall Islands,Micronesia,Nauru,New Caledonia,Niue,Northern Mariana Islands,Palau,Papua New Guinea,Pitcairn,Solomon Islands,Samoa,Tokelau,Tonga,Tuvalu,Vanuatu,Wallis and Futuna"
+# These are from here https://github.com/digitalearthpacific/dep-tools/blob/main/dep_tools/grids.py
+# Only difference is I had to rename 'Pitcairn Islands' to 'Pitcairn'.
 
 ### PRODUCTS ###
 

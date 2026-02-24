@@ -10,6 +10,7 @@ import typer
 from dask.distributed import Client
 from odc.geo.geom import Geometry
 
+from csdr.cli_helpers import parse_csv_list
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
@@ -125,10 +126,6 @@ def _create_product_output(
             "datasetProvenanceUrl": dataset_provenance_url,
         },
     }
-
-
-def parse_csv_list(value: str) -> list[str]:
-    return value.split(",") if value else []
 
 
 def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
