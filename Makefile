@@ -432,6 +432,7 @@ product-gmw-v4-eez-list-geometries-local:
 	csdr products list-geometries \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries_list.json
+# 		--exclude-ids="1cd8d5a6-8ba2-537a-9706-a6413e025b03,d0b2c60c-e347-5d0d-83fa-24db9db9f558"
 
 product-gmw-v4-eez-list-geometries-s3:
 	csdr products list-geometries \
