@@ -11,10 +11,6 @@ from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
 from csdr.cli_geometries import geometry_app
-from csdr.cli_geometry_acsc2 import acsc2_app
-from csdr.cli_geometry_aus_states import aus_states_app
-from csdr.cli_geometry_cwa import cwa_app
-from csdr.cli_geometry_eez import eez_app
 from csdr.cli_helpers import helpers_app
 from csdr.cli_products import products_app
 from csdr.cli_provenance import provenance_app
@@ -27,11 +23,6 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(module)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stderr,
-)
-
-# Add the subcommands
-app.add_typer(
-    geometry_app, name="geometries", help="Commands for processing geometries."
 )
 
 ## Datasets
@@ -50,24 +41,9 @@ app.add_typer(
     buildings_app, name="buildings", help="Cache and process buildings dataset."
 )
 
-## Geometries
-# ACSC2
+## Geometries - for all geometries e.g. CWA, EEZ, ACSC2, Aus States, etc.
 app.add_typer(
-    acsc2_app,
-    name="acsc2",
-    help="Cache and process the Australian Coastal Sediment Compartments - Secondary Compartments dataset.",
-)
-# CWA
-app.add_typer(
-    cwa_app, name="cwa", help="Cache and process the GA Coastal Waters Areas dataset."
-)
-# EEZ
-app.add_typer(eez_app, name="eez", help="Cache and process the EEZ dataset.")
-# ABS Australian States
-app.add_typer(
-    aus_states_app,
-    name="aus-states",
-    help="Cache and process the ABS Australian States dataset.",
+    geometry_app, name="geometries", help="Commands for processing geometries."
 )
 
 # Generic conversion tools

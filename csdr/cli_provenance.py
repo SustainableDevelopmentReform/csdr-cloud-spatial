@@ -35,7 +35,7 @@ def _meta_provenance(
     id: str,
     type: Literal["dataset", "geometry", "product"],
     data_url: str,
-    data_type: str,  # TODO: make this a Literal[...]
+    data_type: Literal["geoparquet", "stac-geoparquet"],
     overwrite: bool,
     post_to_database: bool,
     source_url: str | None = None,
@@ -51,7 +51,7 @@ def _meta_provenance(
         id (str): ID of the dataset or geometry or product.
         type (Literal): "dataset" or "geometry" or "product".
         data_url (str): URL of the dataset or geometry or product.
-        data_type (str): Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.
+        data_type (Literal): Type of dataset. 'geoparquet', 'stac-geoparquet'.
         overwrite (bool): If true, overwrite existing provenance file.
         post_to_database (bool): If true, post the provenance to the database.
         source_url (str | None): URL of the original source data.
@@ -165,9 +165,9 @@ def write_geometry_provenance(
         help="Run ID to associate geometry outputs with",
     ),
     geometry_url: str = typer.Option(..., help="URL that points to the geometry"),
-    geometry_type: str = typer.Option(
+    geometry_type: Literal["geoparquet", "stac-geoparquet"] = typer.Option(
         "not-set",
-        help="Type of geometry, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
+        help="Type of geometry. Can be 'geoparquet' or 'stac-geoparquet'.",
     ),
     pmtiles_url: str | None = typer.Option(
         None, help="URL that points to the PMTiles file for the geometry (optional)"

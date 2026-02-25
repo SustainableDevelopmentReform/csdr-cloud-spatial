@@ -277,12 +277,14 @@ dataset-buildings-provenance-local-db:
 # Geometry EEZ
 ### EEZ cache
 geometry-eez-cache-local:
-	csdr eez cache \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
 		--target-location=./cache/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 
 geometry-eez-cache-s3:
-	csdr eez cache \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
 		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
 		--overwrite
 
@@ -343,14 +345,15 @@ geometry-eez-provenance-s3-db:
 
 # Geometry Australian Coastal Sediment Compartments - Secondary Compartments
 geometry-acsc2-cache-local:
-	csdr acsc2 cache \
+	csdr geometries cache \
+		--source-url="https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
 		--target-location=./cache/geometries/acsc2/0-0-1/raw \
 		--overwrite
 
 geometry-acsc2-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/acsc2.zip \
+		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip \
 		--source-internal-path-name=Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.shp \
 		--target-location=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id \
 		--create-pmtiles
@@ -370,14 +373,14 @@ geometry-acsc2-provenance-local-db:
 
 # Geometry GA Coastal Waters Areas
 geometry-cwa-cache-local:
-	csdr cwa cache \
+	csdr geometries cache \
 		--source-url="https://hub.arcgis.com/api/v3/datasets/37a401e932544c88828a7d099880afb5_1/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
 		--target-location=./cache/geometries/cwa/0-0-1/raw \
 		--overwrite
 geometry-cwa-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/cwa.zip \
+		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/CW_1970_1980_Areas.zip \
 		--source-internal-path-name=CW_1970_1980_Areas.shp \
 		--target-location=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id \
 		--create-pmtiles
@@ -396,7 +399,8 @@ geometry-cwa-provenance-local-db:
 
 # Geometry Australian States and Territories
 geometry-aus-states-cache-local:
-	csdr aus-states cache \
+	csdr geometries cache \
+		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \
 		--target-location=./cache/geometries/aus-states/0-0-1/raw \
 		--overwrite
 geometry-aus-states-convert-local:
@@ -792,34 +796,12 @@ product-dep-mangrove-eez-provenance-local-db:
 		--overwrite
 
 # Product DEP Mangrove per Pacific EEZ
-product-dep-mangrove-pacific-eez-process-geometry-local:
-	csdr products process-geometry \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--run-id=test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
-		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
-		--datetime-string-match=2024 \
-		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
-		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": "1.0,2.0"}}' \
-		--overwrite
-product-dep-mangrove-pacific-eez-consolidate-local:
-	csdr products consolidate \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
-		--indicator-name=mangroves
-product-dep-mangrove-pacific-eez-provenance-local-db:
-	csdr provenance product \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
-		--run-id=test-dep-mangrove-eez-run-id \
-		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
-		--geometries-run-id=eez-test-run-id \
-		--post-to-database \
-		--overwrite
-
+# product-dep-mangrove-pacific-eez-process-geometry-local:
+# TODO
+# product-dep-mangrove-pacific-eez-consolidate-local:
+# TODO
+# product-dep-mangrove-pacific-eez-provenance-local-db:
+# TODO
 
 
 ### OTHER ###
