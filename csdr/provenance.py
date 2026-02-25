@@ -18,9 +18,20 @@ SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
 
 def get_image_state() -> dict[str, str]:
     """Get the image state from environment variables"""
+    image_code = os.getenv("IMAGE_REPO", None)
+    image_tag = os.getenv("IMAGE_TAG", None)
+    if (
+        image_code is None
+        or image_tag is None
+        or image_code == "unknown"
+        or image_tag == "unknown"
+    ):
+        raise CSDRException(
+            "IMAGE_REPO and IMAGE_TAG environment variables must be set for provenance."
+        )
     return {
-        "imageCode": os.getenv("IMAGE_REPO", "not-set"),
-        "imageTag": os.getenv("IMAGE_TAG", "not-set"),
+        "imageCode": image_code,
+        "imageTag": image_tag,
     }
 
 
