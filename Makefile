@@ -2,6 +2,8 @@
 # It is the base for creating the workflows in the -flux repo.
 # See here to get developing: ./how_to_run_dataset_eez-v4_workflow.md
 
+# TODO: Check all datetime vs. datetime-string-match. datetime-string-match actually filters, datetime just makes the output path.
+
 ### DATASETS ###
 
 # Dataset GMW v4
@@ -417,6 +419,14 @@ geometry-aus-states-provenance-local-db:
 		--post-geometry-outputs \
 		--overwrite
 
+geometry-pacific-eez-filter:
+	csdr helpers filter-geometries-by-name \
+		--source-url=https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
+		--target-url=s3://csdr-public-dev/geometries/eez-pacific/0-0-1/eez-pacific.parquet \
+		--name-fields="csdr-name,SOVEREIGN1,SOVEREIGN2" \
+		--geometry-names="American Samoa,Cook Islands,Fiji,French Polynesia,Guam,Kiribati,Marshall Islands,Micronesia,Nauru,New Caledonia,Niue,Northern Mariana Islands,Palau,Papua New Guinea,Pitcairn,Solomon Islands,Samoa,Tokelau,Tonga,Tuvalu,Vanuatu,Wallis and Futuna"
+# These are from here https://github.com/digitalearthpacific/dep-tools/blob/main/dep_tools/grids.py
+# Only difference is I had to rename 'Pitcairn Islands' to 'Pitcairn'.
 
 ### PRODUCTS ###
 
@@ -680,7 +690,7 @@ product-aca-eez-provenance-local-db:
 # Product buildings by EEZ
 # Count how many buildings per EEZ.
 # South Sudan b1b00b2e-2739-5215-a18c-eb72c5798034
-# South Sudan geometry hits 9 building parquet bboxes.
+# South Sudan geometry hits 11 building parquet bboxes.
 # France has a massive bounding box that South Sudan intersects, but 0 buildings actually intersect.
 # Germany a5446e2f-eaad-5e91-b6d9-b5c5595f4f3b
 # Australia bdcf6908-2ad1-5451-80ef-d0a9994d8a78
@@ -694,7 +704,7 @@ product-buildings-eez-process-geometry-local:
 		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
 		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
-		--geometry-id=698e177a-687f-5e72-8bd5-280b88d9ad19 \
+		--geometry-id=b1b00b2e-2739-5215-a18c-eb72c5798034 \
 		--indicators-to-extract='{"count-buildings": {"indicator-name": "buildings", "indicator-value": null}}' \
 		--overwrite
 product-buildings-eez-consolidate-local:
@@ -728,7 +738,9 @@ product-ace-acsc2-process-geometry-local:
 		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
 		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--datetime-string-match='2022-01-01T00:00:00Z/2022-12-31T23:59:59.999Z' \
 		--datetime=2022 \
+		--load-kwargs="resolution=100,crs=epsg:6933" \
 		--geometry-id=b608c6ab-6ce4-5a89-9523-ee07d8dd4c22 \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "classification", "indicator-value": 3}, "sum-intertidal-area": {"indicator-name": "classification", "indicator-value": 2}, "sum-saltmarsh-area": {"indicator-name": "classification", "indicator-value": 4}, "sum-seagrass-area": {"indicator-name": "classification", "indicator-value": 5}, "percent-mangrove-area": {"indicator-name": null, "indicator-value": null}, "percent-intertidal-area": {"indicator-name": null, "indicator-value": null}, "percent-saltmarsh-area": {"indicator-name": null, "indicator-value": null}, "percent-seagrass-area": {"indicator-name": null, "indicator-value": null}}' \
 		--overwrite
@@ -750,6 +762,46 @@ product-ace-acsc2-provenance-local-db:
 		--overwrite
 
 
+# Product DEP Mangrove per EEZ
+product-dep-mangrove-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--datetime-string-match=2024 \
+		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": "1.0,2.0"}}' \
+		--overwrite
+product-dep-mangrove-eez-consolidate-local:
+	csdr products consolidate \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--indicator-name=mangroves
+product-dep-mangrove-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
+		--geometries-run-id=eez-test-run-id \
+		--post-to-database \
+		--overwrite
+
+# Product DEP Mangrove per Pacific EEZ
+# TODO: Fill these:
+# product-dep-mangrove-pacific-eez-process-geometry-local:
+# 	csdr products process-geometry \
+# 		...
+# product-dep-mangrove-pacific-eez-consolidate-local:
+# 	csdr products consolidate \
+# 		...
+# product-dep-mangrove-pacific-eez-provenance-local-db:
+# 	csdr provenance product \
+# 		...
 
 
 ### OTHER ###

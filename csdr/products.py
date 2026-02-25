@@ -22,12 +22,12 @@ logger = logging.getLogger()
 # The _get_area_m2_from_stac_geoparquet function does the following:
 # 1. Loads a STAC-Geoparquet using rustac.
 # 2. If items found, loads the xarray dataset from the STAC items.
-# 4. Calculates the area where the specified indicators equals the given value within the geometry.
+# 4. Calculates the area where the specified indicators equals the given value/s within the geometry.
 def _get_area_m2_from_stac_geoparquet(
     dataset_url: str,
     geometry: Geometry,
     indicator: str,
-    value: float,
+    value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
     load_kwargs: dict = {},
 ) -> float:
@@ -73,9 +73,9 @@ def _get_area_m2_from_stac_geoparquet(
             f"Indicator {indicator} not found in dataset. Available: {list(data.data_vars)}"
         )
 
-    # Calculate area (m²). This also does the indicator/value filter.
+    # Calculate area (m²). This also does the indicator/value/s filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[indicator], geometry, indicator=indicator, value=value
+        data[indicator], geometry, indicator=indicator, value_list=value_list
     )
 
     return total_area_m2
@@ -87,7 +87,7 @@ def _get_area_m2_from_geoparquet_sedona(
     dataset_url: str,
     geometry_wkt: str,
     indicator: str | None = None,
-    value: float | None = None,
+    value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
 ) -> float:
     # This should already handle the bbox intersection optimization internally
@@ -95,7 +95,7 @@ def _get_area_m2_from_geoparquet_sedona(
     # Local for development testing
     # url can be s3://, https://, or local.
 
-    # TODO: Add filters for indicator, value, and datetime_string_match
+    # TODO: Add filters for indicator, value_list, and datetime_string_match
 
     # TODO: Add S3 Authentication using Boto3CredentialProvider. Can pass aws.access_key_id and aws.secret_access_key to Sedona.
     region = "ap-southeast-2"  # TODO: Get this from env/config.
@@ -211,7 +211,7 @@ def _get_area_m2_from_dataset_geometry(
     dataset_type: str,
     geometry: Geometry,
     indicator: str,
-    value: float,
+    value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
     load_kwargs: dict = {},
 ) -> float:
@@ -222,7 +222,7 @@ def _get_area_m2_from_dataset_geometry(
             dataset_url,
             geometry,
             indicator,
-            value,
+            value_list,
             datetime_string_match=datetime_string_match,
             load_kwargs=load_kwargs,
         )
@@ -235,7 +235,7 @@ def _get_area_m2_from_dataset_geometry(
             partition_path,
             geometry.wkt,
             indicator,
-            value,
+            value_list,
             datetime_string_match=datetime_string_match,
         )
     else:
@@ -249,8 +249,6 @@ def process_indicators_for_geometry(
     indicators: dict[str, dict],
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
-    indicator_name: str = "asset",
-    indicator_value: float | int | None = None,
     load_kwargs: dict = {},
 ) -> dict[str, str | float]:
     results = {}
@@ -270,18 +268,45 @@ def process_indicators_for_geometry(
     area_percent_var_pattern = re.compile(r"^percent-.*-area$")
     count_var_pattern = re.compile(r"^count-.*$")
     # TODO: Extend to other indicator types as needed by future products.
+
     for var_key, var_info in indicators.items():
         indicator_name = var_info.get("indicator-name")
-        indicator_value = var_info.get("indicator-value")
-        # Try to convert indicator_value to float if possible
-        try:
-            if indicator_value is not None:
-                indicator_value = float(indicator_value)
-        except Exception:
+        indicator_value_s = var_info.get("indicator-value")
+
+        indicator_value_list = None
+
+        # Indicator value can be a single string, a single float, or a comma-separated list of strings or floats.
+        if indicator_value_s is None:  # No indicator value provided, set to None.
             pass
+        elif isinstance(
+            indicator_value_s, str
+        ):  # Split comma-seperated string to list, and parse to floats.
+            iv_list = indicator_value_s.strip().split(",")
+            indicator_value_list = []
+            for iv in iv_list:
+                iv = iv.strip()
+                try:
+                    iv_float = float(iv)
+                    iv = iv_float
+                    indicator_value_list.append(iv_float)
+                except ValueError:
+                    indicator_value_list.append(
+                        iv
+                    )  # Not parsable to float, keep as string.
+        else:  # Else just try to parse it to float if it's not already.
+            try:
+                iv_float = float(indicator_value_s)
+                indicator_value_s = iv_float
+                indicator_value_list = [indicator_value_s]
+            except ValueError:
+                raise CSDRException(
+                    f"Indicator value {indicator_value_s} is not parsable to float. It should be either a single float, or a comma-separated list of strings or floats."
+                )
+
         logging.info(
-            f"Processing indicator: {var_key} with indicator name: {indicator_name} and value: {indicator_value}"
+            f"Processing indicators: {var_key} with indicator name: {indicator_name} and value/s: {indicator_value_s}"
         )
+
         # Explode multipolygon geometries to single polygons
         geoms = [geometry]
         if geometry.geom_type == "MultiPolygon":
@@ -310,13 +335,13 @@ def process_indicators_for_geometry(
                     geom,
                     datetime_string_match=datetime_string_match,
                     indicator=indicator_name,
-                    value=indicator_value,
+                    value_list=indicator_value_list,
                     load_kwargs=load_kwargs,
                 )
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2
                 logging.info(
-                    f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value {indicator_value}"
+                    f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value/s {indicator_value_s}"
                 )
             elif count_var_pattern.match(var_key):  # ["count-buildings"]
                 logging.info("Starting count indicator analysis...")

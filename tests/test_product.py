@@ -52,7 +52,7 @@ def test_get_area_from_geoparquet_sedona(sample_polygon: polygon) -> None:
         sample_polygon.wkt,
         # TODO: Test these params once implemented
         # variable,
-        # value,
+        # value_list,
         # datetime_string_match,
     )
     assert area == 12308463893.98

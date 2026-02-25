@@ -77,7 +77,7 @@ def xarray_calculate_area_m2(
     data: Dataset | DataArray,
     geom: Geometry,
     indicator: str | None = None,
-    value: int | float | None = None,
+    value_list: list[float] | None = None,
 ) -> float:
     # Work with a dataarray, not a dataset, so it's a singular thing
     if type(data) is not DataArray:
@@ -85,15 +85,16 @@ def xarray_calculate_area_m2(
             raise CSDRException("Indicator must be specified when data is a Dataset.")
         data = data[indicator]
 
-    # Only select a specific value. This will convert to float, with nans
-    if value is not None:
-        data = data.where(data == value)
+    # Only select specific value/s. This will convert to float, with nans
+    if value_list is not None:
+        data = data.where(data.isin(value_list))
 
     # Validate that data and geom have the same CRS.
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
-    data = data.rio.reproject(
-        target_crs
-    )  # TODO: Tweak parameters of reproject: resolution=desired_resolution, method='nearest', resampling=Resampling.bilinear
+    # Raster reproject is not needed because we load in 6933.
+    # data = data.rio.reproject(
+    #     target_crs
+    # )  # TODO: Tweak parameters of reproject: resolution=desired_resolution, method='nearest', resampling=Resampling.bilinear
     geom = geom.to_crs(target_crs)
 
     # Mask out regions outside the geometry
