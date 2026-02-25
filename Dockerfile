@@ -3,6 +3,13 @@ FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.3
 
 ARG DEV=false
 
+# IMAGE_TAG and IMAGE_REPO env vars are used for provenance.
+ARG DOCKER_IMAGE=unknown
+ARG COMMIT=unknown
+ENV IMAGE_TAG=$DOCKER_IMAGE
+ENV COMMIT=$COMMIT
+ENV IMAGE_REPO=https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial/tree/$COMMIT/
+
 # Don't use old pygeos
 ENV USE_PYGEOS=0
 
@@ -56,3 +63,5 @@ ENV PATH="/code/.venv/bin:$PATH"
 
 # Smoketest
 RUN csdr --help
+
+RUN echo "Image: ${IMAGE_TAG}" && echo "Repo: ${IMAGE_REPO}"
