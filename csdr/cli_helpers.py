@@ -98,6 +98,12 @@ def filter_geometries_by_name(
 
     filtered_gdf = gdf[match_mask]
 
+    # Reset csdr-id (DB geometry_output.id has a unique constraint that this filtered dataset must not violate).
+    timestamp = datetime.now().isoformat()
+    filtered_gdf["csdr-id"] = [
+        make_uuid(source_url + timestamp + str(i)) for i in range(len(filtered_gdf))
+    ]
+
     target_path, target_filename = split_path_and_file_name_from_url(target_url)
     target_store = get_store_with_prefix_from_url(target_path)
     write_gdf_to_parquet(filtered_gdf, target_store, target_filename)

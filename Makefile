@@ -419,10 +419,10 @@ geometry-aus-states-provenance-local-db:
 		--post-geometry-outputs \
 		--overwrite
 
-geometry-pacific-eez-filter:
+geometry-pacific-eez-filter-s3:
 	csdr helpers filter-geometries-by-name \
 		--source-url=https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
-		--target-url=s3://csdr-public-dev/geometries/eez-pacific/0-0-1/eez-pacific.parquet \
+		--target-url=s3://csdr-public-dev/geometries/eez-pacific/0-0-1/runs/test-run-id/eez-pacific.parquet \
 		--name-fields="csdr-name,SOVEREIGN1,SOVEREIGN2" \
 		--geometry-names="American Samoa,Cook Islands,Fiji,French Polynesia,Guam,Kiribati,Marshall Islands,Micronesia,Nauru,New Caledonia,Niue,Northern Mariana Islands,Palau,Papua New Guinea,Pitcairn,Solomon Islands,Samoa,Tokelau,Tonga,Tuvalu,Vanuatu,Wallis and Futuna"
 # These are from here https://github.com/digitalearthpacific/dep-tools/blob/main/dep_tools/grids.py
@@ -792,16 +792,34 @@ product-dep-mangrove-eez-provenance-local-db:
 		--overwrite
 
 # Product DEP Mangrove per Pacific EEZ
-# TODO: Fill these:
-# product-dep-mangrove-pacific-eez-process-geometry-local:
-# 	csdr products process-geometry \
-# 		...
-# product-dep-mangrove-pacific-eez-consolidate-local:
-# 	csdr products consolidate \
-# 		...
-# product-dep-mangrove-pacific-eez-provenance-local-db:
-# 	csdr provenance product \
-# 		...
+product-dep-mangrove-pacific-eez-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--datetime-string-match=2024 \
+		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": "1.0,2.0"}}' \
+		--overwrite
+product-dep-mangrove-pacific-eez-consolidate-local:
+	csdr products consolidate \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--indicator-name=mangroves
+product-dep-mangrove-pacific-eez-provenance-local-db:
+	csdr provenance product \
+		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
+		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
+		--run-id=test-dep-mangrove-eez-run-id \
+		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
+		--geometries-run-id=eez-test-run-id \
+		--post-to-database \
+		--overwrite
+
 
 
 ### OTHER ###
