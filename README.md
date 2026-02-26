@@ -22,6 +22,16 @@ This toolkit is part of a larger system. Additional repositories for the applica
 
 Each of datasets, geometries, and products have runs. A single run is a workflow that calls commands from this toolkit. Each of these can have many runs. Each run has its own provenance and is written to the target store, and the app's PostgreSQL database.
 
+### Types of datasets:
+
+| # | Dataset Type                      | Data Class | Example                |
+|---|-----------------------------------|------------|------------------------|
+| 1 | STAC API or STAC-Geoparquet       | Raster     | DEP Seagrass           |
+| 2 | Zipped TIFFs / COGs               | Raster     | GMW Mangrove Extents   |
+| 3 | Partitioned Parquets              | Vector     | VIDA Buildings         |
+| 4 | Zipped Shapefile                  | Vector     | ACA Reef Extents       |
+
+
 ### Data formats used:
 - [SpatioTemporal Asset Catalogs (STAC)](https://stacspec.org/)
 - [Cloud Optimized GeoTIFFs (COG)](https://cogeo.org/)
@@ -31,6 +41,10 @@ Each of datasets, geometries, and products have runs. A single run is a workflow
 - [PMTiles](https://docs.protomaps.com/pmtiles/)
 
 This pipeline toolkit also ingests zipped `.shp`s and `.tiff`s for interoperability.
+
+### Provenance:
+In this toolkit, each dataset, geometry, and product run is recorded with provenance that captures source inputs, processing context, and generated outputs, ensuring results are traceable, reproducible, and auditable across local and cloud workflows.
+
 
 ### Storage
 The system supports local and cloud (S3) storage (via [obstore](https://developmentseed.org/obstore/latest/)).
