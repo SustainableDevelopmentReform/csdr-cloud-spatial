@@ -54,6 +54,7 @@ dev = [
     "bokeh",
     "folium",
     "jinja2",
+    "mapclassify",
     "matplotlib",
     "ruff",
     "moto[server]",
