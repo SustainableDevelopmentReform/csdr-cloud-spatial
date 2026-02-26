@@ -4,20 +4,22 @@
 
 # TODO: Check all datetime vs. datetime-string-match. datetime-string-match actually filters, datetime just makes the output path.
 
+VERSION ?= 0.0.1
+
 ### DATASETS ###
 
 # Dataset GMW v4
 cache-gmw-v4-local:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v4/0-0-1/raw \
+		--target-location=./cache/datasets/gmw-v4/$(VERSION)/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
 cache-gmw-v4-s3:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 
@@ -25,36 +27,36 @@ cache-gmw-v4-s3:
 # Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
 extract-gmw-v4-local:
 	csdr gmw extract \
-		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
+		--source-location=./cache/datasets/gmw-v4/$(VERSION)/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v4/$(VERSION)/data \
 		--overwrite
 
 extract-gmw-v4-s3:
 	csdr gmw extract \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/raw \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/data \
 		--overwrite
 
 # TODO: Check whether index source and target locations must be absolute paths (for local store) too for STAC hrefs to be correct. Using absolute paths just in case.
 index-gmw-v4-local:
 	csdr gmw index \
-		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
-		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
+		--source-location=$(PWD)/cache/datasets/gmw-v4/$(VERSION)/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v4/$(VERSION) \
 		--overwrite
 
 index-gmw-v4-s3:
 	csdr gmw index \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1 \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION) \
 		--overwrite
 
 # Make a Dataset in the app and use the ID here
 provenance-gmw-v4-local-db:
 	csdr provenance dataset \
 		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
-		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
+		--dataset-url=./cache/datasets/gmw-v4/$(VERSION)/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
 		--dataset-type=stac-geoparquet \
@@ -64,7 +66,7 @@ provenance-gmw-v4-local-db:
 provenance-gmw-v4-s3-db:
 	csdr provenance dataset \
 		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
-		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet \
+		--dataset-url=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
 		--dataset-type=stac-geoparquet \
@@ -78,7 +80,7 @@ provenance-gmw-v4-s3-db:
 cache-gmw-v3-local-single-file:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
+		--target-location=./cache/datasets/gmw-v3/$(VERSION)/raw \
 		--out-file=/tmp/cached_files.json \
 		--overwrite
 # Many files/years
@@ -88,14 +90,14 @@ cache-gmw-v3-local-single-file:
 cache-gmw-v3-local-multiple-files:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=./cache/datasets/gmw-v3/0-0-1/raw \
+		--target-location=./cache/datasets/gmw-v3/$(VERSION)/raw \
 		--out-file=/tmp/cached_files.json \
 		--no-overwrite
 
 cache-gmw-v3-s3-multiple-files:
 	csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmwv3/gmw_v3_1996_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2007_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2008_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2009_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2010_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2015_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2016_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2017_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2018_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2019_gtiff.zip,https://files.auspatious.com/gmwv3/gmw_v3_2020_gtiff.zip \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION)/raw \
 		--out-file=/tmp/cached_files.json \
 		--no-overwrite
 
@@ -106,31 +108,31 @@ cache-gmw-v3-s3-multiple-files:
 # Local paths must be absolute for STAC hrefs to be correct!!
 extract-gmw-v3-local:
 	csdr gmw extract \
-		--source-location=./cache/datasets/gmw-v3/0-0-1/raw \
+		--source-location=./cache/datasets/gmw-v3/$(VERSION)/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
-		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v3/$(VERSION)/data \
 		--overwrite
 # 		--source-zip-name=gmw_v3_2020_gtiff.zip \
 
 extract-gmw-v3-s3:
 	csdr gmw extract \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/raw \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION)/raw \
 		--source-zip-name=gmw_v3_1996_gtiff.zip \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION)/data \
 		--overwrite
 
 ## Index v3
 # This is recursive over all subfolders (one for each year). Makes just one STAC-geoparquet for all years.
 index-gmw-v3-local:
 	csdr gmw index \
-		--source-location=$(PWD)/cache/datasets/gmw-v3/0-0-1/data \
-		--target-location=$(PWD)/cache/datasets/gmw-v3/0-0-1 \
+		--source-location=$(PWD)/cache/datasets/gmw-v3/$(VERSION)/data \
+		--target-location=$(PWD)/cache/datasets/gmw-v3/$(VERSION) \
 		--overwrite
 
 index-gmw-v3-s3:
 	csdr gmw index \
-		--source-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/data \
-		--target-location=s3://csdr-public-dev/datasets/gmw-v3/0-0-1 \
+		--source-location=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION)/data \
+		--target-location=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION) \
 		--overwrite
 
 ## Provenance v3
@@ -138,7 +140,7 @@ index-gmw-v3-s3:
 provenance-gmw-v3-local-db:
 	csdr provenance dataset \
 		--id=36fff098-96f9-4b98-b728-10b2d71a4149 \
-		--dataset-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet \
+		--dataset-url=./cache/datasets/gmw-v3/$(VERSION)/gmw.parquet \
 		--source-url="https://zenodo.org/records/6894273" \
 		--source-metadata-url="https://zenodo.org/records/6894273" \
 		--dataset-type=stac-geoparquet \
@@ -148,7 +150,7 @@ provenance-gmw-v3-local-db:
 provenance-gmw-v3-s3-db:
 	csdr provenance dataset \
 		--id=36fff098-96f9-4b98-b728-10b2d71a4149 \
-		--dataset-url=s3://csdr-public-dev/datasets/gmw-v3/0-0-1/gmw.parquet \
+		--dataset-url=s3://csdr-public-dev/datasets/gmw-v3/$(VERSION)/gmw.parquet \
 		--source-url="https://zenodo.org/records/6894273" \
 		--source-metadata-url="https://zenodo.org/records/6894273" \
 		--dataset-type=stac-geoparquet \
@@ -160,18 +162,18 @@ provenance-gmw-v3-s3-db:
 dataset-seagrass-index-local:
 	csdr seagrass index \
 		--stac-api-url=https://stac.prod.digitalearthpacific.io \
-		--target-location=./cache/datasets/seagrass/0-0-1 \
+		--target-location=./cache/datasets/seagrass/$(VERSION) \
 		--overwrite
 dataset-seagrass-index-s3:
 	csdr seagrass index \
 		--stac-api-url=https://stac.prod.digitalearthpacific.io \
-		--target-location=s3://csdr-public-dev/datasets/seagrass/0-0-1 \
+		--target-location=s3://csdr-public-dev/datasets/seagrass/$(VERSION) \
 		--overwrite
 
 dataset-seagrass-provenance-local:
 	csdr provenance dataset \
 		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
-		--dataset-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
+		--dataset-url=./cache/datasets/seagrass/$(VERSION)/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type=stac-geoparquet \
@@ -180,7 +182,7 @@ dataset-seagrass-provenance-local:
 dataset-seagrass-provenance-s3:
 	csdr provenance dataset \
 		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
-		--dataset-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet \
+		--dataset-url=s3://csdr-public-dev/datasets/seagrass/$(VERSION)/dep_s2_seagrass.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type=stac-geoparquet \
@@ -193,13 +195,13 @@ dataset-ace-index-local:
 	csdr ace index \
 		--source-stac-url="https://explorer.dea.ga.gov.au/stac" \
 		--stac-collection=ga_s2_coastalecosystems_cyear_3_v1 \
-		--target-location=./cache/datasets/ace/0-0-1 \
+		--target-location=./cache/datasets/ace/$(VERSION) \
 		--target-filename=ace \
 		--overwrite
 dataset-ace-provenance-local:
 	csdr provenance dataset \
 		--id=19e30180-8512-4cce-b280-fa17bb014578 \
-		--dataset-url=./cache/datasets/ace/0-0-1/ace.parquet \
+		--dataset-url=./cache/datasets/ace/$(VERSION)/ace.parquet \
 		--source-url="https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1" \
 		--source-metadata-url="https://knowledge.dea.ga.gov.au/data/product/dea-coastal-ecosystems" \
 		--dataset-type=stac-geoparquet \
@@ -211,13 +213,13 @@ dataset-dep-mangrove-index-local:
 	csdr ace index \
 		--source-stac-url="https://stac.digitalearthpacific.org" \
 		--stac-collection=dep_s2_mangroves \
-		--target-location=./cache/datasets/dep-mangrove/0-0-1 \
+		--target-location=./cache/datasets/dep-mangrove/$(VERSION) \
 		--target-filename=dep-mangrove \
 		--overwrite
 dataset-dep-mangrove-provenance-local:
 	csdr provenance dataset \
 		--id=6e88d2d4-2cc8-46ab-9741-e7cfc20a6330 \
-		--dataset-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet \
+		--dataset-url=./cache/datasets/dep-mangrove/$(VERSION)/dep-mangrove.parquet \
 		--source-url="https://data.digitalearthpacific.org/#dep_s2_mangroves/" \
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_mangroves/" \
 		--dataset-type=stac-geoparquet \
@@ -228,27 +230,27 @@ dataset-dep-mangrove-provenance-local:
 # Dataset ACA - reef extent
 dataset-aca-extract-local:
 	csdr aca extract \
-		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/raw \
-		--target-location=./cache/datasets/aca/0-0-1/data \
+		--source-location=s3://csdr-public-dev/datasets/aca/$(VERSION)/raw \
+		--target-location=./cache/datasets/aca/$(VERSION)/data \
 		--no-overwrite
 # 		--overwrite
 
 dataset-aca-index-local:
 	csdr aca index \
-		--source-location=./cache/datasets/aca/0-0-1/data \
-		--target-location=./cache/datasets/aca/0-0-1 \
+		--source-location=./cache/datasets/aca/$(VERSION)/data \
+		--target-location=./cache/datasets/aca/$(VERSION) \
 		--overwrite
 
 dataset-aca-index-s3:
 	csdr aca index \
-		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
-		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
+		--source-location=s3://csdr-public-dev/datasets/aca/$(VERSION)/data \
+		--target-location=s3://csdr-public-dev/datasets/aca/$(VERSION) \
 		--overwrite
 
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
 		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
-		--dataset-url=./cache/datasets/aca/0-0-1/reefextent.parquet \
+		--dataset-url=./cache/datasets/aca/$(VERSION)/reefextent.parquet \
 		--source-url="https://allencoralatlas.org/atlas/" \
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
@@ -259,12 +261,12 @@ dataset-aca-provenance-local-db:
 # Index is done in-place in Source Coop.
 dataset-buildings-index-local:
 	csdr buildings index \
-		--target-location=./cache/datasets/buildings/0-0-1 \
+		--target-location=./cache/datasets/buildings/$(VERSION) \
 		--overwrite
 dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
 		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
-		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
+		--dataset-url=./cache/datasets/buildings/$(VERSION)/buildings.parquet \
 		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
@@ -277,30 +279,32 @@ dataset-buildings-provenance-local-db:
 # Geometry EEZ
 ### EEZ cache
 geometry-eez-cache-local:
-	csdr eez cache \
-		--target-location=./cache/geometries/eez-v4/0-0-1/raw \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
+		--target-location=./cache/geometries/eez-v4/$(VERSION)/raw \
 		--overwrite
 
 geometry-eez-cache-s3:
-	csdr eez cache \
-		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw \
+	csdr geometries cache \
+		--source-url="https://files.auspatious.com/unsw/EEZ_land_union_v4_202410.zip" \
+		--target-location=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/raw \
 		--overwrite
 
 ### EEZ convert
 geometry-eez-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location ./cache/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
+		--source-zip-location ./cache/geometries/eez-v4/$(VERSION)/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name=EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location=./cache/geometries/eez-v4/0-0-1/runs/test-run-id \
+		--target-location=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id \
 		--create-pmtiles
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
 		--name-field UNION \
-		--source-zip-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
+		--source-zip-location=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name=EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
-		--target-location=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id \
+		--target-location=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-run-id \
 		--create-pmtiles
 
 ### EEZ provenance
@@ -308,8 +312,8 @@ geometry-eez-provenance-local:
 	csdr provenance geometry \
 		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
 		--run-id=test-run-id \
-		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--geometry-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--geometry-type=geoparquet \
@@ -319,8 +323,8 @@ geometry-eez-provenance-local-db:
 	csdr provenance geometry \
 		--id=65427160-c63c-4c24-a4ac-7013940fae9e \
 		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
-		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
+		--geometry-url=./cache/geometries/eez-v4/$(VERSION)/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=./cache/geometries/eez-v4/$(VERSION)/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--geometry-type=geoparquet \
@@ -332,8 +336,8 @@ geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
 		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
 		--run-id=test-run-id \
-		--geometry-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+		--geometry-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+		--pmtiles-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
 		--geometry-type=geoparquet \
@@ -343,24 +347,25 @@ geometry-eez-provenance-s3-db:
 
 # Geometry Australian Coastal Sediment Compartments - Secondary Compartments
 geometry-acsc2-cache-local:
-	csdr acsc2 cache \
-		--target-location=./cache/geometries/acsc2/0-0-1/raw \
+	csdr geometries cache \
+		--source-url="https://hub.arcgis.com/api/v3/datasets/2af87180973d44b0b5b73583e3c06957_2/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
+		--target-location=./cache/geometries/acsc2/$(VERSION)/raw \
 		--overwrite
 
 geometry-acsc2-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/acsc2/0-0-1/raw/acsc2.zip \
+		--source-zip-location=./cache/geometries/acsc2/$(VERSION)/raw/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.zip \
 		--source-internal-path-name=Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.shp \
-		--target-location=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id \
+		--target-location=./cache/geometries/acsc2/$(VERSION)/runs/acsc2-test-run-id \
 		--create-pmtiles
 
 geometry-acsc2-provenance-local-db:
 	csdr provenance geometry \
 		--id=452a546e-681e-4187-b3d3-8190a317862c \
 		--run-id=acsc2-test-run-id \
-		--geometry-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet \
-		--pmtiles-url=.cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.pmtiles \
+		--geometry-url=./cache/geometries/acsc2/$(VERSION)/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet \
+		--pmtiles-url=.cache/geometries/acsc2/$(VERSION)/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.pmtiles \
 		--source-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/explore" \
 		--source-metadata-url="https://digital.atlas.gov.au/datasets/digitalatlas::australian-coastal-sediment-compartments-secondary-compartments/about" \
 		--geometry-type=geoparquet \
@@ -370,23 +375,23 @@ geometry-acsc2-provenance-local-db:
 
 # Geometry GA Coastal Waters Areas
 geometry-cwa-cache-local:
-	csdr cwa cache \
+	csdr geometries cache \
 		--source-url="https://hub.arcgis.com/api/v3/datasets/37a401e932544c88828a7d099880afb5_1/downloads/data?format=shp&spatialRefId=4283&where=1%3D1" \
-		--target-location=./cache/geometries/cwa/0-0-1/raw \
+		--target-location=./cache/geometries/cwa/$(VERSION)/raw \
 		--overwrite
 geometry-cwa-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field name \
-		--source-zip-location=./cache/geometries/cwa/0-0-1/raw/cwa.zip \
+		--source-zip-location=./cache/geometries/cwa/$(VERSION)/raw/CW_1970_1980_Areas.zip \
 		--source-internal-path-name=CW_1970_1980_Areas.shp \
-		--target-location=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id \
+		--target-location=./cache/geometries/cwa/$(VERSION)/runs/cwa-test-run-id \
 		--create-pmtiles
 geometry-cwa-provenance-local-db:
 	csdr provenance geometry \
 		--id=0d3cea10-b1c2-41d6-8da7-5183f9548d84 \
 		--run-id=cwa-test-run-id \
-		--geometry-url=./cache/geometries/cwa/0-0-1/runs/cwa-test-run-id/CW_1970_1980_Areas.parquet \
-		--pmtiles-url=.cache/geometries/cwa/0-0-1/runs/cwa-test-run-id/CW_1970_1980_Areas.pmtiles \
+		--geometry-url=./cache/geometries/cwa/$(VERSION)/runs/cwa-test-run-id/CW_1970_1980_Areas.parquet \
+		--pmtiles-url=.cache/geometries/cwa/$(VERSION)/runs/cwa-test-run-id/CW_1970_1980_Areas.pmtiles \
 		--source-url="https://amsis-geoscience-au.hub.arcgis.com/datasets/geoscience-au::coastal-waters-areas-amb2020/explore" \
 		--source-metadata-url="https://amsis-geoscience-au.hub.arcgis.com/datasets/geoscience-au::coastal-waters-areas-amb2020/about" \
 		--geometry-type=geoparquet \
@@ -396,22 +401,23 @@ geometry-cwa-provenance-local-db:
 
 # Geometry Australian States and Territories
 geometry-aus-states-cache-local:
-	csdr aus-states cache \
-		--target-location=./cache/geometries/aus-states/0-0-1/raw \
+	csdr geometries cache \
+		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \
+		--target-location=./cache/geometries/aus-states/$(VERSION)/raw \
 		--overwrite
 geometry-aus-states-convert-local:
 	csdr convert zip-to-parquet \
 		--name-field STE_NAME21 \
-		--source-zip-location=./cache/geometries/aus-states/0-0-1/raw/STE_2021_AUST_SHP_GDA2020.zip \
+		--source-zip-location=./cache/geometries/aus-states/$(VERSION)/raw/STE_2021_AUST_SHP_GDA2020.zip \
 		--source-internal-path-name=STE_2021_AUST_GDA2020.shp \
-		--target-location=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id \
+		--target-location=./cache/geometries/aus-states/$(VERSION)/runs/aus-states-test-run-id \
 		--create-pmtiles
 geometry-aus-states-provenance-local-db:
 	csdr provenance geometry \
 		--id=0b9b8e1a-d20a-41c2-843d-1f2b47d6a512 \
 		--run-id=aus-states-test-run-id \
-		--geometry-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.parquet \
-		--pmtiles-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.pmtiles \
+		--geometry-url=./cache/geometries/aus-states/$(VERSION)/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.parquet \
+		--pmtiles-url=./cache/geometries/aus-states/$(VERSION)/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.pmtiles \
 		--source-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip" \
 		--source-metadata-url="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files#metadata-for-digital-boundary-files" \
 		--geometry-type=geoparquet \
@@ -421,8 +427,8 @@ geometry-aus-states-provenance-local-db:
 
 geometry-pacific-eez-filter-s3:
 	csdr helpers filter-geometries-by-name \
-		--source-url=https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/geometries/eez-v4/0-0-1/EEZ_land_union_v4_202410.parquet \
-		--target-url=s3://csdr-public-dev/geometries/eez-pacific/0-0-1/runs/test-run-id/eez-pacific.parquet \
+		--source-url=https://csdr-public-dev.s3.ap-southeast-2.amazonaws.com/geometries/eez-v4/$(VERSION)/EEZ_land_union_v4_202410.parquet \
+		--target-url=s3://csdr-public-dev/geometries/eez-pacific/$(VERSION)/runs/test-run-id/eez-pacific.parquet \
 		--name-fields="csdr-name,SOVEREIGN1,SOVEREIGN2" \
 		--geometry-names="American Samoa,Cook Islands,Fiji,French Polynesia,Guam,Kiribati,Marshall Islands,Micronesia,Nauru,New Caledonia,Niue,Northern Mariana Islands,Palau,Papua New Guinea,Pitcairn,Solomon Islands,Samoa,Tokelau,Tonga,Tuvalu,Vanuatu,Wallis and Futuna"
 # These are from here https://github.com/digitalearthpacific/dep-tools/blob/main/dep_tools/grids.py
@@ -440,15 +446,15 @@ geometry-pacific-eez-filter-s3:
 # Product GMW EEZ V4 List Geometries
 product-gmw-v4-eez-list-geometries-years-local:
 	csdr products list-geometries-years \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries-years.json \
 		--years="2020"
 # 		--exclude-ids="1cd8d5a6-8ba2-537a-9706-a6413e025b03,d0b2c60c-e347-5d0d-83fa-24db9db9f558"
 
 product-gmw-v4-eez-list-geometries-years-s3:
 	csdr products list-geometries-years \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/tmp/geometries-years.json \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=s3://csdr-public-dev/products/gmw-v4-eez/$(VERSION)/tmp/geometries-years.json \
 		--years="2020"
 
 # Product GMW EEZ V4 Process Geometries
@@ -462,9 +468,9 @@ product-gmw-v4-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--run-id=test-product-gmw-v4-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v4/$(VERSION)/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v4-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
@@ -478,9 +484,9 @@ product-gmw-v4-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=f7cf7d28-9e39-4e3c-8102-705fc3eb40a0 \
 		--run-id=test-product-gmw-v3-eez-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
-		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/gmw.parquet.provenance.json \
+		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v3-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
@@ -491,17 +497,17 @@ product-gmw-v4-eez-process-geometry-s3:
 product-gmw-v4-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--location=./cache/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v4-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v4/$(VERSION)/gmw.parquet.provenance.json \
 		--indicator-name=mangrove \
 
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--location s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-product-gmw-v4-eez-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--location s3://csdr-public-dev/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v4-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/test-product-gmw-v4-eez-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/$(VERSION)/gmw.parquet.provenance.json \
 		--indicator-name=mangrove \
 
 # You need to make a Product in the app before running provenance. Use that product ID here.
@@ -509,7 +515,7 @@ product-gmw-v4-eez-consolidate-s3:
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--product-url=./cache/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=test-product-gmw-v4-eez-run-id \
 		--dataset-run-id=9d2cf140-1d6f-405a-93af-ba1a1dcd7029 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
@@ -519,7 +525,7 @@ product-gmw-v4-eez-provenance-local-db:
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
-		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
+		--product-url=s3://csdr-public-dev/products/gmw-v4-eez/$(VERSION)/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
 		--run-id=test-product-gmw-v4-eez-run-id \
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
@@ -532,7 +538,7 @@ product-gmw-v4-eez-provenance-s3-db:
 # Lists the same geometries as GMW v4 EEZ
 product-gmw-v3-eez-list-geometries-years-local:
 	csdr products list-geometries-years \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries-years.json \
 		--years="1996,2007,2008,2009,2010,2015,2016,2017,2018,2019,2020"
 
@@ -540,9 +546,9 @@ product-gmw-v3-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
 		--run-id=test-product-gmw-v3-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
-		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v3/$(VERSION)/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v3-eez/$(VERSION)/runs/test-product-gmw-v3-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime-string-match=1996 \
 		--load-kwargs="resolution=500,crs=epsg:6933" \
@@ -552,16 +558,16 @@ product-gmw-v3-eez-process-geometry-local:
 product-gmw-v3-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/gmw-v3/0-0-1/gmw.parquet.provenance.json \
+		--location=./cache/products/gmw-v3-eez/$(VERSION)/runs/test-product-gmw-v3-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v3/$(VERSION)/gmw.parquet.provenance.json \
 		--indicator-name=mangrove
 # No datetime because there are many
 
 product-gmw-v3-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=ae9b3100-611b-4841-97f0-d63c3dda0637 \
-		--product-url=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id/mangrove/ae9b3100-611b-4841-97f0-d63c3dda0637.parquet \
+		--product-url=./cache/products/gmw-v3-eez/$(VERSION)/runs/test-product-gmw-v3-eez-run-id/mangrove/ae9b3100-611b-4841-97f0-d63c3dda0637.parquet \
 		--run-id=test-product-gmw-v3-eez-run-id \
 		--dataset-run-id=d97e1dd1-a9eb-481b-9e17-30fdc1fe6838 \
 		--geometries-run-id=test-run-id \
@@ -574,7 +580,7 @@ product-gmw-v3-eez-provenance-local-db:
 # Lists the same geometries as GMW v4 EEZ but for seagrass product
 product-seagrass-eez-list-geometries-years-local:
 	csdr products list-geometries-years \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries-years.json \
 		--years="2017,2018,2019,2020,2021,2022,2023,2024"
 
@@ -587,9 +593,9 @@ product-seagrass-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
 		--run-id=test-product-seagrass-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/seagrass/$(VERSION)/dep_s2_seagrass.parquet.provenance.json \
+		--target-location=./cache/products/seagrass-eez/$(VERSION)/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
@@ -602,9 +608,9 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 	csdr products process-geometry \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
 		--run-id=test-product-seagrass-eez-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
-		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/seagrass/$(VERSION)/dep_s2_seagrass.parquet.provenance.json \
+		--target-location=./cache/products/seagrass-eez/$(VERSION)/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
 		--load-kwargs="resolution=100,crs=epsg:3832" \
@@ -614,15 +620,15 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 product-seagrass-eez-consolidate-local:
 	csdr products consolidate \
 			--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-			--location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
-			--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-			--dataset-provenance-url=./cache/datasets/seagrass/0-0-1/dep_s2_seagrass.parquet.provenance.json \
+			--location=./cache/products/seagrass-eez/$(VERSION)/runs/test-product-seagrass-eez-run-id \
+			--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+			--dataset-provenance-url=./cache/datasets/seagrass/$(VERSION)/dep_s2_seagrass.parquet.provenance.json \
 			--indicator-name=seagrass
 
 product-seagrass-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=e302f96a-e8bb-4457-a55a-4010d98e0a47 \
-		--product-url=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
+		--product-url=./cache/products/seagrass-eez/$(VERSION)/runs/test-product-seagrass-eez-run-id/seagrass/e302f96a-e8bb-4457-a55a-4010d98e0a47.parquet \
 		--run-id=test-product-seagrass-eez-run-id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
@@ -633,7 +639,7 @@ product-seagrass-eez-provenance-local-db:
 # Product ACA Reef Extent by EEZ
 product-aca-eez-list-geometries-years-local:
 	csdr products list-geometries-years \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--out-file=./cache/tmp/geometries-years.json \
 		--years="2022"
 
@@ -646,9 +652,9 @@ product-aca-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--run-id=test-aca-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/aca/$(VERSION)/reefextent.parquet.provenance.json \
+		--target-location=./cache/products/aca-eez/$(VERSION)/runs/test-aca-eez-run-id \
 		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
@@ -659,9 +665,9 @@ product-aca-eez-process-geometry-s3:
 	csdr products process-geometry \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
 		--run-id=test-aca-eez-run-id \
-		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
-		--target-location=s3://csdr-public-dev/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
+		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/$(VERSION)/runs/1cad60fb-73d3-5f95-a733-6bde395af587/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=s3://csdr-public-dev/datasets/aca/$(VERSION)/reefextent.parquet.provenance.json \
+		--target-location=s3://csdr-public-dev/products/aca-eez/$(VERSION)/runs/test-aca-eez-run-id \
 		--indicators-to-extract='{"sum-reef-area": {"indicator-name": "class", "indicator-value": "Reef"}}' \
 		--datetime=2022 \
 		--geometry-id=6fb63148-8709-5ad7-a76c-c6599d34befb \
@@ -670,16 +676,16 @@ product-aca-eez-process-geometry-s3:
 product-aca-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--location=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/aca/0-0-1/reefextent.parquet.provenance.json \
+		--location=./cache/products/aca-eez/$(VERSION)/runs/test-aca-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/aca/$(VERSION)/reefextent.parquet.provenance.json \
 		--indicator-name=class
 # 'class' isn't the best indicator-name here. 'reefextent' would be better. 'class' is just the column name used in process_geometry.
 
 product-aca-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=5926571e-a088-419d-a966-24557866ce90 \
-		--product-url=./cache/products/aca-eez/0-0-1/runs/test-aca-eez-run-id/class/5926571e-a088-419d-a966-24557866ce90.parquet \
+		--product-url=./cache/products/aca-eez/$(VERSION)/runs/test-aca-eez-run-id/class/5926571e-a088-419d-a966-24557866ce90.parquet \
 		--run-id=test-aca-eez-run-id \
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
@@ -700,9 +706,9 @@ product-buildings-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
 		--run-id=test-buildings-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
-		--target-location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/$(VERSION)/buildings.parquet.provenance.json \
+		--target-location=./cache/products/buildings-eez/$(VERSION)/runs/test-buildings-eez-run-id \
 		--datetime=2025 \
 		--geometry-id=b1b00b2e-2739-5215-a18c-eb72c5798034 \
 		--indicators-to-extract='{"count-buildings": {"indicator-name": "buildings", "indicator-value": null}}' \
@@ -710,15 +716,15 @@ product-buildings-eez-process-geometry-local:
 product-buildings-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--location=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/buildings/0-0-1/buildings.parquet.provenance.json \
+		--location=./cache/products/buildings-eez/$(VERSION)/runs/test-buildings-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/buildings/$(VERSION)/buildings.parquet.provenance.json \
 		--indicator-name=buildings
 # 		--indicator-name=count-buildings
 product-buildings-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=f9eef768-40bd-48e5-903d-dc2bb1c16f6d \
-		--product-url=./cache/products/buildings-eez/0-0-1/runs/test-buildings-eez-run-id/buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
+		--product-url=./cache/products/buildings-eez/$(VERSION)/runs/test-buildings-eez-run-id/buildings/f9eef768-40bd-48e5-903d-dc2bb1c16f6d.parquet \
 		--run-id=test-buildings-eez-run-id \
 		--dataset-run-id=c77dd12e-875b-4d05-b9de-0958f1a4d7ec \
 		--geometries-run-id=eez-test-run-id \
@@ -735,9 +741,9 @@ product-ace-acsc2-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
 		--run-id=test-ace-acsc2-run-id \
-		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
-		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/$(VERSION)/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/$(VERSION)/ace.parquet.provenance.json \
+		--target-location=./cache/products/ace-acsc2/$(VERSION)/runs/test-ace-acsc2-run-id \
 		--datetime-string-match='2022-01-01T00:00:00Z/2022-12-31T23:59:59.999Z' \
 		--datetime=2022 \
 		--load-kwargs="resolution=100,crs=epsg:6933" \
@@ -747,14 +753,14 @@ product-ace-acsc2-process-geometry-local:
 product-ace-acsc2-consolidate-local:
 	csdr products consolidate \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
-		--location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
-		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/ace/0-0-1/ace.parquet.provenance.json \
+		--location=./cache/products/ace-acsc2/$(VERSION)/runs/test-ace-acsc2-run-id \
+		--geometry-provenance-url=./cache/geometries/acsc2/$(VERSION)/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/ace/$(VERSION)/ace.parquet.provenance.json \
 		--indicator-name=many-indicators
 product-ace-acsc2-provenance-local-db:
 	csdr provenance product \
 		--product-id=ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443 \
-		--product-url=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id/many-indicators/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
+		--product-url=./cache/products/ace-acsc2/$(VERSION)/runs/test-ace-acsc2-run-id/many-indicators/ab3e7b2c-e79e-4f8b-b1f7-64bf44eb1443.parquet \
 		--run-id=test-ace-acsc2-run-id \
 		--dataset-run-id=b110a9cd-0052-4436-8504-3d55f6d79094 \
 		--geometries-run-id=acsc2-test-run-id \
@@ -767,9 +773,9 @@ product-dep-mangrove-eez-process-geometry-local:
 	csdr products process-geometry \
 		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
 		--run-id=test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
-		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/$(VERSION)/dep-mangrove.parquet.provenance.json \
+		--target-location=./cache/products/dep-mangrove-eez/$(VERSION)/runs/test-dep-mangrove-eez-run-id \
 		--datetime-string-match=2024 \
 		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": "1.0,2.0"}}' \
@@ -777,14 +783,14 @@ product-dep-mangrove-eez-process-geometry-local:
 product-dep-mangrove-eez-consolidate-local:
 	csdr products consolidate \
 		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
+		--location=./cache/products/dep-mangrove-eez/$(VERSION)/runs/test-dep-mangrove-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/$(VERSION)/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/dep-mangrove/$(VERSION)/dep-mangrove.parquet.provenance.json \
 		--indicator-name=mangroves
 product-dep-mangrove-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
+		--product-url=./cache/products/dep-mangrove-eez/$(VERSION)/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
 		--run-id=test-dep-mangrove-eez-run-id \
 		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
 		--geometries-run-id=eez-test-run-id \
@@ -792,34 +798,12 @@ product-dep-mangrove-eez-provenance-local-db:
 		--overwrite
 
 # Product DEP Mangrove per Pacific EEZ
-product-dep-mangrove-pacific-eez-process-geometry-local:
-	csdr products process-geometry \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--run-id=test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
-		--target-location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
-		--datetime-string-match=2024 \
-		--geometry-id=183feceb-c245-5b65-ab0a-59f3ad20685c \
-		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangroves", "indicator-value": "1.0,2.0"}}' \
-		--overwrite
-product-dep-mangrove-pacific-eez-consolidate-local:
-	csdr products consolidate \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--location=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id \
-		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
-		--dataset-provenance-url=./cache/datasets/dep-mangrove/0-0-1/dep-mangrove.parquet.provenance.json \
-		--indicator-name=mangroves
-product-dep-mangrove-pacific-eez-provenance-local-db:
-	csdr provenance product \
-		--product-id=19b9f140-9d1e-4b53-820f-d9745a3faf1b \
-		--product-url=./cache/products/dep-mangrove-eez/0-0-1/runs/test-dep-mangrove-eez-run-id/mangroves/19b9f140-9d1e-4b53-820f-d9745a3faf1b.parquet \
-		--run-id=test-dep-mangrove-eez-run-id \
-		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
-		--geometries-run-id=eez-test-run-id \
-		--post-to-database \
-		--overwrite
-
+# product-dep-mangrove-pacific-eez-process-geometry-local:
+# TODO
+# product-dep-mangrove-pacific-eez-consolidate-local:
+# TODO
+# product-dep-mangrove-pacific-eez-provenance-local-db:
+# TODO
 
 
 ### OTHER ###
