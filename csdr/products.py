@@ -3,7 +3,7 @@ import re
 
 import pandas as pd
 import sedona.db
-from odc.geo.geom import Geometry
+from odc.geo.geom import Geometry, box
 from pystac import ItemCollection
 from python_retry import retry
 from rustac import search_sync as rustac_search_sync
@@ -52,6 +52,11 @@ def _get_area_m2_from_stac_geoparquet(
     logging.info(
         f"Found {len(items)} STAC items for the given geometry and datetime filter."
     )
+
+    # TODO: This could be a better place to tile the massive geoms. Then the no intersect cases would be faster.
+    # Best would be to check intersection of the whole geom with the dataset, exit quick if not, then tile, then check per geom before actually loading anything.
+    # It is pretty quick now because tiles with no intersect exit fast.
+    # geoms_tiled = _tile_geometries(geoms)
 
     items = ItemCollection(items)
 
@@ -244,6 +249,71 @@ def _get_area_m2_from_dataset_geometry(
         )
 
 
+# Constants
+_MAX_GEOM_AREA_KM2 = (
+    1_000_000  # ~Turkey EEZ size — geometries larger than this get tiled
+)
+# TODO: Experiment with tile size. Smaller tiles = less memory usage but more tiles to process. Larger tiles = more memory usage but fewer tiles to process.
+_TILE_SIDE_M = 866_000  # √750,000 km² ≈ 866km — target tile side length in metres
+
+
+def _tile_geometry(geom: Geometry) -> list[Geometry]:
+    """
+    Split a large geometry into tiles for memory-efficient processing.
+    Geometries under _MAX_GEOM_AREA_KM2 are returned as-is.
+    Tiles are clipped to the original geometry — empty tiles are discarded.
+    Coordinates are in EPSG:6933 (metres) for area calculation and tiling,
+    then returned in the original CRS.
+    """
+    geom_6933 = geom.to_crs("EPSG:6933")
+    geom_area_km2 = geom_6933.area / 1_000_000
+
+    if geom_area_km2 <= _MAX_GEOM_AREA_KM2:
+        logging.info(
+            f"Geometry area {geom_area_km2:.0f} km² is under limit, tiling not needed."
+        )
+        return [geom]
+
+    bbox = geom_6933.boundingbox  # BoundingBox with .left .right .top .bottom in metres
+    width_m = bbox.right - bbox.left
+    height_m = bbox.top - bbox.bottom
+    x_tiles = int(width_m // _TILE_SIDE_M) + 1
+    y_tiles = int(height_m // _TILE_SIDE_M) + 1
+
+    logging.info(
+        f"Geometry area {geom_area_km2:.0f} km² exceeds {_MAX_GEOM_AREA_KM2} km² limit. "
+        f"Tiling into {x_tiles}x{y_tiles} = {x_tiles * y_tiles} tiles..."
+    )
+
+    tiles = []
+    for i in range(x_tiles):
+        for j in range(y_tiles):
+            tile_minx = bbox.left + i * _TILE_SIDE_M
+            tile_miny = bbox.bottom + j * _TILE_SIDE_M
+            tile_maxx = min(tile_minx + _TILE_SIDE_M, bbox.right)
+            tile_maxy = min(tile_miny + _TILE_SIDE_M, bbox.top)
+
+            tile_geom_6933 = box(
+                tile_minx, tile_miny, tile_maxx, tile_maxy, crs="EPSG:6933"
+            )
+            tile_geom = tile_geom_6933.to_crs(geom.crs)
+            # Clip tiles to geom boundary.
+            clipped = geom.intersection(tile_geom)
+            if clipped is not None and not clipped.is_empty:
+                tiles.append(clipped)
+
+    logging.info(f"Tiling produced {len(tiles)} tiles.")
+    return tiles
+
+
+def _tile_geometries(geoms: list[Geometry]) -> list[Geometry]:
+    """Tile any oversized geometries in a list, returning the full set ready for processing."""
+    logging.info(f"Before tiling: {len(geoms)} geometries.")
+    tiled = [tile for geom in geoms for tile in _tile_geometry(geom)]
+    logging.info(f"After tiling: {len(tiled)} geometries.")
+    return tiled
+
+
 def process_indicators_for_geometry(
     geometry: Geometry,
     indicators: dict[str, dict],
@@ -312,14 +382,22 @@ def process_indicators_for_geometry(
         if geometry.geom_type == "MultiPolygon":
             geoms = list(geometry.geoms)
 
+        # If any geom is over a certain size, tile it into smaller pieces. Without this, we cannot run Indonesia EEZ GMW v4 at full resolution for example.
+        # See table here for areas https://en.wikipedia.org/wiki/Exclusive_economic_zone
+        # For example this makes Australia's 8 geometries into 38.
+        geoms_tiled = _tile_geometries(geoms)
+
+        # # TODO: Remove this validation step.
+        # gdf_tiled = gpd.GeoDataFrame(geometry=geoms_tiled, crs=geometry.crs)
+        # gdf_tiled.to_file("geoms_tiled.geojson", driver="GeoJSON")
+
         # These total_* indicators are the sums over all single geometries in the multipolygon
         # TODO: When doing the indicator refactor, generalise these.
         total_multipolygon_area_m2 = 0.0  # Need for percent area calculations
         total_indicator_area_m2 = 0.0
         total_count = 0
-        logging.info(f"Amount of single geometries: {len(geoms)}")
-        for i, geom in enumerate(geoms):
-            logging.info(f"Processing geom {i + 1} of {len(geoms)}")
+        for i, geom in enumerate(geoms_tiled):
+            logging.info(f"Processing geom {i + 1} of {len(geoms_tiled)}")
             # For percent area calculations, we need the total area of the multipolygon in m²
             geometry_6933 = geom.to_crs("EPSG:6933")
             geom_area_m2 = geometry_6933.area

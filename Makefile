@@ -467,7 +467,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
-		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
+		--load-kwargs='{"resolution": 10, "crs": "epsg:6933"}' \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
 		--overwrite
 
@@ -592,7 +592,7 @@ product-seagrass-eez-process-geometry-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs='{"resolution": 100, "crs": "epsg:6933", "chunks": {"x": 2048, "y": 2048}}' \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
