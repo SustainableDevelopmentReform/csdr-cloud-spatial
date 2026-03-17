@@ -91,16 +91,13 @@ def xarray_calculate_area_m2(
 
     # Validate that data and geom have the same CRS.
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
-    # Raster reproject is not needed because we load in 6933.
-    # data = data.rio.reproject(
-    #     target_crs
-    # )  # TODO: Tweak parameters of reproject: resolution=desired_resolution, method='nearest', resampling=Resampling.bilinear
     geom = geom.to_crs(target_crs)
 
     # Mask out regions outside the geometry
     masked = mask(data, geom)
 
     # Count all the non-nan cells, and multiply by area
+    # This is where the data actally loads. Values calls dask compute.
     count = float(masked.notnull().sum().values)
     one_pixel_area_m2 = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
