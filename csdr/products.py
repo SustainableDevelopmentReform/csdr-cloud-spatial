@@ -251,10 +251,11 @@ def _get_area_m2_from_dataset_geometry(
 
 # Constants
 _MAX_GEOM_AREA_KM2 = (
-    1_000_000  # ~Turkey EEZ size — geometries larger than this get tiled
+    500_000  # ~Ivory Coast EEZ size — geometries larger than this get tiled
 )
-# TODO: Experiment with tile size. Smaller tiles = less memory usage but more tiles to process. Larger tiles = more memory usage but fewer tiles to process.
-_TILE_SIDE_M = 866_000  # √750,000 km² ≈ 866km — target tile side length in metres
+# Smaller tiles = less memory usage but more tiles to process.
+# Larger tiles = more memory usage but fewer tiles to process.
+_TILE_SIDE_M = 500_000  # ~250,000 km² tiles
 
 
 def _tile_geometry(geom: Geometry) -> list[Geometry]:
@@ -383,13 +384,8 @@ def process_indicators_for_geometry(
             geoms = list(geometry.geoms)
 
         # If any geom is over a certain size, tile it into smaller pieces. Without this, we cannot run Indonesia EEZ GMW v4 at full resolution for example.
-        # See table here for areas https://en.wikipedia.org/wiki/Exclusive_economic_zone
-        # For example this makes Australia's 8 geometries into 38.
+        # For example this makes Australia's 8 geometries into 86.
         geoms_tiled = _tile_geometries(geoms)
-
-        # # TODO: Remove this validation step.
-        # gdf_tiled = gpd.GeoDataFrame(geometry=geoms_tiled, crs=geometry.crs)
-        # gdf_tiled.to_file("geoms_tiled.geojson", driver="GeoJSON")
 
         # These total_* indicators are the sums over all single geometries in the multipolygon
         # TODO: When doing the indicator refactor, generalise these.
