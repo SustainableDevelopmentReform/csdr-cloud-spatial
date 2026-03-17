@@ -131,20 +131,7 @@ def _create_product_output(
 def opt_dict_parser(s: str | dict[str, Any]) -> dict[str, Any]:
     if type(s) is dict:
         return s
-
-    result = dict(item.split("=", 1) for item in s.split(",") if "=" in item)
-
-    # Try parsing values to int or float
-    for key, value in result.items():
-        try:
-            result[key] = int(value)
-        except ValueError:
-            try:
-                result[key] = float(value)
-            except ValueError:
-                pass
-
-    return result
+    return json.loads(s)
 
 
 def version_parser(s: str) -> str:
@@ -255,7 +242,7 @@ def process_geometry(
     load_kwargs: dict[str, str] = typer.Option(
         {},
         "--load-kwargs",
-        help="Options to pass to xarray load function, in the form --load-kwargs key1=value1,key2=value2",
+        help='Options to pass to xarray load function, in the form --load-kwargs=\'{"crs": "epsg:6933", "resolution": 100, "chunks": {"x": 2048, "y": 2048}}\'',
         parser=opt_dict_parser,
     ),
     use_dask: bool = typer.Option(
@@ -264,7 +251,7 @@ def process_geometry(
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
-        help='Options to pass to Dask client, in the form --dask-opts="n_workers=8,threads_per_worker=1,memory_limit=3GB"',
+        help='Options to pass to Dask client, in the form --dask-opts=\'{"n_workers": 8, "threads_per_worker": 1, "memory_limit": "3GB"}\'',
         parser=opt_dict_parser,
     ),
     overwrite: bool = typer.Option(

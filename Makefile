@@ -467,7 +467,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
 		--overwrite
 
@@ -483,7 +483,7 @@ product-gmw-v4-eez-process-geometry-s3:
 		--target-location=s3://csdr-public-dev/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=7b628528-0f25-514a-884f-4d9750acccda \
 		--overwrite
 
@@ -545,7 +545,7 @@ product-gmw-v3-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v3-eez/0-0-1/runs/test-product-gmw-v3-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime-string-match=1996 \
-		--load-kwargs="resolution=500,crs=epsg:6933" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=01ff6be8-675b-5c8e-97dc-8cb224a12db6 \
 		--overwrite
 
@@ -592,7 +592,7 @@ product-seagrass-eez-process-geometry-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933", "chunks": {"x": 2048, "y": 2048}}' \
 		--geometry-id=1d7022dd-e6de-50b5-bee5-687df14be0a2 \
 		--overwrite
 
@@ -607,7 +607,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs="resolution=100,crs=epsg:3832" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
 		--overwrite
 
@@ -740,7 +740,7 @@ product-ace-acsc2-process-geometry-local:
 		--target-location=./cache/products/ace-acsc2/0-0-1/runs/test-ace-acsc2-run-id \
 		--datetime-string-match='2022-01-01T00:00:00Z/2022-12-31T23:59:59.999Z' \
 		--datetime=2022 \
-		--load-kwargs="resolution=100,crs=epsg:6933" \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
 		--geometry-id=b608c6ab-6ce4-5a89-9523-ee07d8dd4c22 \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "classification", "indicator-value": 3}, "sum-intertidal-area": {"indicator-name": "classification", "indicator-value": 2}, "sum-saltmarsh-area": {"indicator-name": "classification", "indicator-value": 4}, "sum-seagrass-area": {"indicator-name": "classification", "indicator-value": 5}, "percent-mangrove-area": {"indicator-name": null, "indicator-value": null}, "percent-intertidal-area": {"indicator-name": null, "indicator-value": null}, "percent-saltmarsh-area": {"indicator-name": null, "indicator-value": null}, "percent-seagrass-area": {"indicator-name": null, "indicator-value": null}}' \
 		--overwrite
