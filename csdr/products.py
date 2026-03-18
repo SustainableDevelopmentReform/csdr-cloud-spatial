@@ -59,6 +59,27 @@ def _get_area_m2_from_stac_geoparquet(
     # geoms_tiled = _tile_geometries(geoms)
 
     items = ItemCollection(items)
+    items_cleaned = []
+    # print(items[0].assets)
+    print(f"Before cleaning, {len(items)} STAC items found for loading.")
+    for x in list(items):
+        minx, _miny, maxx, _maxy = x.bbox
+        if (minx < -180 or maxx > 180) or (minx == -180 and maxx == 180):
+            logging.warning(
+                f"##################### Item {x.id} has bbox that spans the antimeridian: {x.bbox}. Skipping for now."
+            )
+        else:
+            logging.info("Item bbox ok.")
+            items_cleaned.append(x)
+        # if x.id == "dep_s2_seagrass_066_019_2017":
+        #     print(x.assets.get(indicator, {}.get('href')))
+        #     print(x.bbox)
+        #     import pdb; pdb.set_trace()
+    items = ItemCollection(items_cleaned)
+    print(f"After cleaning, {len(items)} STAC items remain for loading.")
+
+    # The problem is that dep_s2_seagrass_066_019_2017_seagrass spans the antimeridian (when reprojected from native 3832 to 6933 at 10m).
+    # This causes the loaded dataset to be insanely big. For some reason we don't hit this for GMW or DEPSeagrass at 100m. Maybe because they are in 4326.
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
@@ -303,7 +324,7 @@ def _tile_geometry(geom: Geometry) -> list[Geometry]:
             if clipped is not None and not clipped.is_empty:
                 tiles.append(clipped)
 
-    logging.info(f"Tiling produced {len(tiles)} tiles.")
+    logging.info(f"Tiling produced {len(tiles)} tiles (after clipping).")
     return tiles
 
 
