@@ -593,9 +593,10 @@ product-seagrass-eez-process-geometry-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs='{"resolution": 10, "crs": "epsg:6933", "chunks": {"x": 4096, "y": 4096}}' \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:3832", "chunks": {"x": 4096, "y": 4096}}' \
 		--geometry-id=7293a564-543d-545b-b9ac-2a77e2d8795b \
 		--overwrite
+# 3832 is native.
 
 # d74a98d8-0679-5f6e-aa03-74ba02b41718 Jordan (no seagrass)
 # fcff483d-6755-5a58-8cfd-902a0831e998 Nauru (has seagrass)
@@ -608,7 +609,7 @@ product-seagrass-eez-process-geometry-read-s3-write-local:
 		--target-location=./cache/products/seagrass-eez/0-0-1/runs/test-product-seagrass-eez-run-id \
 		--indicators-to-extract='{"sum-seagrass-area": {"indicator-name": "seagrass", "indicator-value": 1}}' \
 		--datetime-string-match="2017" \
-		--load-kwargs='{"resolution": 100, "crs": "epsg:6933"}' \
+		--load-kwargs='{"resolution": 100, "crs": "epsg:3832"}' \
 		--geometry-id=fcff483d-6755-5a58-8cfd-902a0831e998 \
 		--overwrite
 

@@ -53,30 +53,7 @@ def _get_area_m2_from_stac_geoparquet(
         f"Found {len(items)} STAC items for the given geometry and datetime filter."
     )
 
-    # TODO: This could be a better place to tile the massive geoms. Then the no intersect cases would be faster.
-    # Best would be to check intersection of the whole geom with the dataset, exit quick if not, then tile, then check per geom before actually loading anything.
-    # It is pretty quick now because tiles with no intersect exit fast.
-    # geoms_tiled = _tile_geometries(geoms)
-
     items = ItemCollection(items)
-    items_cleaned = []
-    # print(items[0].assets)
-    print(f"Before cleaning, {len(items)} STAC items found for loading.")
-    for x in list(items):
-        minx, _miny, maxx, _maxy = x.bbox
-        if (minx < -180 or maxx > 180) or (minx == -180 and maxx == 180):
-            logging.warning(
-                f"##################### Item {x.id} has bbox that spans the antimeridian: {x.bbox}. Skipping for now."
-            )
-        else:
-            logging.info("Item bbox ok.")
-            items_cleaned.append(x)
-        # if x.id == "dep_s2_seagrass_066_019_2017":
-        #     print(x.assets.get(indicator, {}.get('href')))
-        #     print(x.bbox)
-        #     import pdb; pdb.set_trace()
-    items = ItemCollection(items_cleaned)
-    print(f"After cleaning, {len(items)} STAC items remain for loading.")
 
     # The problem is that dep_s2_seagrass_066_019_2017_seagrass spans the antimeridian (when reprojected from native 3832 to 6933 at 10m).
     # This causes the loaded dataset to be insanely big. For some reason we don't hit this for GMW or DEPSeagrass at 100m. Maybe because they are in 4326.
@@ -86,13 +63,22 @@ def _get_area_m2_from_stac_geoparquet(
         load_kwargs["chunks"] = {}
     logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
 
-    # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
+    # Load the dataset as xarray from the STAC items.
     data = load_xarray_stacgeoparquet(
         items,
         **load_kwargs,
     )
 
     logging.info(f"Loaded data with shape {data.dims}")
+
+    # After loading, before any compute, check antimeridian issue.
+    MAX_PIXELS_PER_DIM = 500_000
+    x_size = data.sizes["x"]
+    y_size = data.sizes["y"] / 2
+    if x_size > MAX_PIXELS_PER_DIM or y_size > MAX_PIXELS_PER_DIM:
+        raise CSDRException(
+            f"Array shape (y={y_size}, x={x_size}) indicates antimeridian/polar issue. Maximum allowed is {MAX_PIXELS_PER_DIM}."
+        )
 
     if indicator not in data.data_vars:
         raise CSDRException(

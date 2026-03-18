@@ -8,6 +8,7 @@ from typing import Any
 import geopandas as gpd
 import pystac
 import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
+from odc.geo.geobox import GeoBox
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
@@ -68,7 +69,9 @@ def load_xarray_stacgeoparquet(
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
-    data = load(items, **load_kwargs)
+    data = load(
+        items, **load_kwargs, resampling="nearest"
+    )  # Nearest due to categorical data (default but being explicit).
 
     return data
 
@@ -93,15 +96,34 @@ def xarray_calculate_area_m2(
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
     geom = geom.to_crs(target_crs)
 
-    # Mask out regions outside the geometry
+    # For DEP Seagrass, we need to load natively in 3832 to avoid reprojection issues with the antimeridian. But then we need to reproject to 6933 for the area calculation to be correct.
+    # For all others we load straight to 6933.
+    # TODO: Test DEP Mangrove too. Not sure what CRS is native for that dataset.
+    loaded_epsg = data.odc.geobox.crs.to_epsg()
+    print(f"Data CRS: {loaded_epsg}, Geometry CRS: {geom.crs}")
+    if loaded_epsg != 6933:
+        logging.warning(
+            f"Reprojecting dataset (from {loaded_epsg}) because it was not loading in 6933. Please use 6933 unless you can't (e.g. DEP Seagrass Antimeridian Fiji issue)"
+        )
+        # Use the geometry bounds to define the output extent
+        # rather than letting odc calculate it (which causes the blowup)
+        target_geobox = GeoBox.from_bbox(
+            geom.boundingbox,  # already in 6933 at this point
+            crs=target_crs,
+            resolution=data.odc.geobox.resolution,  # preserve native resolution
+        )
+        data = data.odc.reproject(target_geobox, resampling="nearest")
+
+    # Mask out regions outside the geometry. Must be done after reprojection to ensure correct masking.
     masked = mask(data, geom)
 
     # Count all the non-nan cells, and multiply by area
-    # This is where the data actally loads. Values calls dask compute.
-    count = float(masked.notnull().sum().values)
     one_pixel_area_m2 = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )
+    # This is where the data actally loads. Compute.
+    # single compute call, only on the already-reduced scalar
+    count = float(masked.notnull().sum().compute())
 
     return round(float(count) * one_pixel_area_m2, 2)
 
