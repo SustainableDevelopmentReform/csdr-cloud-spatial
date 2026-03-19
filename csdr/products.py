@@ -392,8 +392,7 @@ def process_indicators_for_geometry(
 
         # If any geom is over a certain size, tile it into smaller pieces. Without this, we cannot run Indonesia EEZ GMW v4 at full resolution for example.
         # For example this makes Australia's 8 geometries into 86.
-        # geoms_tiled = _tile_geometries(geoms)
-        geoms_tiled = geoms  # Skip tiling to debug antimeridian
+        geoms_tiled = _tile_geometries(geoms)
 
         # These total_* indicators are the sums over all single geometries in the multipolygon
         # TODO: When doing the indicator refactor, generalise these.
