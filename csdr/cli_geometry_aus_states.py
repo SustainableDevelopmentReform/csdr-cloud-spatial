@@ -12,6 +12,7 @@ from csdr.io import (
 )
 
 aus_states_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 # Steps:
 # 1. Cache: Download the ABS states shapefile zip from ABS website to target_location
@@ -43,25 +44,25 @@ def cache_aus_states(
         True, help="Overwrite files if they exist at target."
     ),
 ) -> None:
-    logging.info("Starting Australian States caching process ...")
+    logger.info("Starting Australian States caching process ...")
     target_location = target_location.rstrip("/")
 
     target_store = get_store_with_prefix_from_url(target_location)
     _source_path, source_file_name = split_path_and_file_name_from_url(source_url)
     target_url = f"{target_location}/{source_file_name}"
-    logging.info(f"Target URL for caching is {target_url}")
+    logger.info(f"Target URL for caching is {target_url}")
 
     if exists(target_store, source_file_name) and not overwrite:
-        logging.info(
+        logger.info(
             "File already exists at target location and overwrite is disabled. Skipping download."
         )
         exit(0)  # Exit successfully, nothing to do
-    logging.info(
+    logger.info(
         "File either doesn't exist at target location or overwrite is enabled. Re-downloading."
     )
 
     asyncio.run(_run_cache_aus_states(source_url, source_file_name, target_store))
 
-    logging.info(
+    logger.info(
         f"Australian States caching process completed. Downloaded to {target_url}"
     )

@@ -16,7 +16,7 @@ from csdr.utils import (
     xarray_calculate_area_m2,
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 # The _get_area_m2_from_stac_geoparquet function does the following:
@@ -45,11 +45,11 @@ def _get_area_m2_from_stac_geoparquet(
     )
 
     if not items or len(items) == 0:
-        logging.info(
+        logger.info(
             "No STAC items found for the given geometry and datetime filter. Returning area of 0.0"
         )
         return 0.0
-    logging.info(
+    logger.info(
         f"Found {len(items)} STAC items for the given geometry and datetime filter."
     )
 
@@ -63,7 +63,7 @@ def _get_area_m2_from_stac_geoparquet(
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
-    logging.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
+    logger.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
 
     # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
     data = load_xarray_stacgeoparquet(
@@ -71,7 +71,7 @@ def _get_area_m2_from_stac_geoparquet(
         **load_kwargs,
     )
 
-    logging.info(f"Loaded data with shape {data.dims}")
+    logger.info(f"Loaded data with shape {data.dims}")
 
     if indicator not in data.data_vars:
         raise CSDRException(
@@ -120,10 +120,10 @@ def _get_area_m2_from_geoparquet_sedona(
 
     area_m2 = area_result_m2["total_area_m2"][0]
     if pd.isna(area_m2):
-        logging.info("No intersected dataset geometries found.")
+        logger.info("No intersected dataset geometries found.")
         return 0.0
     else:
-        logging.info(f"Total intersected area: {area_m2:.2f}m²")
+        logger.info(f"Total intersected area: {area_m2:.2f}m²")
 
     return round(float(area_m2), 2)
 
@@ -161,9 +161,9 @@ def _get_count_points_in_polygon_geoparquet(
     ).to_pandas()
 
     if intersected_partition_urls.empty:
-        logging.info("No intersected dataset geometries found in index.")
+        logger.info("No intersected dataset geometries found in index.")
         return 0
-    logging.info(
+    logger.info(
         f"Found {len(intersected_partition_urls)} intersected 2nd level country admin area parquet files from index."
     )
 
@@ -186,23 +186,23 @@ def _get_count_points_in_polygon_geoparquet(
             ).to_pandas()
             geom_count = count_result["geom_count"][0]
             if not pd.isna(geom_count):
-                logging.info(f"{geom_count} buildings for parquet.")
+                logger.info(f"{geom_count} buildings for parquet.")
                 return int(geom_count)
             return 0
         except Exception:
-            logging.exception(
+            logger.exception(
                 f"Error processing 2nd level country admin area parquet {country_code}/{s2_code}"
             )
             raise
 
     for idx, (_, row) in enumerate(intersected_partition_urls.iterrows(), 1):
         try:
-            logging.info(
+            logger.info(
                 f"Processing parquet {idx} of {len(intersected_partition_urls)}. Reading parquet: '{row.country_code}', '{row.s2_code}', '{row.url}'"
             )
             total_count += count_points_parquet(row)
         except Exception:
-            logging.exception(
+            logger.exception(
                 f"Failed to process 2nd level country admin area parquet {row.country_code}/{row.s2_code} after retries. Raising so workflow will retry."
             )
             raise
@@ -270,7 +270,7 @@ def _tile_geometry(geom: Geometry) -> list[Geometry]:
     geom_area_km2 = geom_6933.area / 1_000_000
 
     if geom_area_km2 <= _MAX_GEOM_AREA_KM2:
-        logging.info(
+        logger.info(
             f"Geometry area {geom_area_km2:.0f} km² is under limit, tiling not needed."
         )
         return [geom]
@@ -281,7 +281,7 @@ def _tile_geometry(geom: Geometry) -> list[Geometry]:
     x_tiles = int(width_m // _TILE_SIDE_M) + 1
     y_tiles = int(height_m // _TILE_SIDE_M) + 1
 
-    logging.info(
+    logger.info(
         f"Geometry area {geom_area_km2:.0f} km² exceeds {_MAX_GEOM_AREA_KM2} km² limit. "
         f"Tiling into {x_tiles}x{y_tiles} = {x_tiles * y_tiles} tiles..."
     )
@@ -303,15 +303,15 @@ def _tile_geometry(geom: Geometry) -> list[Geometry]:
             if clipped is not None and not clipped.is_empty:
                 tiles.append(clipped)
 
-    logging.info(f"Tiling produced {len(tiles)} tiles.")
+    logger.info(f"Tiling produced {len(tiles)} tiles.")
     return tiles
 
 
 def _tile_geometries(geoms: list[Geometry]) -> list[Geometry]:
     """Tile any oversized geometries in a list, returning the full set ready for processing."""
-    logging.info(f"Before tiling: {len(geoms)} geometries.")
+    logger.info(f"Before tiling: {len(geoms)} geometries.")
     tiled = [tile for geom in geoms for tile in _tile_geometry(geom)]
-    logging.info(f"After tiling: {len(tiled)} geometries.")
+    logger.info(f"After tiling: {len(tiled)} geometries.")
     return tiled
 
 
@@ -325,7 +325,7 @@ def process_indicators_for_geometry(
     results = {}
     sd = sedona.db.connect()
 
-    logging.info(f"Loading dataset from {dataset_provenance_url}")
+    logger.info(f"Loading dataset from {dataset_provenance_url}")
     provenance = read_provenance(dataset_provenance_url)
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
@@ -374,7 +374,7 @@ def process_indicators_for_geometry(
                     f"Indicator value {indicator_value_s} is not parsable to float. It should be either a single float, or a comma-separated list of strings or floats."
                 )
 
-        logging.info(
+        logger.info(
             f"Processing indicators: {var_key} with indicator name: {indicator_name} and value/s: {indicator_value_s}"
         )
 
@@ -393,7 +393,7 @@ def process_indicators_for_geometry(
         total_indicator_area_m2 = 0.0
         total_count = 0
         for i, geom in enumerate(geoms_tiled):
-            logging.info(f"Processing geom {i + 1} of {len(geoms_tiled)}")
+            logger.info(f"Processing geom {i + 1} of {len(geoms_tiled)}")
             # For percent area calculations, we need the total area of the multipolygon in m²
             geometry_6933 = geom.to_crs("EPSG:6933")
             geom_area_m2 = geometry_6933.area
@@ -414,24 +414,24 @@ def process_indicators_for_geometry(
                 )
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2
-                logging.info(
+                logger.info(
                     f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value/s {indicator_value_s}"
                 )
             elif count_var_pattern.match(var_key):  # ["count-buildings"]
-                logging.info("Starting count indicator analysis...")
+                logger.info("Starting count indicator analysis...")
                 # TODO: Try to parallelise this to improve performance on multipolygons with many parts, that each intersect many parquet files.
                 count = _get_count_points_in_polygon_geoparquet(
                     sd, dataset_url, geom.wkt
                 )
                 total_count += count
                 results[var_key] = total_count
-                logging.info(
+                logger.info(
                     f"Total count of intersected buildings for this multipolygon geometry so far: {total_count}"
                 )
 
         # Handle area percent indicators outside of the single geometry loop, since they depend on total area calculations
         if area_percent_var_pattern.match(var_key):
-            logging.info(
+            logger.info(
                 "Calculating percent area now that all geoms have been processed..."
             )
             indicator_area_m2 = results.get(
@@ -443,7 +443,7 @@ def process_indicators_for_geometry(
                 else 0.0
             )
             results[var_key] = area_percent
-            logging.info(
+            logger.info(
                 f"Calculated {var_key}: {area_percent:.2f}% (Indicator area: {indicator_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)"
             )
 

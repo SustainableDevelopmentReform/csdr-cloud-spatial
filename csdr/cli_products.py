@@ -25,6 +25,7 @@ from csdr.provenance import read_provenance
 from csdr.utils import CSDRException, make_uuid
 
 products_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 # In future we will get indicators/variables from the DB.
 # In future, indicators will be called indicators and can be computed or derived (currently only computed).
@@ -74,10 +75,10 @@ def _setup_dask_client(
 ) -> Client | None:
     """Set up Dask client if requested."""
     if not use_dask:
-        logging.info("Use Dask parameter is False. Not starting Dask client.")
+        logger.info("Use Dask parameter is False. Not starting Dask client.")
         return None
 
-    logging.info(f"Starting Dask client with options: {dask_client_opts}")
+    logger.info(f"Starting Dask client with options: {dask_client_opts}")
 
     # Parse the client opts, making them integers if they can be
     for key, value in dask_client_opts.items():
@@ -87,7 +88,7 @@ def _setup_dask_client(
             pass
 
     client = Client(**dask_client_opts)
-    logging.info(
+    logger.info(
         f"Dask client started: {client.dashboard_link if hasattr(client, 'dashboard_link') else client}"
     )
     return client
@@ -97,7 +98,7 @@ def _load_geometry_data(geometry_provenance_url: str) -> tuple[Any, str]:
     """Load geometry provenance and return gdf and geometry_file_url."""
     provenance = read_provenance(geometry_provenance_url)
     geometry_file_url = provenance.get("dataUrl")
-    logging.info(f"Reading geometries from {geometry_file_url}")
+    logger.info(f"Reading geometries from {geometry_file_url}")
     gdf = read_geospatial_file(geometry_file_url)
     return gdf, geometry_file_url
 
@@ -169,23 +170,23 @@ def list_geometries_years(
         None, help="Tempfile to write list of IDs to (otherwise print to console)"
     ),
 ) -> None:
-    logging.info(f"Dumping list of geometry ids for {geometry_provenance_url}")
+    logger.info(f"Dumping list of geometry ids for {geometry_provenance_url}")
 
     # Load the provenance file
     provenance = read_provenance(geometry_provenance_url)
     geometry_file_url = provenance.get("dataUrl")
 
-    logging.info(f"Reading geometries from {geometry_file_url}")
+    logger.info(f"Reading geometries from {geometry_file_url}")
     gdf = read_geospatial_file(geometry_file_url)
-    logging.info(f"Found {len(gdf)} geometries")
+    logger.info(f"Found {len(gdf)} geometries")
 
     # Filter geometries by IDs.
     ids_list = gdf["csdr-id"].tolist()
-    logging.info(f"Geometry contains {len(ids_list)} features.")
+    logger.info(f"Geometry contains {len(ids_list)} features.")
     if exclude_ids:
         exclude_ids_list = parse_csv_list(exclude_ids)
         ids_list = [id for id in ids_list if id not in exclude_ids_list]
-        logging.info(
+        logger.info(
             f"Excluded {len(exclude_ids_list)} geometry features. {len(ids_list)} features remaining."
         )
 
@@ -201,7 +202,7 @@ def list_geometries_years(
         target_path, target_file_name = split_path_and_file_name_from_url(out_file)
         target_store = get_store_with_prefix_from_url(target_path)
         write_json(target_store, target_file_name, geometries_years)
-        logging.info(f"Wrote geometry ids crossed with years to {out_file}")
+        logger.info(f"Wrote geometry ids crossed with years to {out_file}")
     else:
         sys.stdout.write(json.dumps(geometries_years, indent=4))
 
@@ -258,11 +259,11 @@ def process_geometry(
         False, help="If true, overwrite existing product file"
     ),
 ) -> None:
-    logging.info(
+    logger.info(
         f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'"
     )
-    logging.info(f"Run ID: '{run_id}'")
-    logging.info(f"indicators_to_extract (raw JSON): {indicators_to_extract}")
+    logger.info(f"Run ID: '{run_id}'")
+    logger.info(f"indicators_to_extract (raw JSON): {indicators_to_extract}")
 
     # Parse indicators_to_extract as JSON
     try:
@@ -297,9 +298,9 @@ def process_geometry(
     )
     target_url = f"{target_location}/{target_path}"
     if exists(target_store, target_path) and not overwrite:
-        logging.info(f"Product already exists at {target_url}, skipping processing.")
+        logger.info(f"Product already exists at {target_url}, skipping processing.")
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
-    logging.info("JSON doesn't exist or overwrite is True, processing geometry.")
+    logger.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
     # Load geometry data using Sedona so filtering is done before loading into memory
     # TODO: Make this a function get_geometry_parquet_sedona
@@ -323,7 +324,7 @@ def process_geometry(
             f"Multiple geometries found for id '{geometry_id}' in geometry file '{geometry_file_url}'"
         )
     geometry_row = geometry_df.iloc[0]
-    logging.info(
+    logger.info(
         f"Processing geometry '{geometry_row['csdr-name']}' with id '{geometry_id}'"
     )  # Name is helpful for debugging logs.
     geometry = Geometry(
@@ -352,9 +353,9 @@ def process_geometry(
             run_id,
         )
 
-        logging.info(f"Writing to {target_url}. target_path: {target_path}...")
+        logger.info(f"Writing to {target_url}. target_path: {target_path}...")
         write_json(target_store, target_path, product_output)
-        logging.info(f"Wrote results to {target_url}")
+        logger.info(f"Wrote results to {target_url}")
 
     finally:
         # Release resources
@@ -385,13 +386,13 @@ def consolidate_product(
         help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
     ),
 ) -> None:
-    logging.info(f"Consolidating product {product_id} from {location}")
+    logger.info(f"Consolidating product {product_id} from {location}")
     location = location.rstrip("/")
     store = get_store_with_prefix_from_url(location)
     path = get_product_path(product_id, indicator_name, datetime=datetime)
-    logging.info(f"path {path}")
+    logger.info(f"path {path}")
     url = f"{location}/{path}"
-    logging.info(f"Looking for product files in {url}")
+    logger.info(f"Looking for product files in {url}")
 
     # TODO: Use io.find_matching_files for this step
     # Get a list of all the json files in the product directory
@@ -402,13 +403,13 @@ def consolidate_product(
         files = [f["path"] for f in chunk if f["path"].endswith(".json")]
         json_files.extend(files)
 
-    logging.info(f"Found {len(json_files)} product files to consolidate")
+    logger.info(f"Found {len(json_files)} product files to consolidate")
 
     # Load each file and combine into a pandas DataFrame
     all_data = []
     for file in json_files:
         if file.endswith(".provenance.json"):
-            logging.info(f"Skipping provenance file {file}")
+            logger.info(f"Skipping provenance file {file}")
             continue
         product = read_dict(store, file)
         geometry_provenance_url = product.get("metadata", {}).get(
@@ -438,11 +439,11 @@ def consolidate_product(
         raise CSDRException(f"No valid product data found in {url}")
 
     df = pd.DataFrame(all_data)
-    logging.info(f"Consolidated product data from {url}: {df.shape[0]} rows")
+    logger.info(f"Consolidated product data from {url}: {df.shape[0]} rows")
 
     # Write the consolidated DataFrame to a new parquet
     output_file = f"{path}/{product_id}.parquet"
     write_gdf_to_parquet(df, store, output_file)
 
     target_url = f"{location}/{output_file}"
-    logging.info(f"Wrote consolidated product data to {target_url}")
+    logger.info(f"Wrote consolidated product data to {target_url}")
