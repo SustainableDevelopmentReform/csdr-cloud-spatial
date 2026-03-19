@@ -12,6 +12,7 @@ from csdr.io import (
 from csdr.utils import suppress_rust_output
 
 seagrass_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 
 async def run_index_dep_seagrass(
@@ -20,19 +21,19 @@ async def run_index_dep_seagrass(
     target_filename = "dep_s2_seagrass.parquet"
     target_store = get_store_with_prefix_from_url(target_location, mkdir=True)
     target_url = f"{target_location}/{target_filename}"
-    logging.info(f"Target URL for DEP Seagrass parquet: {target_url}")
+    logger.info(f"Target URL for DEP Seagrass parquet: {target_url}")
 
     # Check for existing geoparquet file
     if exists(target_store, target_filename) and not overwrite:
-        logging.info(
+        logger.info(
             f"Parquet file already exists at {target_filename}, skipping indexing."
         )
         return
     else:
         if overwrite:
-            logging.info("Overwrite is enabled, re-indexing.")
+            logger.info("Overwrite is enabled, re-indexing.")
         else:
-            logging.info("Parquet file does not exist, proceeding with indexing.")
+            logger.info("Parquet file does not exist, proceeding with indexing.")
 
     with suppress_rust_output():
         # TODO: experiment with parquet_compression options for rustac write
@@ -43,12 +44,12 @@ async def run_index_dep_seagrass(
             store=target_store,
         )
 
-    logging.info(f"Written {count_items} STAC items to parquet at {target_url}")
+    logger.info(f"Written {count_items} STAC items to parquet at {target_url}")
     if count_items == 0:
-        logging.error("No STAC items found, nothing to index.")
+        logger.error("No STAC items found, nothing to index.")
         exit(1)  # Exit with error code
 
-    logging.info(f"Finished writing parquet file to {target_url}")
+    logger.info(f"Finished writing parquet file to {target_url}")
 
 
 # Read all STAC items from DEP Seagrass bucket path and index them into a single STAC-Geoparquet file using rustac.
@@ -64,6 +65,6 @@ def index_dep_seagrass(
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
-    logging.info("Starting DEP Seagrass indexing process...")
+    logger.info("Starting DEP Seagrass indexing process...")
     asyncio.run(run_index_dep_seagrass(stac_api_url, target_location, overwrite))
-    logging.info("DEP Seagrass indexing process completed.")
+    logger.info("DEP Seagrass indexing process completed.")

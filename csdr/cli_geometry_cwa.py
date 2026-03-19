@@ -11,6 +11,7 @@ from csdr.io import (
 )
 
 cwa_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 geometry_name = "GA Coastal Waters Areas"
 
@@ -26,7 +27,7 @@ async def run_cache_cwa(
     # Source url is http://
     # Target location can be s3:// or local file path
     target_location = target_location.rstrip("/")
-    logging.info(
+    logger.info(
         f"Caching '{geometry_name}' from '{source_url}' to '{target_location}'..."
     )
     target_path = target_location  # This is the path, there is no file name
@@ -34,14 +35,14 @@ async def run_cache_cwa(
     target_store = get_store_with_prefix_from_url(target_path)
 
     if exists(target_store, target_file_name) and not overwrite:
-        logging.info(
+        logger.info(
             "File already exists at target location and overwrite is off, skipping download."
         )
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
 
-    logging.info("File doesn't exist or overwrite is on. Re-downloading.")
+    logger.info("File doesn't exist or overwrite is on. Re-downloading.")
 
-    logging.info(
+    logger.info(
         f"Downloading {target_file_name} from {source_url} to {target_location}..."
     )
 
@@ -71,9 +72,9 @@ def cache_cwa(
         True, help="Replace existing zip file if it exists."
     ),
 ) -> None:
-    logging.info(f"Starting '{geometry_name}' caching process...")
+    logger.info(f"Starting '{geometry_name}' caching process...")
 
     result_path = asyncio.run(run_cache_cwa(source_url, target_location, overwrite))
-    logging.info(
+    logger.info(
         f"'{geometry_name}' caching process completed. Cached to '{result_path}'"
     )

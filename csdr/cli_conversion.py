@@ -19,6 +19,7 @@ from csdr.io import (
 from csdr.utils import CSDRException
 
 conversion_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 
 def _get_geometry_id(geometry_id: str | None, dataset_url: str) -> str | None:
@@ -62,7 +63,7 @@ def convert_zipfile_to_parquet(
         True, help="Replace existing parquet file if it exists."
     ),
 ) -> None:
-    logging.info("Starting parquet conversion process...")
+    logger.info("Starting parquet conversion process...")
 
     assert source_zip_location.endswith(".zip"), "Source file must be a .zip file"
 
@@ -76,7 +77,7 @@ def convert_zipfile_to_parquet(
         raise CSDRException(
             f"Source zip file does not exist at {source_zip_location}. Cannot extract."
         )
-    logging.info(
+    logger.info(
         f"Source zip file found at {source_zip_location}, proceeding with extraction."
     )
 
@@ -91,11 +92,11 @@ def convert_zipfile_to_parquet(
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
-        logging.info(
+        logger.info(
             f"Target parquet file already exists at {target_url} and overwrite is off. Use --overwrite to replace. Exiting successfully."
         )
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
-    logging.info(
+    logger.info(
         "Target parquet file does not exist or overwrite is on, proceeding with extraction."
     )
 
@@ -105,8 +106,8 @@ def convert_zipfile_to_parquet(
 
     with ZipMemoryFile(zip_bytes) as z:
         files_in_zip = z.listdir()
-        logging.info(f"Files in zip: {files_in_zip}")
-        logging.info(f"Requested internal path: {source_internal_path_name}")
+        logger.info(f"Files in zip: {files_in_zip}")
+        logger.info(f"Requested internal path: {source_internal_path_name}")
         if source_internal_path_name not in files_in_zip:
             raise CSDRException(
                 f"Internal path {source_internal_path_name} not found in zip file."
@@ -115,7 +116,7 @@ def convert_zipfile_to_parquet(
         with z.open(source_internal_path_name) as src:
             gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
 
-    logging.info(f"Loaded {len(gdf)} records from the shapefile.")
+    logger.info(f"Loaded {len(gdf)} records from the shapefile.")
 
     # Add ID and Name fields
     gdf = add_geometry_id_name(
@@ -131,7 +132,7 @@ def convert_zipfile_to_parquet(
     # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
 
     if create_pmtiles:
-        logging.info("Creating PMTiles file alongside the parquet...")
+        logger.info("Creating PMTiles file alongside the parquet...")
         # Create a PMTiles files with tippecanoe
         pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
 
@@ -166,11 +167,11 @@ def convert_zipfile_to_parquet(
 
             # Upload the PMTiles file to the target store
             target_store.put(pmtiles_file, local_pmtiles)
-        logging.info(f"Created PMTiles file at {pmtiles_file}")
+        logger.info(f"Created PMTiles file at {pmtiles_file}")
     else:
-        logging.info("Skipping PMTiles creation because flag is set to false.")
+        logger.info("Skipping PMTiles creation because flag is set to false.")
 
-    logging.info(f"Parquet extraction process completed. Wrote file to {target_url}")
+    logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
 
 
 @conversion_app.command("geo-to-parquet")
@@ -190,7 +191,7 @@ def convert_geospatial_file_to_parquet(
         True, help="Replace existing parquet file if it exists."
     ),
 ) -> None:
-    logging.info("Starting geospatial to parquet conversion process...")
+    logger.info("Starting geospatial to parquet conversion process...")
 
     source_path, source_name = split_path_and_file_name_from_url(source_location)
     source_store = get_store_with_prefix_from_url(source_path)
@@ -200,7 +201,7 @@ def convert_geospatial_file_to_parquet(
             f"Source geospatial file does not exist at {source_location}. Cannot convert."
         )
     else:
-        logging.info(
+        logger.info(
             f"Source geospatial file found at {source_location}, proceeding with conversion."
         )
     if target_location is None:
@@ -216,7 +217,7 @@ def convert_geospatial_file_to_parquet(
 
     # Check if target file already exists
     if exists(target_store, target_filename) and not overwrite:
-        logging.warning(
+        logger.warning(
             f"Target parquet file already exists at {target_url}. Use --overwrite to replace."
         )
         raise typer.Exit(code=0)  # Exit successfully, nothing to do
@@ -228,7 +229,7 @@ def convert_geospatial_file_to_parquet(
         gdf, name_field=name_field, geometry_id=_get_geometry_id(None, source_name)
     )
 
-    logging.info(f"Opened file with {len(gdf)} features")
+    logger.info(f"Opened file with {len(gdf)} features")
 
     with BytesIO() as parquet_buffer:
         gdf.to_parquet(parquet_buffer, engine="pyarrow")
@@ -237,5 +238,5 @@ def convert_geospatial_file_to_parquet(
         # Write the parquet bytes to the target store using obstore
         target_store.put(target_filename, parquet_buffer.getvalue())
 
-    logging.info(f"Loaded {len(gdf)} records from the geospatial file.")
-    logging.info(f"Parquet conversion process completed. Wrote file to {target_url}")
+    logger.info(f"Loaded {len(gdf)} records from the geospatial file.")
+    logger.info(f"Parquet conversion process completed. Wrote file to {target_url}")

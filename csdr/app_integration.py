@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Literal
 
@@ -5,6 +6,8 @@ import requests
 from requests import Response
 
 from csdr.utils import CSDRException
+
+logger = logging.getLogger(__name__)
 
 HOSTNAME = os.getenv("CSDR_API_HOSTNAME", "http://localhost:4000").rstrip("/")
 API_KEY = os.getenv("CSDR_API_KEY", None)

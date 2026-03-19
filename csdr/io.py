@@ -13,6 +13,8 @@ from obstore.auth.boto3 import Boto3CredentialProvider
 from obstore.store import HTTPStore, LocalStore, ObjectStore, S3Store, from_url
 from pyarrow import ArrowInvalid
 
+logger = logging.getLogger(__name__)
+
 
 class CSDRException(Exception):
     pass
@@ -111,7 +113,7 @@ def read_dict(store: ObjectStore, file_name: str) -> dict[str, Any]:
             json_dict = json.load(buffer)
             return json_dict
         except Exception:
-            logging.exception(f"Failed to read dict from {file_name}.")
+            logger.exception(f"Failed to read dict from {file_name}.")
             raise
 
 
@@ -135,7 +137,7 @@ def read_geospatial_file(url: str, **kwargs: dict) -> gpd.GeoDataFrame:
                 gdf = gpd.read_file(buffer, **kwargs)
                 return gdf
             except Exception:
-                logging.exception(f"Failed to read geospatial file from {url}.")
+                logger.exception(f"Failed to read geospatial file from {url}.")
                 raise
 
 
@@ -146,15 +148,15 @@ def find_matching_files(
     Finds files in the store with a given glob pattern (recursively).
     """
     list_of_matching_files = []
-    logging.info("Listing items in store recursively")
+    logger.info("Listing items in store recursively")
     regex = re.compile(pattern)
     for i, batch in enumerate(store.list(prefix=prefix, chunk_size=1000)):
-        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
+        logger.info(f"Batch number {i + 1} of {len(batch)} files...")
         for item in batch:
             if regex.search(item["path"]):
                 list_of_matching_files.append(item["path"])  # Append the path string.
 
-    logging.info(f"Found {len(list_of_matching_files)} matching items.")
+    logger.info(f"Found {len(list_of_matching_files)} matching items.")
 
     return list_of_matching_files
 
@@ -162,18 +164,18 @@ def find_matching_files(
 async def get_stac_item_dicts_from_store(store: ObjectStore) -> list[dict[str, Any]]:
     list_of_stac_files = []
 
-    logging.info("Listing STAC items in store recursively")
+    logger.info("Listing STAC items in store recursively")
 
     # TODO: There is a function io.find_matching_files that could be used instead of this part of get_stac_item_dicts_from_store.
     for i, batch in enumerate(
         store.list(chunk_size=1000)
     ):  # default chunk_size is 50 which is very low just to list files
-        logging.info(f"Batch number {i + 1} of {len(batch)} files...")
+        logger.info(f"Batch number {i + 1} of {len(batch)} files...")
         for stac_file in batch:
             if stac_file["path"].endswith(".stac-item.json"):
                 list_of_stac_files.append(stac_file)
 
-    logging.info(f"Found {len(list_of_stac_files)} STAC items.")
+    logger.info(f"Found {len(list_of_stac_files)} STAC items.")
 
     # Use semaphore to limit concurrent requests to prevent S3 from timing out. Otherwise it would request all concurrently and sometimes time out.
     semaphore = asyncio.Semaphore(1000)

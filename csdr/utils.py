@@ -13,6 +13,8 @@ from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
 
+logger = logging.getLogger(__name__)
+
 
 class CSDRException(Exception):
     pass
@@ -31,8 +33,8 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         # Log stderr even on success, as it might contain warnings
         if process.stderr:
             cmd_str = " ".join(command)
-            logging.debug(f"Command '{cmd_str}' stderr:")
-            logging.debug(process.stderr.strip())
+            logger.debug(f"Command '{cmd_str}' stderr:")
+            logger.debug(process.stderr.strip())
 
         if process.returncode == 0:
             return True, process.stdout.strip(), ""
@@ -46,15 +48,15 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
                 f"Stderr:\n{stderr_str}\n"
                 f"Stdout:\n{stdout_str}"
             )
-            logging.error(error_message)
+            logger.error(error_message)
             return False, stdout_str, stderr_str
     except FileNotFoundError:
         cmd_zero = command[0] if command else "<empty command>"
-        logging.error(f"Command not found: {cmd_zero}")
+        logger.error(f"Command not found: {cmd_zero}")
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
         cmd_str = " ".join(command)
-        logging.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
+        logger.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
         return False, "", str(e)
 
 
