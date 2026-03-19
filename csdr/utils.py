@@ -8,7 +8,6 @@ from typing import Any
 import geopandas as gpd
 import pystac
 import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
-from odc.geo.geobox import GeoBox
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
@@ -72,10 +71,70 @@ def load_xarray_stacgeoparquet(
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
     data = load(
-        items, **load_kwargs, resampling="nearest"
+        items,
+        **load_kwargs,  # , resampling="nearest"
     )  # Nearest due to categorical data (default but being explicit).
 
     return data
+
+
+# def xarray_calculate_area_m2(
+#     data: Dataset | DataArray,
+#     geom: Geometry,
+#     indicator: str | None = None,
+#     value_list: list[float] | None = None,
+# ) -> float:
+#     # Work with a dataarray, not a dataset, so it's a singular thing
+#     if type(data) is not DataArray:
+#         if indicator is None:
+#             raise CSDRException("Indicator must be specified when data is a Dataset.")
+#         data = data[indicator]
+
+#     # Only select specific value/s. This will convert to float, with nans
+#     logger.info(f"Pixels before value filter: {int(data.notnull().sum().compute())}")
+#     if value_list is not None:
+#         data = data.where(data.isin(value_list))
+#     logger.info(f"Pixels after value filter: {int(data.notnull().sum().compute())}")
+
+#     # Validate that data and geom have the same CRS.
+#     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
+#     geom = geom.to_crs(target_crs)
+
+#     # For DEP Seagrass, we need to load natively in 3832 to avoid reprojection issues with the antimeridian. But then we need to reproject to 6933 for the area calculation to be correct.
+#     # For all others we load straight to 6933.
+#     # TODO: Test DEP Mangrove too. Not sure what CRS is native for that dataset.
+#     loaded_epsg = data.odc.geobox.crs.to_epsg()
+#     if loaded_epsg != 6933:
+#         # logger.warning(
+#         #     f"Reprojecting dataset (from {loaded_epsg}) because it was not loading in 6933. Please use 6933 unless you can't (e.g. DEP Seagrass Antimeridian Fiji issue)"
+#         # )
+#         # # Use the geometry bounds to define the output extent
+#         # # rather than letting odc calculate it (which causes the blowup)
+#         # target_geobox = GeoBox.from_bbox(
+#         #     geom.boundingbox,  # already in 6933 at this point
+#         #     crs=target_crs,
+#         #     resolution=data.odc.geobox.resolution,  # preserve native resolution
+#         # )
+#         # data = data.odc.reproject(target_geobox, resampling="nearest")
+#         # Using ODC reproject is preferred but caused antimeridian issues for DEP Seagrass.
+#         logger.info(f"Resolution before reproject: {data.odc.geobox.resolution}")
+#         data = data.rio.reproject(target_crs, resolution=data.odc.geobox.resolution.x)
+#         logger.info(f"Resolution after reproject: {data.odc.geobox.resolution}")
+#         logger.info(f"Pixels after reproject: {int(data.notnull().sum().compute())}")
+
+#     # Mask out regions outside the geometry. Must be done after reprojection to ensure correct masking.
+#     masked = mask(data, geom)
+
+#     # Count all the non-nan cells, and multiply by area
+#     one_pixel_area_m2 = abs(
+#         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
+#     )
+#     # This is where the data actally loads. Compute.
+#     # single compute call, only on the already-reduced scalar
+#     count = float(masked.notnull().sum().compute())
+#     logger.info(f"Count of pixels after mask: {count}")
+
+#     return round(float(count) * one_pixel_area_m2, 2)
 
 
 def xarray_calculate_area_m2(
@@ -91,45 +150,31 @@ def xarray_calculate_area_m2(
         data = data[indicator]
 
     # Only select specific value/s. This will convert to float, with nans
-    logger.info(f"Pixels before value filter: {int(data.notnull().sum().compute())}")
     if value_list is not None:
         data = data.where(data.isin(value_list))
-    logger.info(f"Pixels after value filter: {int(data.notnull().sum().compute())}")
 
     # Validate that data and geom have the same CRS.
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
+    # Raster reproject is not needed because we load in 6933.
+    # data = data.rio.reproject(
+    #     target_crs
+    # )  # TODO: Tweak parameters of reproject: resolution=desired_resolution, method='nearest', resampling=Resampling.bilinear
     geom = geom.to_crs(target_crs)
+    logger.info(f"Geom area: {geom.area} m²")
 
-    # For DEP Seagrass, we need to load natively in 3832 to avoid reprojection issues with the antimeridian. But then we need to reproject to 6933 for the area calculation to be correct.
-    # For all others we load straight to 6933.
-    # TODO: Test DEP Mangrove too. Not sure what CRS is native for that dataset.
-    loaded_epsg = data.odc.geobox.crs.to_epsg()
-    if loaded_epsg != 6933:
-        logger.warning(
-            f"Reprojecting dataset (from {loaded_epsg}) because it was not loading in 6933. Please use 6933 unless you can't (e.g. DEP Seagrass Antimeridian Fiji issue)"
-        )
-        # Use the geometry bounds to define the output extent
-        # rather than letting odc calculate it (which causes the blowup)
-        target_geobox = GeoBox.from_bbox(
-            geom.boundingbox,  # already in 6933 at this point
-            crs=target_crs,
-            resolution=data.odc.geobox.resolution,  # preserve native resolution
-        )
-        data = data.odc.reproject(target_geobox, resampling="nearest")
-
-    # Mask out regions outside the geometry. Must be done after reprojection to ensure correct masking.
+    # Mask out regions outside the geometry
     masked = mask(data, geom)
 
     # Count all the non-nan cells, and multiply by area
+    count = float(masked.notnull().sum().values)
     one_pixel_area_m2 = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )
-    # This is where the data actally loads. Compute.
-    # single compute call, only on the already-reduced scalar
-    count = float(masked.notnull().sum().compute())
-    logger.info(f"Count of pixels after mask: {count}")
 
-    return round(float(count) * one_pixel_area_m2, 2)
+    area_m2 = round(float(count) * one_pixel_area_m2, 2)
+    logger.info(f"Percent: {(area_m2 / geom.area) * 100}%")
+
+    return area_m2
 
 
 # Make a UUID
