@@ -23,11 +23,14 @@ app = typer.Typer()
 
 # All files will inherit this logging configuration so we only write once
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,
     format="%(asctime)s | %(levelname)s | %(module)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stderr,
+    force=True,
 )
+# Set our own logger level to INFO
+logging.getLogger("csdr").setLevel(logging.INFO)
 
 # Add the subcommands
 app.add_typer(
