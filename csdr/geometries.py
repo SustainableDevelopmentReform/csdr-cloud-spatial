@@ -14,13 +14,15 @@ from csdr.app_integration import post_geometry_output, post_geometry_output_bulk
 from csdr.io import read_geospatial_file
 from csdr.utils import CSDRException, make_uuid
 
+logger = logging.getLogger(__name__)
+
 
 def convert_gdf_row_to_geometry_output(
     gdf_row: Series, crs: pyproj_crs.CRS
 ) -> dict | None:
     if not gdf_row.geometry:
         # This occurs for example in the ABS Australian States dataset where there are some null geometries
-        logging.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
+        logger.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
         return None  # Skip if geometry is None or empty
 
     poly = Geometry(gdf_row.geometry, crs=crs)
@@ -107,7 +109,7 @@ def post_bulk_geometry_outputs_to_database(
             # Only append if geometry_output is not None
             outputs.append(geometry_output)
         else:
-            logging.warning(
+            logger.warning(
                 f"Skipping geometry output {row.get('id')} with null geometry."
             )
 
@@ -119,7 +121,7 @@ def post_bulk_geometry_outputs_to_database(
             "geometriesRunId": run_id,  # This is plural but will be made singular in future DB refactor
             "outputs": outputs[i : i + batch_size],
         }
-        logging.info(
+        logger.info(
             f"Posting batch {i // batch_size + 1} with {len(bulk_output['outputs'])} geometry outputs to database in bulk..."
         )
 
@@ -128,13 +130,13 @@ def post_bulk_geometry_outputs_to_database(
         try:
             response.raise_for_status()
         except HTTPError as e:
-            logging.exception(
+            logger.exception(
                 f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
             raise
 
         # This logs a success message even if there was an error posting some of the data. Could be worth checking if any errors occurred before logging success.
-        logging.info(f"Wrote {len(outputs)} bulk geometry outputs to database.")
+        logger.info(f"Wrote {len(outputs)} bulk geometry outputs to database.")
 
 
 def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
@@ -145,7 +147,7 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         geometry_output = convert_gdf_row_to_geometry_output(row, gpd.crs)
         if geometry_output is None:
             errors += 1
-            logging.warning(
+            logger.warning(
                 f"Skipping geometry output {row.get('id')} with null geometry."
             )
             continue  # Skip geometry if geometry_output is None (handle null geometries)
@@ -155,22 +157,22 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
         try:
             response.raise_for_status()
         except HTTPError as e:
-            logging.error(
+            logger.error(
                 f"Failed to post geometry output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
                 exc_info=True,
             )
-            logging.error(
+            logger.error(
                 f"Failed to post geometry output {geometry_output.get('id')} to database."
             )
             errors += 1
         else:
             successes += 1
-            logging.info(
+            logger.info(
                 f"Wrote geometry output {geometry_output.get('id')} to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
-            logging.info(
+            logger.info(
                 f"Wrote geometry output {geometry_output.get('id')} to database."
             )
-    logging.info(
+    logger.info(
         f"Posted {successes} geometry outputs to database with {errors} errors."
     )

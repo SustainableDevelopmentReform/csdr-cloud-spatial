@@ -20,12 +20,11 @@ from csdr.io import (
 from csdr.utils import CSDRException
 
 buildings_app = typer.Typer()
-
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFrame:
-    logging.info(
+    logger.info(
         f"Scraping country 2nd level admin parquet URLs from {source_location_s3} ..."
     )
     # List objects via Source Coop S3 proxy.
@@ -40,7 +39,7 @@ def _get_parquet_urls(source_location_s3: str, source_proxy: str) -> pd.DataFram
     pattern = r"^country_iso=(?!None/).+\.parquet$"  # Starts with "country_iso=" and ends with ".parquet", but not "country_iso=None/" because that data is broken.
     parquet_files = find_matching_files(store, pattern=pattern)
     number_found = len(parquet_files)
-    logging.info(f"Number of parquet files found: {number_found}")
+    logger.info(f"Number of parquet files found: {number_found}")
     if number_found == 0 or parquet_files is None:
         raise CSDRException("No parquet files found in Source Coop S3.")
     # Example file: "country_iso=IDN/3303671801652969472.parquet"
@@ -68,7 +67,7 @@ async def _get_bounds_from_parquet(
 ) -> tuple[float, float, float, float]:
     # Here we get large parquet files' bbox from metadata. This means that we don't have to download/load all data into memory.
     # It takes a couple of seconds per file this way, rather than minutes to download/load entire file.
-    logging.info(f"Fetching bounding box from parquet file at {s3_url} ...")
+    logger.info(f"Fetching bounding box from parquet file at {s3_url} ...")
     async with semaphore:
         # Retry: Very occasionally reading the parquet file errors with an invalid byte range.
         # It is better to retry here for just one parquet file, rather than make the workflow rerun the step.
@@ -87,11 +86,11 @@ async def _get_bounds_from_parquet(
                 geo_json = meta[b"geo"].decode("utf-8")
                 geo = json.loads(geo_json)
                 bbox = geo["columns"]["geometry"]["bbox"]
-                logging.info(f"Bounding box {bbox} for {s3_url}")
+                logger.info(f"Bounding box {bbox} for {s3_url}")
                 return bbox
             finally:
                 if parquet_file is not None:
-                    logging.info(
+                    logger.info(
                         f"Closing ReadableStream for {s3_url} to avoid resource leaks."
                     )
                     parquet_file.close()
@@ -99,7 +98,7 @@ async def _get_bounds_from_parquet(
         try:
             return fetch_bbox()
         except Exception:
-            logging.exception(
+            logger.exception(
                 f"Failed to fetch bounding box for {s3_url} after 3 retries. Raising so workflow will retry."
             )
             raise
@@ -119,7 +118,7 @@ async def _run_index_buildings(
         for s3_url in parquet_data["s3_url"]
     ]
     bound_results = await asyncio.gather(*tasks)
-    logging.info("Bboxes collected for all parquet files.")
+    logger.info("Bboxes collected for all parquet files.")
 
     parquet_data["bbox"] = bound_results
     if parquet_data.empty:
@@ -139,9 +138,9 @@ async def _run_index_buildings(
     parquet_data = gpd.GeoDataFrame(parquet_data, geometry="geometry", crs="EPSG:4326")
 
     target_file_name = "buildings.parquet"
-    logging.info(f"Writing index buildings parquet to {target_file_name}")
+    logger.info(f"Writing index buildings parquet to {target_file_name}")
     write_gdf_to_parquet(parquet_data, target_store, target_file_name)
-    logging.info("Index buildings dataset completed.")
+    logger.info("Index buildings dataset completed.")
 
 
 # Buildings Index gets all of the parquet files (one per country 2nd level admin area) from source coop, and writes their name, path, and bounds to a single buildings.parquet file at target_location.
@@ -164,16 +163,16 @@ def index_buildings(
         32, help="Maximum number of files to process at once."
     ),
 ) -> None:
-    logging.info("Starting buildings index process ...")
+    logger.info("Starting buildings index process ...")
 
     target_store = get_store_with_prefix_from_url(target_location)
     target_file_name = "buildings.parquet"
     if exists(target_store, target_file_name) and not overwrite:
-        logging.info(
+        logger.info(
             f"Skipping index: {target_file_name} already exists and overwrite is off."
         )
         return
-    logging.info(
+    logger.info(
         "Either file does not exist or overwrite is on, proceeding with indexing."
     )
 
@@ -183,7 +182,7 @@ def index_buildings(
             source_proxy, parquet_data, target_store, target_file_name, max_concurrent
         )
     )
-    logging.info("Index buildings dataset process completed.")
+    logger.info("Index buildings dataset process completed.")
 
 
 if __name__ == "__main__":

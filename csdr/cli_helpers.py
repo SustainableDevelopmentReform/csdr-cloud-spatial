@@ -13,6 +13,7 @@ from csdr.io import (
 from csdr.utils import CSDRException, make_uuid
 
 helpers_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 
 def parse_csv_list(value: str) -> list[str]:
@@ -21,14 +22,14 @@ def parse_csv_list(value: str) -> list[str]:
 
 @helpers_app.command("create-run-id")
 def create_run_id() -> None:
-    logging.info("Creating run ID...")
+    logger.info("Creating run ID...")
 
     now = datetime.now().isoformat()
     run_id = make_uuid(now)
     os.makedirs("/tmp", exist_ok=True)
     with open("/tmp/run_id.txt", "w") as f:
         f.write(run_id)
-    logging.info(f"Run ID {run_id} written to /tmp/run_id.txt")
+    logger.info(f"Run ID {run_id} written to /tmp/run_id.txt")
 
 
 @helpers_app.command("filter-geometries-by-name")
@@ -60,7 +61,7 @@ def filter_geometries_by_name(
     :param geometry_names: Comma-separated list of geometry names to filter by.
     :type geometry_names: str
     """
-    logging.info("Filtering geometries by name...")
+    logger.info("Filtering geometries by name...")
 
     geometry_names_list = parse_csv_list(geometry_names)
     name_fields_list = parse_csv_list(name_fields)
@@ -107,4 +108,4 @@ def filter_geometries_by_name(
     target_path, target_filename = split_path_and_file_name_from_url(target_url)
     target_store = get_store_with_prefix_from_url(target_path)
     write_gdf_to_parquet(filtered_gdf, target_store, target_filename)
-    logging.info(f"Filtered geometries written to {target_url}")
+    logger.info(f"Filtered geometries written to {target_url}")

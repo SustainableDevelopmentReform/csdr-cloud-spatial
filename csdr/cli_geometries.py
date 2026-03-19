@@ -8,6 +8,7 @@ import typer
 from csdr.utils import CSDRException
 
 geometry_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 
 @geometry_app.command("convert-vector")
@@ -57,7 +58,7 @@ def convert_vector(
         # Find input vector file using glob relative to input_dir
         # Search recursively within the input directory
         search_path = os.path.join(input_dir, "**", input_glob)
-        logging.info(f"Searching for input vector file(s) matching: {search_path}")
+        logger.info(f"Searching for input vector file(s) matching: {search_path}")
         found_files = glob.glob(search_path, recursive=True)
 
         if not found_files:
@@ -67,7 +68,7 @@ def convert_vector(
 
         vector_file_path = found_files[0]  # Use the first found file
         if len(found_files) > 1:
-            logging.warning(
+            logger.warning(
                 f"Multiple files found matching '{input_glob}'. Using the first one: {vector_file_path}"
             )
 
@@ -77,7 +78,7 @@ def convert_vector(
             os.makedirs(output_dir, exist_ok=True)
 
         # Read and process vector file
-        logging.info(f"Reading {vector_file_path}")
+        logger.info(f"Reading {vector_file_path}")
         # TODO: Use io.read_geospatial_file
         gdf = gpd.read_file(vector_file_path)
 
@@ -87,21 +88,21 @@ def convert_vector(
             raise CSDRException(
                 "Could not determine source CRS from file and --source-crs not provided."
             )
-        logging.info(f"Using source CRS: {source_crs}")
+        logger.info(f"Using source CRS: {source_crs}")
 
         # Reproject
-        logging.info(f"Projecting from {source_crs} to {target_crs}")
+        logger.info(f"Projecting from {source_crs} to {target_crs}")
         gdf = gdf.to_crs(target_crs)
 
         if name_property:
             gdf = gdf.rename(columns={name_property: "name"})
 
-        logging.info("Applying schema/normalization (placeholder)...")
+        logger.info("Applying schema/normalization (placeholder)...")
 
         # Write out geoparquet
-        logging.info(f"Writing to {output_path}")
+        logger.info(f"Writing to {output_path}")
         gdf.to_parquet(output_path)
-        logging.info("Vector conversion complete.")
+        logger.info("Vector conversion complete.")
 
     except Exception as e:
         raise CSDRException(f"An error occurred during vector conversion: {e}")
@@ -133,7 +134,7 @@ def validate(
 
         # Validate the GeoParquet file
         # validate_geoparquet(gdf, schema_path)
-        logging.info("Validation complete.")
+        logger.info("Validation complete.")
 
     except Exception as e:
         raise CSDRException(f"An error occurred during validation: {e}")

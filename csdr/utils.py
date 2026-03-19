@@ -14,6 +14,8 @@ from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
 
+logger = logging.getLogger(__name__)
+
 
 class CSDRException(Exception):
     pass
@@ -32,8 +34,8 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         # Log stderr even on success, as it might contain warnings
         if process.stderr:
             cmd_str = " ".join(command)
-            logging.debug(f"Command '{cmd_str}' stderr:")
-            logging.debug(process.stderr.strip())
+            logger.debug(f"Command '{cmd_str}' stderr:")
+            logger.debug(process.stderr.strip())
 
         if process.returncode == 0:
             return True, process.stdout.strip(), ""
@@ -47,15 +49,15 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
                 f"Stderr:\n{stderr_str}\n"
                 f"Stdout:\n{stdout_str}"
             )
-            logging.error(error_message)
+            logger.error(error_message)
             return False, stdout_str, stderr_str
     except FileNotFoundError:
         cmd_zero = command[0] if command else "<empty command>"
-        logging.error(f"Command not found: {cmd_zero}")
+        logger.error(f"Command not found: {cmd_zero}")
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
         cmd_str = " ".join(command)
-        logging.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
+        logger.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
         return False, "", str(e)
 
 
@@ -89,8 +91,10 @@ def xarray_calculate_area_m2(
         data = data[indicator]
 
     # Only select specific value/s. This will convert to float, with nans
+    logger.info(f"Pixels before value filter: {int(data.notnull().sum().compute())}")
     if value_list is not None:
         data = data.where(data.isin(value_list))
+    logger.info(f"Pixels after value filter: {int(data.notnull().sum().compute())}")
 
     # Validate that data and geom have the same CRS.
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
@@ -100,9 +104,8 @@ def xarray_calculate_area_m2(
     # For all others we load straight to 6933.
     # TODO: Test DEP Mangrove too. Not sure what CRS is native for that dataset.
     loaded_epsg = data.odc.geobox.crs.to_epsg()
-    print(f"Data CRS: {loaded_epsg}, Geometry CRS: {geom.crs}")
     if loaded_epsg != 6933:
-        logging.warning(
+        logger.warning(
             f"Reprojecting dataset (from {loaded_epsg}) because it was not loading in 6933. Please use 6933 unless you can't (e.g. DEP Seagrass Antimeridian Fiji issue)"
         )
         # Use the geometry bounds to define the output extent
@@ -124,6 +127,7 @@ def xarray_calculate_area_m2(
     # This is where the data actally loads. Compute.
     # single compute call, only on the already-reduced scalar
     count = float(masked.notnull().sum().compute())
+    logger.info(f"Count of pixels after mask: {count}")
 
     return round(float(count) * one_pixel_area_m2, 2)
 

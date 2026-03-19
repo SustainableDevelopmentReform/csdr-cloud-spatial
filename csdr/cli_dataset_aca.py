@@ -19,6 +19,7 @@ from csdr.io import (
 from csdr.utils import CSDRException
 
 aca_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 
 async def _unzip_single_zip(
@@ -41,11 +42,11 @@ async def _unzip_single_zip(
             )
             and not overwrite
         ):
-            logging.info(
+            logger.info(
                 f"Skipping {zip_path_and_file_name}; output exists at target store and overwrite is off."
             )
             return
-        logging.info(
+        logger.info(
             f"Unzipping {zip_path_and_file_name} to target store (overwrite={'on' if overwrite else 'off'}) ..."
         )
         zip_bytes = BytesIO(source_store.get(zip_path_and_file_name).bytes())
@@ -59,12 +60,12 @@ async def _unzip_single_zip(
                 target_path = f"{path_without_extension}/{zip_source_file_name}"  # Add the original zip file name (without .zip) as a folder prefix
                 # TODO: Is this exists check needed? It is a bit redundant but could be a good safeguard in case partial unzips occurred.
                 if exists(target_store, target_path) and not overwrite:
-                    logging.info(
+                    logger.info(
                         f"Skipping file {target_path}, already exists and overwrite is off."
                     )
                     continue
                 target_store.put(target_path, data)
-        logging.info(f"Finished unzipping {zip_path_and_file_name} to target store.")
+        logger.info(f"Finished unzipping {zip_path_and_file_name} to target store.")
 
 
 async def _run_extract_aca(
@@ -73,7 +74,7 @@ async def _run_extract_aca(
     overwrite: bool,
     max_concurrent: int,
 ) -> None:
-    logging.info("Finding zip files to extract...")
+    logger.info("Finding zip files to extract...")
     # TODO: We could make this much more efficient by somehow just getting the reefextent.gpkg because the whole of Northern Caribbean data is 11.84 GB (unzipped) but the reefextent.gpkg is only 38 MB.
     source_store = get_store_with_prefix_from_url(
         source_location, client_options={"timeout": "2 hours"}
@@ -82,7 +83,7 @@ async def _run_extract_aca(
     all_zip_file_paths = find_matching_files(
         source_store, r"\.zip$"
     )  # Match all .zip files
-    logging.info(
+    logger.info(
         f"Found {len(all_zip_file_paths)} zip files to extract from {source_location}. Unzipping..."
     )
 
@@ -98,7 +99,7 @@ async def _run_extract_aca(
         for zip_file_path in all_zip_file_paths
     ]
     await asyncio.gather(*tasks)
-    logging.info("Completed unzipping all region zips.")
+    logger.info("Completed unzipping all region zips.")
 
 
 # ACA Extract gets all zip files from source_location, unzips them to target_location, preserving folder structure.
@@ -119,13 +120,13 @@ def extract_aca(
         16, help="Maximum number of unzips to process at once."
     ),
 ) -> None:
-    logging.info("Starting ACA extraction process ...")
+    logger.info("Starting ACA extraction process ...")
     source_location = source_location.rstrip("/")
     target_location = target_location.rstrip("/")
     asyncio.run(
         _run_extract_aca(source_location, target_location, overwrite, max_concurrent)
     )
-    logging.info("ACA extraction process completed.")
+    logger.info("ACA extraction process completed.")
 
 
 # _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
@@ -161,7 +162,7 @@ def _partition_parquet(
 
     # Delete all files in partition/ folder first if overwrite is on. Otherwise if partition settings are changed, reading the data will be broken due to duplication in different partition structures.
     if overwrite:
-        logging.info("Overwrite is on, deleting existing partition files ...")
+        logger.info("Overwrite is on, deleting existing partition files ...")
         partition_files = find_matching_files(
             target_store, prefix="partition/", pattern=r"\.parquet$"
         )
@@ -169,9 +170,9 @@ def _partition_parquet(
         for file in partition_files:
             print(f"Deleting file {file}...")
             target_store.delete(f"{file}")
-        logging.info("Deleted all partitioned Parquet files ...")
+        logger.info("Deleted all partitioned Parquet files ...")
     else:
-        logging.info("Overwrite is off, existing partition files will be preserved ...")
+        logger.info("Overwrite is off, existing partition files will be preserved ...")
 
     # Write each partition to a separate Parquet file
     for partition, group in gdf.groupby("partition"):
@@ -184,7 +185,7 @@ def _partition_parquet(
             )
             write_gdf_to_parquet(gdf_partition, target_store, file_name)
         else:
-            logging.info(
+            logger.info(
                 f"Skipping partition {partition}, already exists and overwrite is off."
             )
 
@@ -197,19 +198,19 @@ async def _run_index_aca(
     target_store = get_store_with_prefix_from_url(target_location)
     target_file_name = "reefextent.parquet"
     if exists(target_store, target_file_name) and not overwrite:
-        logging.info(
+        logger.info(
             f"Skipping index: {target_file_name} already exists and overwrite is off."
         )
         return
     source_store = get_store_with_prefix_from_url(source_location)
-    logging.info(f"Searching for all reefextent.gpkg under {source_location} ...")
+    logger.info(f"Searching for all reefextent.gpkg under {source_location} ...")
     gpkg_paths = find_matching_files(source_store, "reefextent.gpkg")
-    logging.info(
+    logger.info(
         f"Found {len(gpkg_paths)} reefextent.gpkg files to merge into {target_file_name}"
     )
     dfs = []
     for path in gpkg_paths:
-        logging.info(f"Reading {path} ...")
+        logger.info(f"Reading {path} ...")
         # Get a file-like object from obstore, read it into a GeoDataFrame, append gdf to list.
         bytes_obj = source_store.get(path).bytes()
         # TODO: Use io.read_geospatial_file
@@ -218,15 +219,15 @@ async def _run_index_aca(
     if not dfs:
         raise CSDRException("No GPKG files found, nothing to merge.")
     merged_gdf = gpd.GeoDataFrame(pd.concat(dfs, ignore_index=True))
-    logging.info(f"Writing merged GeoParquet to {target_file_name}")
+    logger.info(f"Writing merged GeoParquet to {target_file_name}")
     with BytesIO() as f:
         merged_gdf.to_parquet(f, index=False)
         f.seek(0)
         target_store.put(target_file_name, f.read())
-    logging.info("Merge and export to GeoParquet completed.")
-    logging.info("Starting partitioning of the merged GeoParquet ...")
+    logger.info("Merge and export to GeoParquet completed.")
+    logger.info("Starting partitioning of the merged GeoParquet ...")
     _partition_parquet(target_store, merged_gdf, grid_size=10, overwrite=overwrite)
-    logging.info("Partitioning completed.")
+    logger.info("Partitioning completed.")
 
 
 # ACA Index gets all of the nested reefextent.gpkg files (one per region folder), and merges them into a single reefextent.parquet file at target_location.
@@ -242,9 +243,9 @@ def index_aca(
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
 ) -> None:
-    logging.info("Starting ACA merge/index process ...")
+    logger.info("Starting ACA merge/index process ...")
     asyncio.run(_run_index_aca(source_location, target_location, overwrite))
-    logging.info("ACA merge/index process completed.")
+    logger.info("ACA merge/index process completed.")
 
 
 if __name__ == "__main__":

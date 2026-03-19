@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import UTC, datetime
 from io import BytesIO
@@ -12,6 +13,8 @@ from csdr.io import (
     split_path_and_file_name_from_url,
 )
 from csdr.utils import CSDRException
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
 

@@ -13,6 +13,7 @@ from csdr.io import (
 from csdr.utils import suppress_rust_output
 
 ace_app = typer.Typer()
+logger = logging.getLogger(__name__)
 
 # One STAC collection: https://explorer.dea.ga.gov.au/stac/collections/ga_s2_coastalecosystems_cyear_3_v1
 # Containing two STAC items:
@@ -33,19 +34,19 @@ async def run_index_aus_coastal_ecosystems(
     target_filename = f"{target_filename}.parquet"
 
     target_url = f"{target_location}/{target_filename}"
-    logging.info(f"Target URL: {target_url}")
+    logger.info(f"Target URL: {target_url}")
 
     # Check for existing geoparquet file
     if exists(target_store, target_filename) and not overwrite:
-        logging.info(
+        logger.info(
             f"Parquet file already exists at {target_filename}, skipping indexing."
         )
         return
     else:
         if overwrite:
-            logging.info("Overwrite is enabled, re-indexing.")
+            logger.info("Overwrite is enabled, re-indexing.")
         else:
-            logging.info("Parquet file does not exist, proceeding with indexing.")
+            logger.info("Parquet file does not exist, proceeding with indexing.")
 
     with suppress_rust_output():
         # Use rustac search_to to get all items from the ACE STAC collection and write to parquet
@@ -56,11 +57,11 @@ async def run_index_aus_coastal_ecosystems(
             collections=[stac_collection],
             store=target_store,
         )
-    logging.info(
+    logger.info(
         f"Retrieved {items} items from STAC collection and wrote them to {target_filename}."
     )
 
-    logging.info(f"Finished writing parquet file to {target_url}")
+    logger.info(f"Finished writing parquet file to {target_url}")
 
 
 # Read all STAC items from ACE STAC Catalog and index them into a single STAC-Geoparquet file using rustac.
@@ -84,7 +85,7 @@ def index_aus_coastal_ecosystems(
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
 ) -> None:
-    logging.info("Starting ACE indexing process...")
+    logger.info("Starting ACE indexing process...")
     asyncio.run(
         run_index_aus_coastal_ecosystems(
             source_stac_url,
@@ -94,4 +95,4 @@ def index_aus_coastal_ecosystems(
             overwrite,
         )
     )
-    logging.info("ACE indexing process completed.")
+    logger.info("ACE indexing process completed.")
