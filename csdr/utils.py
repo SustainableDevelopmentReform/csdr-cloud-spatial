@@ -62,6 +62,7 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
+    geometry_4326: Geometry,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
     # Force the use of Dask. Redundant because it is already done in get_area_m2_from_dataset_geometry (parent function).
@@ -70,14 +71,15 @@ def load_xarray_stacgeoparquet(
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
-    data = load(items, **load_kwargs)
+    # Antimeridian COGs can be solved here by going geopolgon=geometry_4326, which limits the loaded data to not cross the AM.
+    data = load(items, geopolygon=geometry_4326, **load_kwargs)
 
     return data
 
 
 def xarray_calculate_area_m2(
     data: Dataset | DataArray,
-    geom: Geometry,
+    geom_4326: Geometry,
     indicator: str | None = None,
     value_list: list[float] | None = None,
 ) -> float:
@@ -93,10 +95,11 @@ def xarray_calculate_area_m2(
 
     # Validate that data and geom have the same CRS.
     target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
-    geom = geom.to_crs(target_crs)
+    geom_6933 = geom_4326.to_crs(target_crs)
+    logging.info(f"Geom area: {geom_6933.area} m²")
 
     # Mask out regions outside the geometry
-    masked = mask(data, geom)
+    masked = mask(data, geom_6933)  # Mask doesn't clip! Issue TODO:!
 
     # Count all the non-nan cells, and multiply by area
     # This is where the data actally loads. Values calls dask compute.
@@ -104,8 +107,10 @@ def xarray_calculate_area_m2(
     one_pixel_area_m2 = abs(
         masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
     )
+    area_m2 = round(float(count) * one_pixel_area_m2, 2)
+    logging.info(f"Percent: {(area_m2 / geom_6933.area) * 100}%")
 
-    return round(float(count) * one_pixel_area_m2, 2)
+    return area_m2
 
 
 # Make a UUID

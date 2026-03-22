@@ -3,6 +3,7 @@ import re
 
 import pandas as pd
 import sedona.db
+from odc.geo import mask
 from odc.geo.geom import Geometry, box
 from pystac import ItemCollection
 from python_retry import retry
@@ -12,8 +13,6 @@ from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
     CSDRException,
-    load_xarray_stacgeoparquet,
-    xarray_calculate_area_m2,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 # 4. Calculates the area where the specified indicators equals the given value/s within the geometry.
 def _get_area_m2_from_stac_geoparquet(
     dataset_url: str,
-    geometry: Geometry,
+    geometry_4326: Geometry,
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -33,13 +32,18 @@ def _get_area_m2_from_stac_geoparquet(
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     # Get the STAC items filtered by geometry and datetime
-    geom_bbox = geometry.boundingbox
-    geom_bbox_list = [geom_bbox.left, geom_bbox.bottom, geom_bbox.right, geom_bbox.top]
-    geom_geojson = geometry.geojson(simplify=0)["geometry"]
+    # geom_bbox_4326 = geometry_4326.boundingbox
+    # geom_bbox_4326_list = [
+    #     geom_bbox_4326.left,
+    #     geom_bbox_4326.bottom,
+    #     geom_bbox_4326.right,
+    #     geom_bbox_4326.top,
+    # ]
+    geom_geojson = geometry_4326.geojson(simplify=0)["geometry"]
     # TODO: Add to rustac_search_sync collections filter. use_duckdb?
     items = rustac_search_sync(
         dataset_url,
-        bbox=geom_bbox_list,
+        # bbox=geom_bbox_4326_list, # Why add bbox? Surely intersects is enough?
         intersects=geom_geojson,
         datetime=datetime_string_match,
     )
@@ -53,25 +57,58 @@ def _get_area_m2_from_stac_geoparquet(
         f"Found {len(items)} STAC items for the given geometry and datetime filter."
     )
 
-    # TODO: This could be a better place to tile the massive geoms. Then the no intersect cases would be faster.
-    # Best would be to check intersection of the whole geom with the dataset, exit quick if not, then tile, then check per geom before actually loading anything.
-    # It is pretty quick now because tiles with no intersect exit fast.
-    # geoms_tiled = _tile_geometries(geoms)
-
     items = ItemCollection(items)
+    # TODO: Don't just skip these, do a seperate area calc after "antimeridian fixing them".
+    items_cleaned = []
+    naughty_antimeridian_items = []
+    # print(items[0].assets)
+    print(f"Before cleaning, {len(items)} STAC items found for loading.")
+    for item in list(items):
+        minx, _miny, maxx, _maxy = item.bbox
+        if (minx < -180 or maxx > 180) or (minx == -180 and maxx == 180):
+            # logging.warning(
+            #     f"##################### Item {item.id} has bbox that spans the antimeridian: {item.bbox}. Skipping for now."
+            # )
+            naughty_antimeridian_items.append(item)
+        else:
+            # logging.info("Item bbox ok.")
+            items_cleaned.append(item)
+        # if item.id == "dep_s2_seagrass_066_019_2017":
+        #     print(item.assets.get(indicator, {}.get('href')))
+        #     print(item.bbox)
+        #     import pdb; pdb.set_trace()
+    items = ItemCollection(items_cleaned)
+    logger.info(f"After cleaning, {len(items)} STAC items remain for loading.")
+
+    logger.warning(
+        f"Hit {len(naughty_antimeridian_items)} naughty antimeridian items: {[item.id for item in naughty_antimeridian_items]}"
+    )
+
+    # The problem is that dep_s2_seagrass_066_019_2017_seagrass spans the antimeridian (when reprojected from native 3832 to 6933 at 10m).
+    # This causes the loaded dataset to be insanely big. For some reason we don't hit this for GMW or DEPSeagrass at 100m. Maybe because they are in 4326.
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
     logger.info(f"Loading dataset with chunking settings: {load_kwargs.get('chunks')}")
 
-    # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
+    """
+    # Load the dataset as xarray from the STAC items.
     data = load_xarray_stacgeoparquet(
         items,
         **load_kwargs,
     )
 
     logger.info(f"Loaded data with shape {data.dims}")
+    assert data.sizes["x"] < 1_000_000, "Error: X dimension spanning world."
+
+    # After loading, before any compute, check antimeridian issue. This happens for Fiji.
+    max_pixel_width = 500_000
+    x_size = data.sizes["x"]
+    if x_size > max_pixel_width:
+        raise CSDRException(
+            f"Array shape (y={data.sizes['y']}, x={x_size}) indicates antimeridian issue. Maximum allowed is {max_pixel_width}."
+        )
 
     if indicator not in data.data_vars:
         raise CSDRException(
@@ -80,17 +117,106 @@ def _get_area_m2_from_stac_geoparquet(
 
     # Calculate area (m²). This also does the indicator/value/s filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[indicator], geometry, indicator=indicator, value_list=value_list
+        data[indicator], geometry_4326, indicator=indicator, value_list=value_list
     )
 
+    logger.info(f"Total area calculated: {total_area_m2} m²")
+
     return total_area_m2
+    """
+
+    def calculate_area_antimeridian_items(
+        antimeridian_items: list,
+        geom_4326: Geometry,
+        indicator: str,
+        value_list: list[float] | None = None,
+    ) -> float:
+        from odc.stac import load
+        from pyproj import Transformer
+
+        total_count = 0
+
+        for item in antimeridian_items:
+            # Load in native 3832
+            data = load(
+                [item],
+                crs="EPSG:3832",
+                # TODO: replace with load_kwargs.
+                # **load_kwargs,
+                resolution=10,
+                chunks={},  # Lazy
+            )[indicator]
+
+            # Filter values
+            if value_list is not None:
+                data = data.where(data.isin(value_list))
+
+            # Mask to geometry in native 3832 — keeps dataset tiny
+            geom_3832 = geom_4326.to_crs("EPSG:3832")
+            data = mask(data, geom_3832)
+
+            # CLIP the array extent to only the valid region — shrinks the dask array itself
+            bb = geom_3832.boundingbox
+            data = data.sel(
+                x=slice(bb.left, bb.right),
+                y=slice(bb.top, bb.bottom),  # descending y
+            )
+            # logger.info(f"Geom bbox: {bb}")
+            logger.info(f"Array shape after clip: {data.sizes['x']}, {data.sizes['y']}")
+            logger.info(
+                f"Pixels after native mask+clip: {int(data.notnull().sum().compute())}"
+            )
+
+            # Find antimeridian x in 3832 metres
+            t = Transformer.from_crs(4326, 3832, always_xy=True)
+            antimeridian_x, _ = t.transform(180, 0)
+
+            # Split at antimeridian in 3832 space
+            west = data.sel(x=data.x[data.x < antimeridian_x])
+            east = data.sel(x=data.x[data.x >= antimeridian_x])
+
+            west_pixel_count = int(west.notnull().sum().compute())
+            east_pixel_count = int(east.notnull().sum().compute())
+
+            logger.info(
+                f"West part shape: {west.sizes['x']}, {west.sizes['y']}, pixels: {west_pixel_count}"
+            )
+            logger.info(
+                f"East part shape: {east.sizes['x']}, {east.sizes['y']}, pixels: {east_pixel_count}"
+            )
+
+            logger.info("Reprojecting parts to 6933...")
+
+            # Reproject clipped data directly — already small enough after clip
+            logger.info(f"Reprojecting clipped data {dict(data.sizes)} to 6933...")
+            data_6933 = data.rio.reproject("EPSG:6933", resolution=10)
+            logger.info(f"Shape after reproject: {dict(data_6933.sizes)}")
+
+            # Mask to geometry in 6933
+            geom_6933 = geom_4326.to_crs("EPSG:6933")
+            masked = mask(data_6933, geom_6933)
+
+            count = int(masked.notnull().sum().compute())
+            logger.info(f"Item {item.id} pixel count: {count}")
+            total_count += count
+
+        pixel_area_m2 = 10 * 10  # 6933 equal area, 10m resolution
+        logger.info(
+            f"Total pixel count across antimeridian items: {total_count}, which is approximately {total_count * pixel_area_m2:.2f} m²"
+        )
+        return round(total_count * pixel_area_m2, 2)
+
+    naughty_area = calculate_area_antimeridian_items(
+        naughty_antimeridian_items, geometry_4326, indicator, value_list
+    )
+    return naughty_area
 
 
 # TODO: Generalise this to work for any geoparquet dataset, not just ACA reef.
 def _get_area_m2_from_geoparquet_sedona(
     sd: sedona.db.context.SedonaContext,
     dataset_url: str,
-    geometry_wkt: str,
+    geometry_4326_wkt: str,
     indicator: str | None = None,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -114,7 +240,7 @@ def _get_area_m2_from_geoparquet_sedona(
         f"""
         SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area_m2
         FROM dataset
-        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_4326_wkt}'), 4326))
         """
     ).to_pandas()
 
@@ -214,7 +340,7 @@ def _get_area_m2_from_dataset_geometry(
     sd: sedona.db.context.SedonaContext,
     dataset_url: str,
     dataset_type: str,
-    geometry: Geometry,
+    geometry_4326: Geometry,
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -225,7 +351,7 @@ def _get_area_m2_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_m2_from_stac_geoparquet(
             dataset_url,
-            geometry,
+            geometry_4326,
             indicator,
             value_list,
             datetime_string_match=datetime_string_match,
@@ -238,7 +364,7 @@ def _get_area_m2_from_dataset_geometry(
         return _get_area_m2_from_geoparquet_sedona(
             sd,
             partition_path,
-            geometry.wkt,
+            geometry_4326.wkt,
             indicator,
             value_list,
             datetime_string_match=datetime_string_match,
@@ -330,6 +456,8 @@ def process_indicators_for_geometry(
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
 
+    logger.info(f"Dataset URL: {dataset_url}")
+
     # Order sum area indicators first, then area percentages. Area percentages are dependent on area calculations.
     indicators = dict(
         sorted(indicators.items(), key=lambda item: ("percent-" in item[0], item[0]))
@@ -398,6 +526,7 @@ def process_indicators_for_geometry(
             geometry_6933 = geom.to_crs("EPSG:6933")
             geom_area_m2 = geometry_6933.area
             total_multipolygon_area_m2 += geom_area_m2
+            logger.info(f"Geom bbox: {geom.boundingbox}")
             # Area indicators
             if sum_area_var_pattern.match(
                 var_key
