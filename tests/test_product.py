@@ -31,7 +31,7 @@ def test_intersection_raster(
     # sample_polygon is in EPSG:4326.
     # This STAC-Geoparquet file contains a single item in EPSG:4326
     kwargs = {"resolution": 10, "crs": "epsg:6933"}
-    data = load_xarray_stacgeoparquet(sample_stacgeoparquet, **kwargs)
+    data = load_xarray_stacgeoparquet(sample_stacgeoparquet, sample_polygon, **kwargs)
     assert data is not None
 
     # This reprojects to 6933 internally for area calculation.
