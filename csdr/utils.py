@@ -9,7 +9,6 @@ import geopandas as gpd
 import pystac
 import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
 from odc.geo.geom import Geometry
-from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
 
@@ -62,6 +61,7 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
 
 def load_xarray_stacgeoparquet(
     items: pystac.ItemCollection,
+    geometry: Geometry,
     **load_kwargs: dict[str, Any],
 ) -> Dataset:
     # Force the use of Dask. Redundant because it is already done in get_area_m2_from_dataset_geometry (parent function).
@@ -70,7 +70,11 @@ def load_xarray_stacgeoparquet(
 
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
-    data = load(items, **load_kwargs)
+    # geopolygon is essential for antimeridian-crossing COGs e.g. DEP Seagrass for Fiji. Without this a world-spanning dataset is loaded which causes OOM Killed errors.
+    data = load(items, geopolygon=geometry, **load_kwargs)
+    assert data.sizes["x"] < 1_000_000, (
+        "Error: Loaded data's X dimension spans the whole world (at 10m resolution)."
+    )
 
     return data
 
@@ -91,19 +95,10 @@ def xarray_calculate_area_m2(
     if value_list is not None:
         data = data.where(data.isin(value_list))
 
-    # Validate that data and geom have the same CRS.
-    target_crs = "EPSG:6933"  # For consistency with all datasets and geometries
-    geom = geom.to_crs(target_crs)
-
-    # Mask out regions outside the geometry
-    masked = mask(data, geom)
-
     # Count all the non-nan cells, and multiply by area
     # This is where the data actally loads. Values calls dask compute.
-    count = float(masked.notnull().sum().values)
-    one_pixel_area_m2 = abs(
-        masked.odc.geobox.resolution.x * masked.odc.geobox.resolution.y
-    )
+    count = float(data.notnull().sum().values)
+    one_pixel_area_m2 = abs(data.odc.geobox.resolution.x * data.odc.geobox.resolution.y)
 
     return round(float(count) * one_pixel_area_m2, 2)
 

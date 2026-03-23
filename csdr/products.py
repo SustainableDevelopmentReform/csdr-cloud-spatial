@@ -53,11 +53,6 @@ def _get_area_m2_from_stac_geoparquet(
         f"Found {len(items)} STAC items for the given geometry and datetime filter."
     )
 
-    # TODO: This could be a better place to tile the massive geoms. Then the no intersect cases would be faster.
-    # Best would be to check intersection of the whole geom with the dataset, exit quick if not, then tile, then check per geom before actually loading anything.
-    # It is pretty quick now because tiles with no intersect exit fast.
-    # geoms_tiled = _tile_geometries(geoms)
-
     items = ItemCollection(items)
 
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
@@ -68,6 +63,7 @@ def _get_area_m2_from_stac_geoparquet(
     # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
     data = load_xarray_stacgeoparquet(
         items,
+        geometry,
         **load_kwargs,
     )
 
