@@ -7,8 +7,8 @@ from typing import Any
 
 import geopandas as gpd
 import pystac
-import rioxarray  # noqa: F401  # DO NOT REMOVE! Required to enable rioxarray extension for xarray (for .rio accessor and reproject)
 from odc.geo.geom import Geometry
+from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
 
@@ -71,6 +71,7 @@ def load_xarray_stacgeoparquet(
     # load_kwargs.resolution units must match CRS. We should check this. We are passing 10 (meters) for example but the units could be degrees if CRS is geographic.
     # ODC STAC load
     # geopolygon is essential for antimeridian-crossing COGs e.g. DEP Seagrass for Fiji. Without this a world-spanning dataset is loaded which causes OOM Killed errors.
+    # geopolygon only limits to the BOUNDING BOX. So masking is still needed after loading.
     data = load(items, geopolygon=geometry, **load_kwargs)
     assert data.sizes["x"] < 1_000_000, (
         "Error: Loaded data's X dimension spans the whole world (at 10m resolution)."
@@ -81,7 +82,7 @@ def load_xarray_stacgeoparquet(
 
 def xarray_calculate_area_m2(
     data: Dataset | DataArray,
-    geom: Geometry,
+    geometry_4326: Geometry,
     indicator: str | None = None,
     value_list: list[float] | None = None,
 ) -> float:
@@ -94,6 +95,10 @@ def xarray_calculate_area_m2(
     # Only select specific value/s. This will convert to float, with nans
     if value_list is not None:
         data = data.where(data.isin(value_list))
+
+    # Mask out regions outside the geometry.
+    geom_6933 = geometry_4326.to_crs("EPSG:6933")
+    data = mask(data, geom_6933)
 
     # Count all the non-nan cells, and multiply by area
     # This is where the data actally loads. Values calls dask compute.

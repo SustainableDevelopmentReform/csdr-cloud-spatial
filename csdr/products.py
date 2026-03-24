@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # 4. Calculates the area where the specified indicators equals the given value/s within the geometry.
 def _get_area_m2_from_stac_geoparquet(
     dataset_url: str,
-    geometry: Geometry,
+    geometry_4326: Geometry,
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -33,9 +33,9 @@ def _get_area_m2_from_stac_geoparquet(
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     # Get the STAC items filtered by geometry and datetime
-    geom_bbox = geometry.boundingbox
+    geom_bbox = geometry_4326.boundingbox
     geom_bbox_list = [geom_bbox.left, geom_bbox.bottom, geom_bbox.right, geom_bbox.top]
-    geom_geojson = geometry.geojson(simplify=0)["geometry"]
+    geom_geojson = geometry_4326.geojson(simplify=0)["geometry"]
     # TODO: Add to rustac_search_sync collections filter. use_duckdb?
     items = rustac_search_sync(
         dataset_url,
@@ -63,7 +63,7 @@ def _get_area_m2_from_stac_geoparquet(
     # Load the dataset as xarray from the STAC items. Filter spatially and temporally.
     data = load_xarray_stacgeoparquet(
         items,
-        geometry,
+        geometry_4326,
         **load_kwargs,
     )
 
@@ -76,7 +76,7 @@ def _get_area_m2_from_stac_geoparquet(
 
     # Calculate area (m²). This also does the indicator/value/s filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[indicator], geometry, indicator=indicator, value_list=value_list
+        data[indicator], geometry_4326, indicator=indicator, value_list=value_list
     )
 
     return total_area_m2
@@ -86,7 +86,7 @@ def _get_area_m2_from_stac_geoparquet(
 def _get_area_m2_from_geoparquet_sedona(
     sd: sedona.db.context.SedonaContext,
     dataset_url: str,
-    geometry_wkt: str,
+    geometry_4326_wkt: str,
     indicator: str | None = None,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -110,7 +110,7 @@ def _get_area_m2_from_geoparquet_sedona(
         f"""
         SELECT SUM(ST_Area(ST_Transform(geometry, 6933))) AS total_area_m2
         FROM dataset
-        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+        WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_4326_wkt}'), 4326))
         """
     ).to_pandas()
 
@@ -119,7 +119,7 @@ def _get_area_m2_from_geoparquet_sedona(
         logger.info("No intersected dataset geometries found.")
         return 0.0
     else:
-        logger.info(f"Total intersected area: {area_m2:.2f}m²")
+        logger.info(f"Total intersected area: {area_m2:.2f} m²")
 
     return round(float(area_m2), 2)
 
@@ -128,7 +128,7 @@ def _get_area_m2_from_geoparquet_sedona(
 def _get_count_points_in_polygon_geoparquet(
     sd: sedona.db.context.SedonaContext,
     dataset_url: str,
-    geometry_wkt: str,
+    geometry_4326_wkt: str,
 ) -> int:
     # buildings.parquet is in EPSG:4326.
 
@@ -151,7 +151,7 @@ def _get_count_points_in_polygon_geoparquet(
         FROM index_data
         WHERE ST_Intersects(
             geometry,
-            ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326)
+            ST_SetSRID(ST_GeomFromText('{geometry_4326_wkt}'), 4326)
         );
         """
     ).to_pandas()
@@ -177,7 +177,7 @@ def _get_count_points_in_polygon_geoparquet(
                 f"""
                 SELECT COUNT(*) AS geom_count
                 FROM data
-                WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_wkt}'), 4326))
+                WHERE ST_Intersects(geometry, ST_SetSRID(ST_GeomFromText('{geometry_4326_wkt}'), 4326))
                 """
             ).to_pandas()
             geom_count = count_result["geom_count"][0]
@@ -210,7 +210,7 @@ def _get_area_m2_from_dataset_geometry(
     sd: sedona.db.context.SedonaContext,
     dataset_url: str,
     dataset_type: str,
-    geometry: Geometry,
+    geometry_4326: Geometry,
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
@@ -221,7 +221,7 @@ def _get_area_m2_from_dataset_geometry(
     if dataset_type == "stac-geoparquet":
         return _get_area_m2_from_stac_geoparquet(
             dataset_url,
-            geometry,
+            geometry_4326,
             indicator,
             value_list,
             datetime_string_match=datetime_string_match,
@@ -234,7 +234,7 @@ def _get_area_m2_from_dataset_geometry(
         return _get_area_m2_from_geoparquet_sedona(
             sd,
             partition_path,
-            geometry.wkt,
+            geometry_4326.wkt,
             indicator,
             value_list,
             datetime_string_match=datetime_string_match,
@@ -312,7 +312,7 @@ def _tile_geometries(geoms: list[Geometry]) -> list[Geometry]:
 
 
 def process_indicators_for_geometry(
-    geometry: Geometry,
+    geometry_4326: Geometry,
     indicators: dict[str, dict],
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
@@ -375,9 +375,9 @@ def process_indicators_for_geometry(
         )
 
         # Explode multipolygon geometries to single polygons
-        geoms = [geometry]
-        if geometry.geom_type == "MultiPolygon":
-            geoms = list(geometry.geoms)
+        geoms = [geometry_4326]
+        if geometry_4326.geom_type == "MultiPolygon":
+            geoms = list(geometry_4326.geoms)
 
         # If any geom is over a certain size, tile it into smaller pieces. Without this, we cannot run Indonesia EEZ GMW v4 at full resolution for example.
         # For example this makes Australia's 8 geometries into 86.
@@ -388,10 +388,10 @@ def process_indicators_for_geometry(
         total_multipolygon_area_m2 = 0.0  # Need for percent area calculations
         total_indicator_area_m2 = 0.0
         total_count = 0
-        for i, geom in enumerate(geoms_tiled):
+        for i, geom_4326 in enumerate(geoms_tiled):
             logger.info(f"Processing geom {i + 1} of {len(geoms_tiled)}")
             # For percent area calculations, we need the total area of the multipolygon in m²
-            geometry_6933 = geom.to_crs("EPSG:6933")
+            geometry_6933 = geom_4326.to_crs("EPSG:6933")
             geom_area_m2 = geometry_6933.area
             total_multipolygon_area_m2 += geom_area_m2
             # Area indicators
@@ -402,7 +402,7 @@ def process_indicators_for_geometry(
                     sd,
                     dataset_url,
                     dataset_type,
-                    geom,
+                    geom_4326,
                     datetime_string_match=datetime_string_match,
                     indicator=indicator_name,
                     value_list=indicator_value_list,
@@ -411,13 +411,13 @@ def process_indicators_for_geometry(
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2
                 logger.info(
-                    f"Total area by value: {total_indicator_area_m2}m² for indicator {var_key}, value/s {indicator_value_s}"
+                    f"Total area by value: {total_indicator_area_m2} m² for indicator {var_key}, value/s {indicator_value_s}"
                 )
             elif count_var_pattern.match(var_key):  # ["count-buildings"]
                 logger.info("Starting count indicator analysis...")
                 # TODO: Try to parallelise this to improve performance on multipolygons with many parts, that each intersect many parquet files.
                 count = _get_count_points_in_polygon_geoparquet(
-                    sd, dataset_url, geom.wkt
+                    sd, dataset_url, geom_4326.wkt
                 )
                 total_count += count
                 results[var_key] = total_count
@@ -440,7 +440,7 @@ def process_indicators_for_geometry(
             )
             results[var_key] = area_percent
             logger.info(
-                f"Calculated {var_key}: {area_percent:.2f}% (Indicator area: {indicator_area_m2:.2f}m², Total geom area: {total_multipolygon_area_m2:.2f}m²)"
+                f"Calculated {var_key}: {area_percent:.2f} % (Indicator area: {indicator_area_m2:.2f} m², Total geom area: {total_multipolygon_area_m2:.2f} m²)"
             )
 
     return results

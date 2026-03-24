@@ -726,8 +726,21 @@ product-buildings-eez-provenance-local-db:
 		--post-to-database \
 		--overwrite
 
+product-gmw-v4-acsc2-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=xx \
+		--run-id=xx \
+		--geometry-provenance-url=./cache/geometries/acsc2/0-0-1/runs/acsc2-test-run-id/Australian_Coastal_Sediment_Compartments_-_Secondary_Compartments.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v4-acsc2/0-0-1/runs/xx \
+		--datetime-string-match='2020' \
+		--datetime=2020 \
+		--load-kwargs='{"resolution": 10, "crs": "epsg:6933"}' \
+		--geometry-id=a1b11135-e8a6-5311-af57-3053c94e806e \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
+		--overwrite
 
-# Product ACEs by EEZ
+# Product ACEs by ACSC2
 # First product with many indicators. These must be added in the app as indicators.
 # Times: 2021 and 2022.
 # Geometries:
