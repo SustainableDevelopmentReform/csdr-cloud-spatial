@@ -327,16 +327,17 @@ def process_geometry(
     logger.info(
         f"Processing geometry '{geometry_row['csdr-name']}' with id '{geometry_id}'"
     )  # Name is helpful for debugging logs.
-    geometry = Geometry(
+    geometry_native = Geometry(
         geometry_row.geometry, crs=f"EPSG:{geometry_row.crs}"
     )  # ODC Geometry object. This is just one geometry.
+    geometry_4326 = geometry_native.to_crs("EPSG:4326")
 
     # Set up Dask client
     client = _setup_dask_client(use_dask, dask_client_opts)
 
     try:
         results = process_indicators_for_geometry(
-            geometry,
+            geometry_4326,
             indicators_dict,
             dataset_provenance_url,
             datetime_string_match=datetime_string_match,
