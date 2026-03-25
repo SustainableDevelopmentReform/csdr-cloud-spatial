@@ -185,3 +185,6 @@ bucket
 
 # Ignore test files
 tests/data/gmw/gmw.provenance.json
+
+# API doc helper
+notebooks/api-1.json
