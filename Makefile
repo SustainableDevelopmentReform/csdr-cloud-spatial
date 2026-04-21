@@ -237,12 +237,14 @@ dataset-aca-index-local:
 	csdr aca index \
 		--source-location=./cache/datasets/aca/0-0-1/data \
 		--target-location=./cache/datasets/aca/0-0-1 \
+		--write-pmtiles \
 		--overwrite
 
 dataset-aca-index-s3:
 	csdr aca index \
 		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
+		--write-pmtiles \
 		--overwrite
 
 dataset-aca-provenance-local-db:

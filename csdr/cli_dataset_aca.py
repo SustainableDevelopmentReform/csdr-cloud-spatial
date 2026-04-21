@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import os
+import subprocess
 from io import BytesIO
+from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 import geopandas as gpd
@@ -190,9 +192,52 @@ def _partition_parquet(
             )
 
 
+def _write_gdf_to_pmtiles(
+    gdf: gpd.GeoDataFrame,
+    target_store: ObjectStore,
+    file_name: str,
+    fields_to_keep: list,
+) -> None:
+    logger.info("Creating PMTiles...")
+
+    # Do the work in a local temp directory
+    with TemporaryDirectory() as tmpdirname:
+        local_geojson = os.path.join(tmpdirname, "data.geojson")
+        local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
+
+        # Keep only the id and name fields, plus geometry
+        gdf = gdf[[*fields_to_keep, "geometry"]]
+        gdf.to_file(local_geojson, driver="GeoJSON")
+
+        # Create PMTiles file with tippecanoe
+        subprocess.run(
+            [
+                "tippecanoe",
+                "--force",
+                "-z",
+                "10",
+                "--no-simplification-of-shared-nodes",
+                "--simplification",
+                "10",
+                "--drop-densest-as-needed",
+                "--layer",
+                "data",
+                "--output",
+                local_pmtiles,
+                local_geojson,
+            ],
+            check=True,
+        )
+
+        # Upload the PMTiles file to the target store
+        target_store.put(file_name, local_pmtiles)
+        logger.info(f"Created PMTiles file at {file_name}")
+
+
 async def _run_index_aca(
     source_location: str,
     target_location: str,
+    write_pmtiles: bool,
     overwrite: bool,
 ) -> None:
     target_store = get_store_with_prefix_from_url(target_location)
@@ -225,8 +270,16 @@ async def _run_index_aca(
         f.seek(0)
         target_store.put(target_file_name, f.read())
     logger.info("Merge and export to GeoParquet completed.")
+
+    pm_tiles_file_name = target_file_name.replace(".parquet", ".pmtiles")
+    pm_tiles_exists = exists(target_store, pm_tiles_file_name)
+    if write_pmtiles and (overwrite or not pm_tiles_exists):
+        _write_gdf_to_pmtiles(
+            merged_gdf, target_store, pm_tiles_file_name, fields_to_keep=[]
+        )
+
     logger.info("Starting partitioning of the merged GeoParquet ...")
-    _partition_parquet(target_store, merged_gdf, grid_size=10, overwrite=overwrite)
+    _partition_parquet(target_store, merged_gdf, grid_chunks=10, overwrite=overwrite)
     logger.info("Partitioning completed.")
 
 
@@ -242,9 +295,20 @@ def index_aca(
         help="S3 or local path to write reefextent.parquet index (e.g. s3://bucket/datasets/aca/0-0-1/)",
     ),
     overwrite: bool = typer.Option(True, help="Overwrite output file if it exists."),
+    write_pmtiles: bool = typer.Option(
+        True,
+        help="Whether to also write a PMTiles file for the merged reef extent (default: True).",
+    ),
 ) -> None:
     logger.info("Starting ACA merge/index process ...")
-    asyncio.run(_run_index_aca(source_location, target_location, overwrite))
+    asyncio.run(
+        _run_index_aca(
+            source_location,
+            target_location,
+            write_pmtiles=write_pmtiles,
+            overwrite=overwrite,
+        )
+    )
     logger.info("ACA merge/index process completed.")
 
 
