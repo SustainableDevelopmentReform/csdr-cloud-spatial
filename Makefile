@@ -249,8 +249,9 @@ dataset-aca-index-s3:
 
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
-		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
+		--id=forest-cover \
 		--dataset-url=./cache/datasets/aca/0-0-1/reefextent.parquet \
+		--pmtiles-url=./cache/datasets/aca/0-0-1/reefextent.pmtiles \
 		--source-url="https://allencoralatlas.org/atlas/" \
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \

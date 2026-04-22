@@ -123,6 +123,9 @@ def write_dataset_provenance(
         "not-set",
         help="Type of dataset, such as geoparquet, cloud-optimized-geotiff, zarr, etc.",
     ),
+    pmtiles_url: str | None = typer.Option(
+        None, help="URL that points to the PMTiles file for the dataset (optional)"
+    ),
     source_metadata_url: str = typer.Option(
         ...,
         help="URL of the source metadata, such as https://example.com/metadata.html",
@@ -140,6 +143,12 @@ def write_dataset_provenance(
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
+    extra_info_dict = {}
+    if (
+        pmtiles_url is not None
+    ):  # This is optional because geometries and datasets can optionally have PMTiles
+        extra_info_dict["dataPmtilesUrl"] = pmtiles_url
+
     # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id = _meta_provenance(
         id=id,
@@ -150,6 +159,7 @@ def write_dataset_provenance(
         source_metadata_url=source_metadata_url,
         overwrite=overwrite,
         post_to_database=post_to_database,
+        extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
     )
     logger.info(f"dataset_run_id: {dataset_run_id}")
     logger.info(f"Wrote provenance for dataset: {dataset_url}")
@@ -209,10 +219,8 @@ def write_geometry_provenance(
 
     if (
         pmtiles_url is not None
-    ):  # This is optional because geometries can optionally have PMTiles
-        extra_info_dict["dataPmtilesUrl"] = (
-            pmtiles_url  # Need to check how these are written to the db. They could be nullable fields there instead of a loose json.
-        )
+    ):  # This is optional because geometries and datasets can optionally have PMTiles
+        extra_info_dict["dataPmtilesUrl"] = pmtiles_url
 
     # Should run_id be passed as a prop instead of nested in extra_info_dict?
     run_id_created = _meta_provenance(
