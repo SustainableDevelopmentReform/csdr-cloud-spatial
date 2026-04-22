@@ -237,18 +237,21 @@ dataset-aca-index-local:
 	csdr aca index \
 		--source-location=./cache/datasets/aca/0-0-1/data \
 		--target-location=./cache/datasets/aca/0-0-1 \
+		--write-pmtiles \
 		--overwrite
 
 dataset-aca-index-s3:
 	csdr aca index \
 		--source-location=s3://csdr-public-dev/datasets/aca/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/aca/0-0-1 \
+		--write-pmtiles \
 		--overwrite
 
 dataset-aca-provenance-local-db:
 	csdr provenance dataset \
-		--id=7c8c93d3-e5a0-4726-8da4-b00dfbe866a6 \
+		--id=forest-cover \
 		--dataset-url=./cache/datasets/aca/0-0-1/reefextent.parquet \
+		--pmtiles-url=./cache/datasets/aca/0-0-1/reefextent.pmtiles \
 		--source-url="https://allencoralatlas.org/atlas/" \
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
@@ -265,6 +268,7 @@ dataset-buildings-provenance-local-db:
 	csdr provenance dataset \
 		--id=2e09738e-7b2f-4e0e-b66b-a4e332051c25 \
 		--dataset-url=./cache/datasets/buildings/0-0-1/buildings.parquet \
+		--pmtiles-url=https://data.source.coop/vida/google-microsoft-open-buildings/pmtiles/go_ms_building_footprints.pmtiles \
 		--source-url="https://data.source.coop/vida/google-microsoft-open-buildings/geoparquet/by_country_s2/" \
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
