@@ -46,7 +46,7 @@ def get_provenance(
     description: str = "",
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    # Dataset doesn't pass an extra_info_dict, geometry does (including PMTiles url, and geometry run ID). Product probably does (incl. product run ID).
+    # Dataset can pass an extra_info_dict with dataPmtilesUrl, geometry does (including PMTiles url, and geometry run ID). Product probably does (incl. product run ID).
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
     """
