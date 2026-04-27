@@ -10,7 +10,6 @@ from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
-from csdr.cli_geometries import geometry_app
 from csdr.cli_geometry_acsc2 import acsc2_app
 from csdr.cli_geometry_aus_states import aus_states_app
 from csdr.cli_geometry_cwa import cwa_app
@@ -32,9 +31,6 @@ logging.basicConfig(
 logging.getLogger("csdr").setLevel(logging.INFO)  # Our logging level.
 
 # Add the subcommands
-app.add_typer(
-    geometry_app, name="geometries", help="Commands for processing geometries."
-)
 
 ## Datasets
 # GMW
