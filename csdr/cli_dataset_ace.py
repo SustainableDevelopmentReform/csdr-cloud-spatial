@@ -10,6 +10,7 @@ from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
 )
+from csdr.provenance import write_step
 from csdr.utils import suppress_rust_output
 
 ace_app = typer.Typer()
@@ -96,3 +97,8 @@ def index_aus_coastal_ecosystems(
         )
     )
     logger.info("ACE indexing process completed.")
+    write_step(
+        label="Index Australian Coastal Ecosystems STAC collection into a single parquet file",
+        inputs={"source_stac_url": source_stac_url, "stac_collection": stac_collection},
+        outputs={"target_file": f"{target_location}/{target_filename}.parquet"},
+    )

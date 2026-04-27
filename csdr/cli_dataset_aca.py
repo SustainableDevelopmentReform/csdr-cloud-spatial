@@ -18,6 +18,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     write_gdf_to_parquet,
 )
+from csdr.provenance import write_step
 from csdr.utils import CSDRException
 
 aca_app = typer.Typer()
@@ -129,6 +130,11 @@ def extract_aca(
         _run_extract_aca(source_location, target_location, overwrite, max_concurrent)
     )
     logger.info("ACA extraction process completed.")
+    write_step(
+        label="Extract ACA reef extent zip files into individual region folders",
+        inputs={"source_location": source_location},
+        outputs={"target_location": target_location},
+    )
 
 
 # _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
@@ -310,6 +316,11 @@ def index_aca(
         )
     )
     logger.info("ACA merge/index process completed.")
+    write_step(
+        label="Merge per-region Reef Extent geopackages into a combined parquet and pmtiles file",
+        inputs={"source_location": source_location},
+        outputs={"target_file": f"{target_location}/reefextent.parquet"},
+    )
 
 
 if __name__ == "__main__":

@@ -256,8 +256,7 @@ dataset-aca-provenance-local-db:
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
 		--post-to-database \
-		--overwrite \
-		--workflow-dag='{"workflow":"dataset-aca-reef-extents","steps":[{"label":"Extracted raw ACA source files from S3 into local cache","inputs":{"source_location":"s3://csdr-public-dev/datasets/aca/0-0-1/raw"},"outputs":{"target_location":"s3://csdr-public-dev/datasets/aca/0-0-1/data","files_extracted":12},"command":"csdr aca extract --source-location s3://csdr-public-dev/datasets/aca/0-0-1/raw --target-location s3://csdr-public-dev/datasets/aca/0-0-1/data","completed_at":"2025-04-27T10:00:22Z","source":{"file":"csdr/commands/aca.py","line":54,"function":"extract_aca","github_url":"https://github.com/your-org/csdr/blob/a3f8c21/csdr/commands/aca.py#L54"},"depends_on":[]},{"label":"Indexed 47 regional Reef Extent geopackage files into a single merged parquet and pmtiles file","inputs":{"source_location":"s3://csdr-public-dev/datasets/aca/0-0-1/data","gpkg_files_found":47},"outputs":{"parquet_url":"s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.parquet","pmtiles_url":"s3://csdr-public-dev/datasets/aca/0-0-1/reefextent.pmtiles"},"command":"csdr aca index --source-location s3://csdr-public-dev/datasets/aca/0-0-1/data --target-location s3://csdr-public-dev/datasets/aca/0-0-1 --write-pmtiles","completed_at":"2025-04-27T10:01:10Z","source":{"file":"csdr/commands/aca.py","line":87,"function":"index_aca","github_url":"https://github.com/your-org/csdr/blob/a3f8c21/csdr/commands/aca.py#L87"},"depends_on":["extract_aca"]}]}'
+		--overwrite
 
 
 # Dataset MS Buildings
@@ -843,14 +842,6 @@ product-dep-mangrove-pacific-eez-provenance-local-db:
 
 
 ### OTHER ###
-
-# Test GeoJSON
-geometry-geojson-convert:
-	csdr convert geo-to-parquet \
-		--source-location=tests/data/single_geometry.geojson \
-		--target-location=tests/data \
-		--name-field=name \
-		--overwrite
 
 geometry-geojson-provenance:
 	csdr provenance geometry \

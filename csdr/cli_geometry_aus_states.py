@@ -10,6 +10,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
+from csdr.provenance import write_step
 
 aus_states_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -65,4 +66,9 @@ def cache_aus_states(
 
     logger.info(
         f"Australian States caching process completed. Downloaded to {target_url}"
+    )
+    write_step(
+        label="Cache Australian States zipped shapefile from ABS",
+        inputs={"source_url": source_url},
+        outputs={"target_url": target_url},
     )

@@ -10,6 +10,7 @@ from csdr.io import (
     split_path_and_file_name_from_url,
     write_gdf_to_parquet,
 )
+from csdr.provenance import write_step
 from csdr.utils import CSDRException, make_uuid
 
 helpers_app = typer.Typer()
@@ -109,3 +110,8 @@ def filter_geometries_by_name(
     target_store = get_store_with_prefix_from_url(target_path)
     write_gdf_to_parquet(filtered_gdf, target_store, target_filename)
     logger.info(f"Filtered geometries written to {target_url}")
+    write_step(
+        label="Filter geometries by name from source parquet",
+        inputs={"source_url": source_url, "geometry_names": geometry_names},
+        outputs={"target_url": target_url},
+    )

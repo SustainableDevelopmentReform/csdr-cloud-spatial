@@ -12,6 +12,7 @@ from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
 )
+from csdr.provenance import write_step
 
 acsc2_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -80,4 +81,9 @@ def cache_acsc2(
     result_path = asyncio.run(run_cache_acsc2(source_url, target_location, overwrite))
     logger.info(
         f"'{geometry_name}' caching process completed. Cached to '{result_path}'"
+    )
+    write_step(
+        label="Cache ACSC2 zipped shapefile from source",
+        inputs={"source_url": source_url},
+        outputs={"target_location": target_location},
     )

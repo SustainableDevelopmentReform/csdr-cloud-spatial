@@ -23,7 +23,7 @@ from csdr.io import (
     write_json,
 )
 from csdr.products import parse_outputs
-from csdr.provenance import get_provenance
+from csdr.provenance import clear_steps, get_provenance, read_steps
 from csdr.utils import CSDRException
 
 provenance_app = Typer()
@@ -41,7 +41,7 @@ def _meta_provenance(
     post_to_database: bool,
     source_url: str | None = None,
     source_metadata_url: str | None = None,
-    workflow_dag: dict | None = None,
+    workflow_dag: list | None = None,
     # extra_info_dict likely includes geometriesRunId for geometries and productRunId for products
     extra_info_dict: dict | None = None,
 ) -> str | None:
@@ -58,7 +58,7 @@ def _meta_provenance(
         post_to_database (bool): If true, post the provenance to the database.
         source_url (str | None): URL of the original source data.
         source_metadata_url (str): URL of the source metadata.
-        workflow_dag (dict | None): Workflow DAG for the dataset or geometry or product.
+        workflow_dag (list | None): List of workflow step objects for provenance.
         extra_info_dict (dict | None): Additional information to include in the provenance, such as geometriesRunId for geometries and productRunId for products. Dataset run IDs are all made by the DB.
 
     Returns:
@@ -144,12 +144,14 @@ def _write_dataset_provenance(
         False, help="If true, post the provenance to the database"
     ),
     workflow_dag: str = typer.Option(
-        ..., help="Workflow DAG for the dataset (JSON string)"
+        None,
+        help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
-    workflow_dag_dict = loads(workflow_dag)
+    workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    clear_steps()
 
     extra_info_dict = {}
     if (
@@ -167,7 +169,7 @@ def _write_dataset_provenance(
         source_metadata_url=source_metadata_url,
         overwrite=overwrite,
         post_to_database=post_to_database,
-        workflow_dag=workflow_dag_dict,
+        workflow_dag=workflow_dag_parsed,
         extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
     )
     logger.info(f"dataset_run_id: {dataset_run_id}")
@@ -207,7 +209,8 @@ def _write_geometry_provenance(
         False, help="If true, post the provenance to the database"
     ),
     workflow_dag: str = typer.Option(
-        ..., help="Workflow DAG for the geometry (JSON string)"
+        None,
+        help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
     post_geometry_outputs: bool = typer.Option(
         False, help="If true, post the geometry outputs to the database"
@@ -221,7 +224,8 @@ def _write_geometry_provenance(
 ) -> None:
     logger.info(f"Getting provenance for geometry: {geometry_url}")
 
-    workflow_dag_dict = loads(workflow_dag)
+    workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    clear_steps()
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -247,7 +251,7 @@ def _write_geometry_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
-        workflow_dag=workflow_dag_dict,
+        workflow_dag=workflow_dag_parsed,
     )
     logger.info(f"Wrote provenance for geometry: {geometry_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
@@ -280,7 +284,8 @@ def _write_product_provenance(
         help="Geometries run ID",
     ),
     workflow_dag: str = typer.Option(
-        ..., help="Workflow DAG for the product (JSON string)"
+        None,
+        help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
     post_to_database: bool = typer.Option(
         False, help="If true, post the provenance to the database"
@@ -293,7 +298,8 @@ def _write_product_provenance(
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
 
-    workflow_dag_dict = loads(workflow_dag)
+    workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    clear_steps()
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -315,7 +321,7 @@ def _write_product_provenance(
         data_type="parquet",
         overwrite=overwrite,
         post_to_database=post_to_database,
-        workflow_dag=workflow_dag_dict,
+        workflow_dag=workflow_dag_parsed,
         extra_info_dict=extra_info_dict,
     )
     logger.info(f"Wrote provenance for product: {product_url}")

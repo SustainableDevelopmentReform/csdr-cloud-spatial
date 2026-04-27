@@ -9,6 +9,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
+from csdr.provenance import write_step
 
 eez_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -73,3 +74,8 @@ def cache_eez(
 
     result_path = asyncio.run(run_cache_eez(source_url, target_location, overwrite))
     logger.info(f"EEZ caching process completed. Cached to {result_path}")
+    write_step(
+        label="Cache EEZ zip file from source",
+        inputs={"source_url": source_url},
+        outputs={"target_location": target_location},
+    )

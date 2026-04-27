@@ -17,6 +17,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     write_gdf_to_parquet,
 )
+from csdr.provenance import write_step
 from csdr.utils import CSDRException
 
 buildings_app = typer.Typer()
@@ -183,6 +184,11 @@ def index_buildings(
         )
     )
     logger.info("Index buildings dataset process completed.")
+    write_step(
+        label="Index building footprint parquet files from Source Coop into a single bounding-box parquet",
+        inputs={"source_location_s3": source_location_s3},
+        outputs={"target_file": f"{target_location}/{target_file_name}"},
+    )
 
 
 if __name__ == "__main__":

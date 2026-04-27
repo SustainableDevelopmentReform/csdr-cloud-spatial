@@ -21,7 +21,7 @@ from csdr.io import (
     write_json,
 )
 from csdr.products import process_indicators_for_geometry
-from csdr.provenance import read_provenance
+from csdr.provenance import read_provenance, write_step
 from csdr.utils import CSDRException, make_uuid
 
 products_app = typer.Typer()
@@ -357,6 +357,8 @@ def process_geometry(
         logger.info(f"Writing to {target_url}. target_path: {target_path}...")
         write_json(target_store, target_path, product_output)
         logger.info(f"Wrote results to {target_url}")
+        # No write_step here — process-geometry fans out to potentially thousands of pods.
+        # The single summary step is written by consolidate instead.
 
     finally:
         # Release resources
@@ -448,3 +450,13 @@ def consolidate_product(
 
     target_url = f"{location}/{output_file}"
     logger.info(f"Wrote consolidated product data to {target_url}")
+    write_step(
+        label="Consolidate per-geometry-and-year results into a single product parquet",
+        inputs={
+            "location": location,
+            "indicator_name": indicator_name,
+            "geometry_provenance_url": geometry_provenance_url,
+            "dataset_provenance_url": dataset_provenance_url,
+        },
+        outputs={"target_url": target_url},
+    )
