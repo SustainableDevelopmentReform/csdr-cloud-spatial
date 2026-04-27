@@ -70,7 +70,7 @@ def write_step(
 
     step = {
         "label": label,
-        "command": " ".join(sys.argv),
+        "command": " ".join([os.path.basename(sys.argv[0]), *sys.argv[1:]]),
         "inputs": inputs or {},
         "outputs": outputs or {},
         "completed_at": datetime.now(UTC).isoformat() + "Z",
