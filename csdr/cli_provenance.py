@@ -151,7 +151,6 @@ def _write_dataset_provenance(
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
-    clear_steps()
 
     extra_info_dict = {}
     if (
@@ -172,6 +171,7 @@ def _write_dataset_provenance(
         workflow_dag=workflow_dag_parsed,
         extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
     )
+    clear_steps()
     logger.info(f"dataset_run_id: {dataset_run_id}")
     logger.info(f"Wrote provenance for dataset: {dataset_url}")
 
@@ -225,7 +225,6 @@ def _write_geometry_provenance(
     logger.info(f"Getting provenance for geometry: {geometry_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
-    clear_steps()
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -265,6 +264,7 @@ def _write_geometry_provenance(
         else:
             logger.info("Posting geometry outputs to database one at a time...")
             post_geometry_outputs_to_database(geometry_url, run_id=consolidated_run_id)
+    clear_steps()
 
 
 @provenance_app.command("product")
@@ -299,7 +299,6 @@ def _write_product_provenance(
     parsed_outputs = parse_outputs(df)
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
-    clear_steps()
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -355,3 +354,4 @@ def _write_product_provenance(
                     logger.info(
                         f"Posted product output for indicator {indicator} timePoint {timePoint}: {response.status_code}"
                     )
+    clear_steps()
