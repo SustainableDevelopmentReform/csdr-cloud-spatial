@@ -47,6 +47,7 @@ def write_step(
     inputs: dict | None = None,
     outputs: dict | None = None,
     source_function: object | None = None,
+    command: str | None = None,
 ) -> None:
     """Write a provenance step JSON file for the current CLI command.
 
@@ -90,7 +91,7 @@ def write_step(
 
     step = {
         "label": label,
-        "command": " ".join([os.path.basename(sys.argv[0]), *sys.argv[1:]]),
+        "command": command or " ".join([os.path.basename(sys.argv[0]), *sys.argv[1:]]),
         "inputs": inputs or {},
         "outputs": outputs or {},
         "completed_at": datetime.now(UTC).isoformat() + "Z",

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 from typing import Any
 
@@ -125,6 +126,7 @@ def _create_product_output(
         "metadata": {
             "geometryProvenanceUrl": geometry_provenance_url,
             "datasetProvenanceUrl": dataset_provenance_url,
+            "command": " ".join([os.path.basename(sys.argv[0]), *sys.argv[1:]]),
         },
     }
 
@@ -357,6 +359,7 @@ def process_geometry(
         logger.info(f"Writing to {target_url}. target_path: {target_path}...")
         write_json(target_store, target_path, product_output)
         logger.info(f"Wrote results to {target_url}")
+
         # No write_step here — process-geometry fans out to many pods.
         # A single summary step is written by consolidate instead.
 
@@ -461,6 +464,24 @@ def consolidate_product(
         set(item.get("timePoint", "")[:4] for item in all_data if item.get("timePoint"))
     )
 
+    # Read the example process-geometry command from the first product's metadata.
+    # Any single example is sufficient since they all share the same structure.
+    # Replace the geometry-specific values with placeholders to show the template.
+    first_product = all_data[0]
+    process_geometry_command = first_product.get("metadata", {}).get(
+        "command", "csdr products process-geometry"
+    )
+    first_geometry_id = first_product.get("geometryOutputId", "")
+    first_datetime = first_product.get("timePoint", "")[:4]  # e.g. "2020"
+    if first_geometry_id:
+        process_geometry_command = process_geometry_command.replace(
+            first_geometry_id, "{geometry_id}"
+        )
+    if first_datetime:
+        process_geometry_command = process_geometry_command.replace(
+            first_datetime, "{datetime}"
+        )
+
     # Write a summary step for the fan-out process-geometry work.
     # Each geometry is processed in its own pod, so we record a single
     # summary step here where the count is known.
@@ -474,6 +495,7 @@ def consolidate_product(
         },
         outputs={"geometries_processed": len(all_data)},
         source_function=process_geometry,
+        command=process_geometry_command,
     )
     write_step(
         label="Consolidate per-geometry-and-year results into a single product parquet",

@@ -473,7 +473,7 @@ product-gmw-v4-eez-process-geometry-local:
 		--target-location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove", "indicator-value": 1.0}}' \
 		--datetime=2020 \
-		--load-kwargs='{"resolution": 10, "crs": "epsg:6933"}' \
+		--load-kwargs='{"resolution": 500, "crs": "epsg:6933"}' \
 		--geometry-id=b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2 \
 		--overwrite
 
@@ -518,7 +518,7 @@ product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=forest-cover-product \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
-		--run-id=test-product-gmw-v4-eez-run-id3 \
+		--run-id=test-product-gmw-v4-eez-run-id5 \
 		--dataset-run-id=cded8fbc-faf2-49fa-afef-145b7870231d \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
