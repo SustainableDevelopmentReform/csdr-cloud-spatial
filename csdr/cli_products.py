@@ -473,6 +473,7 @@ def consolidate_product(
             "years": years,
         },
         outputs={"geometries_processed": len(all_data)},
+        source_function=process_geometry,
     )
     write_step(
         label="Consolidate per-geometry-and-year results into a single product parquet",

@@ -501,7 +501,7 @@ product-gmw-v4-eez-consolidate-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--indicator-name=mangrove \
-		--overwrite
+		--no-overwrite
 
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
@@ -518,11 +518,11 @@ product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=forest-cover-product \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
-		--run-id=test-product-gmw-v4-eez-run-id2 \
+		--run-id=test-product-gmw-v4-eez-run-id3 \
 		--dataset-run-id=cded8fbc-faf2-49fa-afef-145b7870231d \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
-		--overwrite
+		--no-overwrite
 
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \

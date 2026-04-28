@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import types
 from datetime import UTC, datetime
 from io import BytesIO
 from json import load
@@ -45,26 +46,41 @@ def write_step(
     label: str,
     inputs: dict | None = None,
     outputs: dict | None = None,
+    source_function: object | None = None,
 ) -> None:
     """Write a provenance step JSON file for the current CLI command.
 
     Call this at the end of any ``csdr`` command that should appear in the
     workflow provenance.  The caller's file and line are captured
     automatically via :func:`inspect.stack`.
+
+    If *source_function* is provided (a callable), the source metadata will
+    point to that function instead of the direct caller.  This is useful when
+    a step summarises work done by a different command (e.g. consolidate
+    writing a summary step on behalf of process-geometry).
     """
-    caller = inspect.stack()[1]
-    # Use the function's definition line (from the code object) rather than
-    # the line that calls write_step, so the GitHub link points to the
-    # function header instead of the write_step() call at the bottom.
-    func_start_line = caller.frame.f_code.co_firstlineno
+    if source_function is not None:
+        if isinstance(source_function, types.FunctionType):
+            src_file = inspect.getfile(source_function)
+            src_line = source_function.__code__.co_firstlineno
+            src_name = source_function.__name__
+        else:
+            raise CSDRException(
+                f"source_function must be a function, got {type(source_function)}"
+            )
+    else:
+        caller = inspect.stack()[1]
+        src_file = caller.filename
+        src_line = caller.frame.f_code.co_firstlineno
+        src_name = caller.function
 
     source: dict[str, str | int] = {
-        "file": caller.filename,
-        "line": func_start_line,
-        "function": caller.function,
+        "file": src_file,
+        "line": src_line,
+        "function": src_name,
     }
 
-    github_url = _get_github_url(caller.filename, func_start_line)
+    github_url = _get_github_url(src_file, src_line)
     if github_url is not None:
         source["github"] = github_url
     else:
