@@ -95,83 +95,85 @@ def convert_zipfile_to_parquet(
         logger.info(
             f"Target parquet file already exists at {target_url} and overwrite is off. Use --overwrite to replace. Exiting successfully."
         )
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
-    logger.info(
-        "Target parquet file does not exist or overwrite is on, proceeding with extraction."
-    )
-
-    # Pull the whole zip into memory
-    zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
-    zip_bytes.seek(0)  # Ensure pointer is at start
-
-    with ZipMemoryFile(zip_bytes) as z:
-        files_in_zip = z.listdir()
-        logger.info(f"Files in zip: {files_in_zip}")
-        logger.info(f"Requested internal path: {source_internal_path_name}")
-        if source_internal_path_name not in files_in_zip:
-            raise CSDRException(
-                f"Internal path {source_internal_path_name} not found in zip file."
-            )
-        # Open the shapefile within the ZIP
-        with z.open(source_internal_path_name) as src:
-            gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
-
-    logger.info(f"Loaded {len(gdf)} records from the shapefile.")
-
-    # Add ID and Name fields
-    gdf = add_geometry_id_name(
-        gdf,
-        name_field=name_field,
-        geometry_id=_get_geometry_id(geometry_id, source_internal_path_name),
-    )
-
-    write_gdf_to_parquet(gdf, target_store, target_filename)
-
-    # !tippecanoe --force -z 10 --no-simplification-of-shared-nodes
-    # --simplification 10 --drop-densest-as-needed
-    # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
-
-    if create_pmtiles:
-        logger.info("Creating PMTiles file alongside the parquet...")
-        # Create a PMTiles files with tippecanoe
-        pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
-
-        # Do the work in a local temp directory
-        with TemporaryDirectory() as tmpdirname:
-            local_geojson = os.path.join(tmpdirname, "data.geojson")
-            local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
-
-            # Keep only the id and name fields, plus geometry
-            gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
-            gdf.to_file(local_geojson, driver="GeoJSON")
-
-            # Create PMTiles file with tippecanoe
-            subprocess.run(
-                [
-                    "tippecanoe",
-                    "--force",
-                    "-z",
-                    "10",
-                    "--no-simplification-of-shared-nodes",
-                    "--simplification",
-                    "10",
-                    "--drop-densest-as-needed",
-                    "--layer",
-                    "data",
-                    "--output",
-                    local_pmtiles,
-                    local_geojson,
-                ],
-                check=True,
-            )
-
-            # Upload the PMTiles file to the target store
-            target_store.put(pmtiles_file, local_pmtiles)
-        logger.info(f"Created PMTiles file at {pmtiles_file}")
     else:
-        logger.info("Skipping PMTiles creation because flag is set to false.")
+        logger.info(
+            "Target parquet file does not exist or overwrite is on, proceeding with extraction."
+        )
 
-    logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
+        # Pull the whole zip into memory
+        zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
+        zip_bytes.seek(0)  # Ensure pointer is at start
+
+        with ZipMemoryFile(zip_bytes) as z:
+            files_in_zip = z.listdir()
+            logger.info(f"Files in zip: {files_in_zip}")
+            logger.info(f"Requested internal path: {source_internal_path_name}")
+            if source_internal_path_name not in files_in_zip:
+                raise CSDRException(
+                    f"Internal path {source_internal_path_name} not found in zip file."
+                )
+            # Open the shapefile within the ZIP
+            with z.open(source_internal_path_name) as src:
+                gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
+
+        logger.info(f"Loaded {len(gdf)} records from the shapefile.")
+
+        # Add ID and Name fields
+        gdf = add_geometry_id_name(
+            gdf,
+            name_field=name_field,
+            geometry_id=_get_geometry_id(geometry_id, source_internal_path_name),
+        )
+
+        write_gdf_to_parquet(gdf, target_store, target_filename)
+
+        # !tippecanoe --force -z 10 --no-simplification-of-shared-nodes
+        # --simplification 10 --drop-densest-as-needed
+        # -l "data" -o ../geometries/acsc-ga-2015/out/acsc-primary-compartments.pmtiles ../geometries/acsc-ga-2015/out/acsc-primary-compartments.geojson
+
+        if create_pmtiles:
+            logger.info("Creating PMTiles file alongside the parquet...")
+            # Create a PMTiles files with tippecanoe
+            pmtiles_file = target_filename.replace(".parquet", ".pmtiles")
+
+            # Do the work in a local temp directory
+            with TemporaryDirectory() as tmpdirname:
+                local_geojson = os.path.join(tmpdirname, "data.geojson")
+                local_pmtiles = os.path.join(tmpdirname, "data.pmtiles")
+
+                # Keep only the id and name fields, plus geometry
+                gdf = gdf[["csdr-id", "csdr-name", "geometry"]]
+                gdf.to_file(local_geojson, driver="GeoJSON")
+
+                # Create PMTiles file with tippecanoe
+                subprocess.run(
+                    [
+                        "tippecanoe",
+                        "--force",
+                        "-z",
+                        "10",
+                        "--no-simplification-of-shared-nodes",
+                        "--simplification",
+                        "10",
+                        "--drop-densest-as-needed",
+                        "--layer",
+                        "data",
+                        "--output",
+                        local_pmtiles,
+                        local_geojson,
+                    ],
+                    check=True,
+                )
+
+                # Upload the PMTiles file to the target store
+                target_store.put(pmtiles_file, local_pmtiles)
+            logger.info(f"Created PMTiles file at {pmtiles_file}")
+        else:
+            logger.info("Skipping PMTiles creation because flag is set to false.")
+
+        logger.info(f"Parquet extraction process completed. Wrote file to {target_url}")
+
+    # Write step regardless of whether we skipped or did the work.
     write_step(
         label=f"Convert zipped shapefile to GeoParquet{' and PMTiles' if create_pmtiles else ''}",
         inputs={

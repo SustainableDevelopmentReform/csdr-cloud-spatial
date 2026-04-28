@@ -12,7 +12,7 @@ cache-gmw-v4-local:
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--out-file=/tmp/cached_files.json \
-		--overwrite
+		--no-overwrite
 
 cache-gmw-v4-s3:
 	csdr gmw cache \
@@ -28,7 +28,7 @@ extract-gmw-v4-local:
 		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
 		--source-zip-name=gmw_mng_2020_v4019_gtiff.zip \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
-		--overwrite
+		--no-overwrite
 
 extract-gmw-v4-s3:
 	csdr gmw extract \
@@ -42,18 +42,18 @@ index-gmw-v4-local:
 	csdr gmw index \
 		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
 		--target-location=$(PWD)/cache/datasets/gmw-v4/0-0-1 \
-		--overwrite
+		--no-overwrite
 
 index-gmw-v4-s3:
 	csdr gmw index \
 		--source-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/data \
 		--target-location=s3://csdr-public-dev/datasets/gmw-v4/0-0-1 \
-		--overwrite
+		--no-overwrite
 
 # Make a Dataset in the app and use the ID here
 provenance-gmw-v4-local-db:
 	csdr provenance dataset \
-		--id=5714917f-3549-4a95-9fc4-ff96efbdf311 \
+		--id=forest-cover \
 		--dataset-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet \
 		--source-url="https://zenodo.org/records/12756047" \
 		--source-metadata-url="https://zenodo.org/records/12756047" \
@@ -237,8 +237,8 @@ dataset-aca-index-local:
 	csdr aca index \
 		--source-location=./cache/datasets/aca/0-0-1/data \
 		--target-location=./cache/datasets/aca/0-0-1 \
-		--write-pmtiles \
-		--overwrite
+		--no-write-pmtiles \
+		--no-overwrite
 
 dataset-aca-index-s3:
 	csdr aca index \
@@ -284,7 +284,7 @@ dataset-buildings-provenance-local-db:
 geometry-eez-cache-local:
 	csdr eez cache \
 		--target-location=./cache/geometries/eez-v4/0-0-1/raw \
-		--overwrite
+		--no-overwrite
 
 geometry-eez-cache-s3:
 	csdr eez cache \
@@ -298,7 +298,8 @@ geometry-eez-convert-local:
 		--source-zip-location ./cache/geometries/eez-v4/0-0-1/raw/EEZ_land_union_v4_202410.zip \
 		--source-internal-path-name=EEZ_land_union_v4_202410/EEZ_land_union_v4_202410.shp \
 		--target-location=./cache/geometries/eez-v4/0-0-1/runs/test-run-id \
-		--create-pmtiles
+		--create-pmtiles \
+		--no-overwrite
 
 geometry-eez-convert-s3:
 	csdr convert zip-to-parquet \
@@ -309,20 +310,20 @@ geometry-eez-convert-s3:
 		--create-pmtiles
 
 ### EEZ provenance
-geometry-eez-provenance-local:
-	csdr provenance geometry \
-		--id=6231cc07-5723-4c95-8e64-39322a9be2ed \
-		--run-id=test-run-id \
-		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
-		--source-url="https://www.marineregions.org/downloads.php" \
-		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-		--geometry-type=geoparquet \
-		--overwrite
+# geometry-eez-provenance-local:
+# 	csdr provenance geometry \
+# 		--id=australia-geometries \
+# 		--run-id=test-run-id \
+# 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
+# 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
+# 		--source-url="https://www.marineregions.org/downloads.php" \
+# 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
+# 		--geometry-type=geoparquet \
+# 		--overwrite
 
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
-		--id=65427160-c63c-4c24-a4ac-7013940fae9e \
+		--id=australia-geometries \
 		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
@@ -500,6 +501,7 @@ product-gmw-v4-eez-consolidate-local:
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=./cache/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--indicator-name=mangrove \
+		--overwrite
 
 product-gmw-v4-eez-consolidate-s3:
 	csdr products consolidate \
@@ -508,15 +510,16 @@ product-gmw-v4-eez-consolidate-s3:
 		--geometry-provenance-url=s3://csdr-public-dev/geometries/eez-v4/0-0-1/runs/test-product-gmw-v4-eez-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
 		--dataset-provenance-url=s3://csdr-public-dev/datasets/gmw-v4/0-0-1/gmw.parquet.provenance.json \
 		--indicator-name=mangrove \
+		--overwrite
 
 # You need to make a Product in the app before running provenance. Use that product ID here.
 # You also need to make a indicator. It must have the ID 'sum-mangrove-area'.
 product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
-		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
+		--product-id=forest-cover-product \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
-		--run-id=test-product-gmw-v4-eez-run-id \
-		--dataset-run-id=9d2cf140-1d6f-405a-93af-ba1a1dcd7029 \
+		--run-id=test-product-gmw-v4-eez-run-id2 \
+		--dataset-run-id=cded8fbc-faf2-49fa-afef-145b7870231d \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite

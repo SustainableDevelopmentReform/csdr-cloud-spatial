@@ -39,7 +39,7 @@ async def run_cache_cwa(
         logger.info(
             "File already exists at target location and overwrite is off, skipping download."
         )
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+        return target_location  # Return successfully, nothing to do
 
     logger.info("File doesn't exist or overwrite is on. Re-downloading.")
 
