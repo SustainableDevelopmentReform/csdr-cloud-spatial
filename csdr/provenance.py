@@ -53,14 +53,18 @@ def write_step(
     automatically via :func:`inspect.stack`.
     """
     caller = inspect.stack()[1]
+    # Use the function's definition line (from the code object) rather than
+    # the line that calls write_step, so the GitHub link points to the
+    # function header instead of the write_step() call at the bottom.
+    func_start_line = caller.frame.f_code.co_firstlineno
 
     source: dict[str, str | int] = {
         "file": caller.filename,
-        "line": caller.lineno,
+        "line": func_start_line,
         "function": caller.function,
     }
 
-    github_url = _get_github_url(caller.filename, caller.lineno)
+    github_url = _get_github_url(caller.filename, func_start_line)
     if github_url is not None:
         source["github"] = github_url
     else:
