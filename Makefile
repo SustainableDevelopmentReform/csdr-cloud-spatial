@@ -414,7 +414,7 @@ geometry-aus-states-convert-local:
 		--create-pmtiles
 geometry-aus-states-provenance-local-db:
 	csdr provenance geometry \
-		--id=0b9b8e1a-d20a-41c2-843d-1f2b47d6a512 \
+		--id=australia-geometries \
 		--run-id=aus-states-test-run-id \
 		--geometry-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.parquet \
 		--pmtiles-url=./cache/geometries/aus-states/0-0-1/runs/aus-states-test-run-id/STE_2021_AUST_GDA2020.pmtiles \
