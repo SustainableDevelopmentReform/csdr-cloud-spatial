@@ -172,18 +172,24 @@ def index_buildings(
         logger.info(
             f"Skipping index: {target_file_name} already exists and overwrite is off."
         )
-        return
-    logger.info(
-        "Either file does not exist or overwrite is on, proceeding with indexing."
-    )
-
-    parquet_data = _get_parquet_urls(source_location_s3, source_proxy)
-    asyncio.run(
-        _run_index_buildings(
-            source_proxy, parquet_data, target_store, target_file_name, max_concurrent
+    else:
+        logger.info(
+            "Either file does not exist or overwrite is on, proceeding with indexing."
         )
-    )
-    logger.info("Index buildings dataset process completed.")
+
+        parquet_data = _get_parquet_urls(source_location_s3, source_proxy)
+        asyncio.run(
+            _run_index_buildings(
+                source_proxy,
+                parquet_data,
+                target_store,
+                target_file_name,
+                max_concurrent,
+            )
+        )
+        logger.info("Index buildings dataset process completed.")
+
+    # Write step regardless of overwrite.
     write_step(
         label="Index building footprint parquet files from Source Coop into a single bounding-box parquet",
         inputs={"source_location_s3": source_location_s3},
