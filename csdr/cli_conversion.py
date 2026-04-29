@@ -105,13 +105,6 @@ def convert_zipfile_to_parquet(
         zip_bytes.seek(0)  # Ensure pointer is at start
 
         with ZipMemoryFile(zip_bytes) as z:
-            files_in_zip = z.listdir()
-            logger.info(f"Files in zip: {files_in_zip}")
-            logger.info(f"Requested internal path: {source_internal_path_name}")
-            if source_internal_path_name not in files_in_zip:
-                raise CSDRException(
-                    f"Internal path {source_internal_path_name} not found in zip file."
-                )
             # Open the shapefile within the ZIP
             with z.open(source_internal_path_name) as src:
                 gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
