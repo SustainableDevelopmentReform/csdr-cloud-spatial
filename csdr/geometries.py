@@ -20,12 +20,16 @@ logger = logging.getLogger(__name__)
 def convert_gdf_row_to_geometry_output(
     gdf_row: Series, crs: pyproj_crs.CRS
 ) -> dict | None:
-    if not gdf_row.geometry:
+    geom = gdf_row.geometry
+    if geom is None or not hasattr(geom, "__geo_interface__"):
         # This occurs for example in the ABS Australian States dataset where there are some null geometries
-        logger.warning(f"Geometry is None for geometry output. {gdf_row['csdr-id']}")
+        # NaN values (float) also end up here when geometry column has missing data.
+        logger.warning(
+            f"Geometry is None or invalid for geometry output. {gdf_row['csdr-id']}"
+        )
         return None  # Skip if geometry is None or empty
 
-    poly = Geometry(gdf_row.geometry, crs=crs)
+    poly = Geometry(geom, crs=crs)
     properties = gdf_row.drop(labels=["geometry"]).to_dict()
 
     # Clean data, replace NaN with None so that it works in JSON
