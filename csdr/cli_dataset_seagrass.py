@@ -9,6 +9,7 @@ from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
 )
+from csdr.provenance import write_step
 from csdr.utils import suppress_rust_output
 
 seagrass_app = typer.Typer()
@@ -68,3 +69,8 @@ def index_dep_seagrass(
     logger.info("Starting DEP Seagrass indexing process...")
     asyncio.run(run_index_dep_seagrass(stac_api_url, target_location, overwrite))
     logger.info("DEP Seagrass indexing process completed.")
+    write_step(
+        label="Index DEP Seagrass STAC collection into a single parquet file",
+        inputs={"stac_api_url": stac_api_url},
+        outputs={"target_file": f"{target_location}/dep_s2_seagrass.parquet"},
+    )

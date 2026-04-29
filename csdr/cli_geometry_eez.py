@@ -9,6 +9,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
+from csdr.provenance import write_step
 
 eez_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -34,14 +35,14 @@ async def run_cache_eez(
     if exists(target_store, target_file_name):
         if not overwrite:
             logger.info("File already exists at target location, skipping download.")
-            raise typer.Exit(code=0)  # Exit successfully, nothing to do
+            return target_location  # Return successfully, nothing to do
         else:
             dest_meta = target_store.head(target_file_name)
             if size is not None and "size" in dest_meta and dest_meta["size"] == size:
                 logger.info(
                     f"Overwrite is on but file already exists at target location with matching size of {size}. Skipping download."
                 )
-                raise typer.Exit(code=0)  # Exit successfully, nothing to do
+                return target_location  # Return successfully, nothing to do
             else:
                 logger.info(
                     f"Overwrite is on. File already exists at target location but size does not match (local: {size}, remote: {dest_meta['size']}). Re-downloading."
@@ -73,3 +74,8 @@ def cache_eez(
 
     result_path = asyncio.run(run_cache_eez(source_url, target_location, overwrite))
     logger.info(f"EEZ caching process completed. Cached to {result_path}")
+    write_step(
+        label="Cache EEZ zip file from source",
+        inputs={"source_url": source_url},
+        outputs={"target_location": target_location},
+    )

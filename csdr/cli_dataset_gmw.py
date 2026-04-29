@@ -22,6 +22,7 @@ from csdr.io import (
     get_store_with_prefix_from_url,
     split_path_and_file_name_from_url,
 )
+from csdr.provenance import write_step
 from csdr.utils import CSDRException, suppress_rust_output
 
 gmw_app = typer.Typer()
@@ -156,6 +157,14 @@ def cache_gmw(
     )
     logger.info(
         f"GMW caching process completed. Cached to {target_location.rstrip('/')}"
+    )
+    write_step(
+        label="Cache Global Mangrove Watch source zip files",
+        inputs={
+            "source_file_count": len(source_locations_list),
+            "source_locations_sample": source_locations_list[:3],
+        },
+        outputs={"target_location": target_location},
     )
 
 
@@ -329,6 +338,11 @@ def extract_gmw(
             source_location, source_zip_name, target_location, overwrite, max_concurrent
         )
     )
+    write_step(
+        label="Extract GMW zip into COGs and STAC items",
+        inputs={"source_location": source_location, "source_zip_name": source_zip_name},
+        outputs={"target_location": target_location},
+    )
 
 
 async def run_index_gmw(
@@ -380,3 +394,8 @@ def index_gmw(
     logger.info("Starting GMW indexing process...")
     asyncio.run(run_index_gmw(source_location, target_location, overwrite))
     logger.info("GMW indexing process completed.")
+    write_step(
+        label="Index GMW STAC items into a single parquet file",
+        inputs={"source_location": source_location},
+        outputs={"target_file": f"{target_location}/gmw.parquet"},
+    )

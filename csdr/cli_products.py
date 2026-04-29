@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 from typing import Any
 
@@ -21,7 +22,7 @@ from csdr.io import (
     write_json,
 )
 from csdr.products import process_indicators_for_geometry
-from csdr.provenance import read_provenance
+from csdr.provenance import read_provenance, write_step
 from csdr.utils import CSDRException, make_uuid
 
 products_app = typer.Typer()
@@ -125,6 +126,7 @@ def _create_product_output(
         "metadata": {
             "geometryProvenanceUrl": geometry_provenance_url,
             "datasetProvenanceUrl": dataset_provenance_url,
+            "command": " ".join([os.path.basename(sys.argv[0]), *sys.argv[1:]]),
         },
     }
 
@@ -299,7 +301,7 @@ def process_geometry(
     target_url = f"{target_location}/{target_path}"
     if exists(target_store, target_path) and not overwrite:
         logger.info(f"Product already exists at {target_url}, skipping processing.")
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+        return None  # Exit successfully, nothing to do
     logger.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
     # Load geometry data using Sedona so filtering is done before loading into memory
@@ -358,6 +360,9 @@ def process_geometry(
         write_json(target_store, target_path, product_output)
         logger.info(f"Wrote results to {target_url}")
 
+        # No write_step here — process-geometry fans out to many pods.
+        # A single summary step is written by consolidate instead.
+
     finally:
         # Release resources
         if client is not None:
@@ -382,18 +387,18 @@ def consolidate_product(
     indicator_name: str = typer.Option(
         "asset", help="Name of the indicator to use for calculations (if applicable)"
     ),
-    datetime: str | None = typer.Option(
-        None,
-        help="Parseable datetime to use as the timePoint for the product output (e.g. '2024-01-01T00:00:00Z' or '2024-01')",
+    overwrite: bool = typer.Option(
+        True, help="Replace existing parquet file if it exists."
     ),
 ) -> None:
     logger.info(f"Consolidating product {product_id} from {location}")
     location = location.rstrip("/")
     store = get_store_with_prefix_from_url(location)
-    path = get_product_path(product_id, indicator_name, datetime=datetime)
+    path = get_product_path(product_id, indicator_name)
     logger.info(f"path {path}")
     url = f"{location}/{path}"
-    logger.info(f"Looking for product files in {url}")
+    output_file = f"{path}/{product_id}.parquet"
+    target_url = f"{location}/{output_file}"
 
     # TODO: Use io.find_matching_files for this step
     # Get a list of all the json files in the product directory
@@ -442,9 +447,61 @@ def consolidate_product(
     df = pd.DataFrame(all_data)
     logger.info(f"Consolidated product data from {url}: {df.shape[0]} rows")
 
-    # Write the consolidated DataFrame to a new parquet
-    output_file = f"{path}/{product_id}.parquet"
-    write_gdf_to_parquet(df, store, output_file)
+    if exists(store, output_file) and not overwrite:
+        logger.info(
+            f"Consolidated product already exists at {target_url}, skipping writing consolidated data."
+        )
+    else:
+        logger.info(f"Looking for product files in {url}")
 
-    target_url = f"{location}/{output_file}"
-    logger.info(f"Wrote consolidated product data to {target_url}")
+        # Write the consolidated DataFrame to a new parquet
+        write_gdf_to_parquet(df, store, output_file)
+
+        logger.info(f"Wrote consolidated product data to {target_url}")
+
+    # Extract the unique years from the processed geometry data
+    years = sorted(
+        set(item.get("timePoint", "")[:4] for item in all_data if item.get("timePoint"))
+    )
+
+    # Read the example process-geometry command from the first product's metadata.
+    # Any single example is sufficient since they all share the same structure.
+    # Replace the geometry-specific values with placeholders to show the template.
+    first_product = all_data[0]
+    process_geometry_command = first_product.get("metadata", {}).get(
+        "command", "csdr products process-geometry"
+    )
+    first_geometry_id = first_product.get("geometryOutputId", "")
+    first_datetime = first_product.get("timePoint", "")[:4]  # e.g. "2020"
+    if first_geometry_id:
+        process_geometry_command = process_geometry_command.replace(
+            first_geometry_id, "{geometry_id}"
+        )
+    if first_datetime:
+        process_geometry_command = process_geometry_command.replace(
+            first_datetime, "{datetime}"
+        )
+
+    # Write a summary step for the fan-out process-geometry work.
+    # Each geometry is processed in its own pod, so we record a single
+    # summary step here where the count is known.
+    write_step(
+        label=f"Process {len(all_data)} geometr{'ies' if len(all_data) != 1 else 'y'} for {len(years)} year{'s' if len(years) != 1 else ''} to compute indicators",
+        inputs={
+            "geometry_provenance_url": geometry_provenance_url,
+            "dataset_provenance_url": dataset_provenance_url,
+            "indicator_name": indicator_name,
+            "years": years,
+        },
+        outputs={"geometries_processed": len(all_data)},
+        source_function=process_geometry,
+        command=process_geometry_command,
+    )
+    write_step(
+        label="Consolidate per-geometry-and-year results into a single product parquet",
+        inputs={
+            "location": location,
+            "indicator_name": indicator_name,
+        },
+        outputs={"target_url": target_url},
+    )

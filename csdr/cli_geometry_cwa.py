@@ -9,6 +9,7 @@ from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
 )
+from csdr.provenance import write_step
 
 cwa_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ async def run_cache_cwa(
         logger.info(
             "File already exists at target location and overwrite is off, skipping download."
         )
-        raise typer.Exit(code=0)  # Exit successfully, nothing to do
+        return target_location  # Return successfully, nothing to do
 
     logger.info("File doesn't exist or overwrite is on. Re-downloading.")
 
@@ -77,4 +78,9 @@ def cache_cwa(
     result_path = asyncio.run(run_cache_cwa(source_url, target_location, overwrite))
     logger.info(
         f"'{geometry_name}' caching process completed. Cached to '{result_path}'"
+    )
+    write_step(
+        label="Cache Coastal Waters Areas zipped shapefile from source",
+        inputs={"source_url": source_url},
+        outputs={"target_location": target_location},
     )
