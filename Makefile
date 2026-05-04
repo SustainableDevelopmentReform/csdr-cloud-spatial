@@ -59,7 +59,8 @@ provenance-gmw-v4-local-db:
 		--source-metadata-url="https://zenodo.org/records/12756047" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Mangrove Watch v4 (2020) 10 meter resolution dataset for presentation and analysis.", "inputs": ["Global Mangrove Watch v4 zipfile of COGs."], "methods": ["Cache (download 2020 zipfile), extract (unzip to COGs, write STAC metadata), and index to STAC-Geoparquet."], "outputs": ["COGs and STAC items indexed in STAC-Geoparquet on AWS S3."]}'
 
 provenance-gmw-v4-s3-db:
 	csdr provenance dataset \
@@ -69,7 +70,8 @@ provenance-gmw-v4-s3-db:
 		--source-metadata-url="https://zenodo.org/records/12756047" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Mangrove Watch v4 (2020) 10 meter resolution dataset for presentation and analysis.", "inputs": ["Global Mangrove Watch v4 zipfile of COGs."], "methods": ["Cache (download 2020 zipfile), extract (unzip to COGs, write STAC metadata), and index to STAC-Geoparquet."], "outputs": ["COGs and STAC items indexed in STAC-Geoparquet on AWS S3."]}'
 
 
 # Dataset GMW v3
@@ -143,7 +145,8 @@ provenance-gmw-v3-local-db:
 		--source-metadata-url="https://zenodo.org/records/6894273" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Mangrove Watch v3 (1996, 2007-2010, 2015-2020) 25m resolution dataset.", "inputs": ["GMW v3 zipfiles of COGs"], "methods": ["Cache, extract, and index to STAC-Geoparquet"], "outputs": ["COGs and STAC-Geoparquet on AWS S3"]}'
 
 provenance-gmw-v3-s3-db:
 	csdr provenance dataset \
@@ -153,7 +156,8 @@ provenance-gmw-v3-s3-db:
 		--source-metadata-url="https://zenodo.org/records/6894273" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Mangrove Watch v3 (1996, 2007-2010, 2015-2020) 25m resolution dataset.", "inputs": ["GMW v3 zipfiles of COGs"], "methods": ["Cache, extract, and index to STAC-Geoparquet"], "outputs": ["COGs and STAC-Geoparquet on AWS S3"]}'
 
 
 # Dataset Seagrass
@@ -176,7 +180,8 @@ dataset-seagrass-provenance-local:
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Digital Earth Pacific Seagrass dataset (2017-2024) at 10m resolution.", "inputs": ["DEP Seagrass STAC collection"], "methods": ["Index STAC items to STAC-Geoparquet"], "outputs": ["STAC-Geoparquet on AWS S3"]}'
 dataset-seagrass-provenance-s3:
 	csdr provenance dataset \
 		--id=8faf443a-3b57-47f8-8a7c-e9fbb00ca84c \
@@ -185,7 +190,8 @@ dataset-seagrass-provenance-s3:
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_seagrass/0-2-0" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Digital Earth Pacific Seagrass dataset (2017-2024) at 10m resolution.", "inputs": ["DEP Seagrass STAC collection"], "methods": ["Index STAC items to STAC-Geoparquet"], "outputs": ["STAC-Geoparquet on AWS S3"]}'
 
 
 # Dataset ACE - Australian Coastal Ecosystems
@@ -204,7 +210,8 @@ dataset-ace-provenance-local:
 		--source-metadata-url="https://knowledge.dea.ga.gov.au/data/product/dea-coastal-ecosystems" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Digital Earth Australia Coastal Ecosystems dataset (2021-2022) at 10m resolution.", "inputs": ["DEAustralia Coastal Ecosystems STAC collection"], "methods": ["Index STAC items to STAC-Geoparquet"], "outputs": ["STAC-Geoparquet on AWS S3"]}'
 
 # Dataset DEP Pacific Mangrove
 dataset-dep-mangrove-index-local:
@@ -222,7 +229,8 @@ dataset-dep-mangrove-provenance-local:
 		--source-metadata-url="https://data.digitalearthpacific.org/#dep_s2_mangroves/" \
 		--dataset-type=stac-geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Digital Earth Pacific Mangroves dataset (2017-2024) at 10m resolution.", "inputs": ["DEP Mangroves STAC collection"], "methods": ["Index STAC items to STAC-Geoparquet"], "outputs": ["STAC-Geoparquet on AWS S3"]}'
 
 
 # Dataset ACA - reef extent
@@ -256,7 +264,8 @@ dataset-aca-provenance-local-db:
 		--source-metadata-url="https://storage.googleapis.com/coral-atlas-static-files/download-package-materials/Class-Descriptions-Benthic-Maps-v3.pdf" \
 		--dataset-type=geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Allen Coral Atlas reef extent vector dataset (2022).", "inputs": ["Allen Coral Atlas reef extent vector data"], "methods": ["Extract (many zipped geopackage region files), index to Geoparquet and PMTiles"], "outputs": ["Geoparquet and PMTiles on AWS S3"]}'
 
 
 # Dataset MS Buildings
@@ -274,7 +283,8 @@ dataset-buildings-provenance-local-db:
 		--source-metadata-url="https://source.coop/vida/google-microsoft-open-buildings" \
 		--dataset-type=geoparquet \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the VIDA Google-Microsoft Open Buildings footprints dataset (2024).", "inputs": ["VIDA Google-Microsoft Open Buildings Geoparquet from Source Cooperative"], "methods": ["Index building footprint Geoparquet files"], "outputs": ["Geoparquet of bounding boxes on AWS S3. PMTiles on Source Cooperative."]}'
 
 
 ### GEOMETRIES ###
@@ -310,21 +320,10 @@ geometry-eez-convert-s3:
 		--create-pmtiles
 
 ### EEZ provenance
-# geometry-eez-provenance-local:
-# 	csdr provenance geometry \
-# 		--id=australia-geometries \
-# 		--run-id=test-run-id \
-# 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet \
-# 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.pmtiles \
-# 		--source-url="https://www.marineregions.org/downloads.php" \
-# 		--source-metadata-url="https://www.marineregions.org/downloads.php" \
-# 		--geometry-type=geoparquet \
-# 		--overwrite
-
 geometry-eez-provenance-local-db:
 	csdr provenance geometry \
 		--id=australia-geometries \
-		--run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
+		--run-id=test-run-id \
 		--geometry-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet \
 		--pmtiles-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.pmtiles \
 		--source-url="https://www.marineregions.org/downloads.php" \
@@ -332,7 +331,8 @@ geometry-eez-provenance-local-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Exclusive Economic Zone boundaries.", "inputs": ["Global EEZ boundaries zipped shapefile"], "methods": ["Convert zipped shapefile and write to database"], "outputs": ["Parquet", "PMTiles", "Database records"]}'
 
 geometry-eez-provenance-s3-db:
 	csdr provenance geometry \
@@ -345,7 +345,8 @@ geometry-eez-provenance-s3-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Exclusive Economic Zone boundaries.", "inputs": ["Global EEZ boundaries zipped shapefile"], "methods": ["Convert zipped shapefile and write to database"], "outputs": ["Parquet", "PMTiles", "Database records"]}'
 
 # Geometry Australian Coastal Sediment Compartments - Secondary Compartments
 geometry-acsc2-cache-local:
@@ -372,7 +373,8 @@ geometry-acsc2-provenance-local-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Australian Coastal Sediment Compartments (Secondary) boundaries.", "inputs": ["ACSC2 zipped shapefile from ArcGIS hub API."], "methods": ["Cache and convert zipped shapefile and write to database"], "outputs": ["Parquet", "PMTiles", "Database records"]}'
 
 # Geometry GA Coastal Waters Areas
 geometry-cwa-cache-local:
@@ -398,7 +400,8 @@ geometry-cwa-provenance-local-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare Geoscience Australia'\''s Coastal Waters Areas boundaries.", "inputs": ["Coastal Waters Areas zipped shapefile from ArcGIS hub API"], "methods": ["Cache and convert zipped shapefile and write to database"], "outputs": ["Parquet", "PMTiles", "Database records"]}'
 
 # Geometry Australian States and Territories
 geometry-aus-states-cache-local:
@@ -423,7 +426,8 @@ geometry-aus-states-provenance-local-db:
 		--geometry-type=geoparquet \
 		--post-to-database \
 		--post-geometry-outputs \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare Australian Bureau of Statistics'\'' Australian States and Territories boundaries.", "inputs": ["ABS States and Territories zipped shapefile"], "methods": ["Cache and convert zipped shapefile and write to database"], "outputs": ["Parquet", "PMTiles", "Database records"]}'
 
 geometry-pacific-eez-filter-s3:
 	csdr helpers filter-geometries-by-name \
@@ -518,11 +522,12 @@ product-gmw-v4-eez-provenance-local-db:
 	csdr provenance product \
 		--product-id=forest-cover-product \
 		--product-url=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove/935e9c13-7e2e-40c5-a4f8-f5f62ea54381.parquet \
-		--run-id=test-product-gmw-v4-eez-run-id5 \
+		--run-id=test-product-gmw-v4-eez-run-id6 \
 		--dataset-run-id=cded8fbc-faf2-49fa-afef-145b7870231d \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
-		--no-overwrite
+		--no-overwrite \
+		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": ["GMW v4 (2020) 10m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": ["Mangrove Area (m\u00b2)"]}'
 
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \
@@ -532,7 +537,8 @@ product-gmw-v4-eez-provenance-s3-db:
 		--dataset-run-id=dc364a0b-a719-4a39-b088-653dd28bb7a6 \
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": ["GMW v4 (2020) 10m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": ["Mangrove Area (m\u00b2)"]}'
 
 
 ### Product GMW v3 by EEZ ###
@@ -574,7 +580,8 @@ product-gmw-v3-eez-provenance-local-db:
 		--dataset-run-id=d97e1dd1-a9eb-481b-9e17-30fdc1fe6838 \
 		--geometries-run-id=test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect GMW v3 with EEZ boundaries to calculate mangrove area per EEZ annually (1996, 2007-2010, 2015-2020).", "inputs": ["GMW v3 (1996, 2007-2010, 2015-2020) 25m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v3 per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
 
 
 ### Product Seagrass EEZ v4 ###
@@ -636,7 +643,8 @@ product-seagrass-eez-provenance-local-db:
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect DEP Seagrass with EEZ boundaries to calculate seagrass area per EEZ.", "inputs": ["DEP Seagrass raster dataset 10m (2017-2024)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["Seagrass per EEZ Product"], "indicators": ["Seagrass Area (m\u00b2)"]}'
 
 
 # Product ACA Reef Extent by EEZ
@@ -693,7 +701,8 @@ product-aca-eez-provenance-local-db:
 		--dataset-run-id=1a045bf6-9deb-42d4-8150-9ce460e5f2a2 \
 		--geometries-run-id=test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect Allen Coral Atlas reef extent areas with EEZ boundaries to calculate reef area per EEZ.", "inputs": ["Allen Coral Atlas reef extent vector dataset (2022)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ)"], "outputs": ["ACA Reef Extent per EEZ Product"], "indicators": ["Reef Area (m\u00b2)"]}'
 
 
 # Product buildings by EEZ
@@ -732,7 +741,9 @@ product-buildings-eez-provenance-local-db:
 		--dataset-run-id=c77dd12e-875b-4d05-b9de-0958f1a4d7ec \
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect VIDA Google-Microsoft Open Buildings with EEZ boundaries to count buildings per EEZ.", "inputs": ["VIDA Google-Microsoft Open Buildings vector dataset (2024)", "Global EEZ boundaries"], "methods": ["Intersect and count buildings (per EEZ)"], "outputs": ["Buildings per EEZ Product"], "indicators": ["Building Count"]}'
+
 
 product-gmw-v4-acsc2-process-geometry-local:
 	csdr products process-geometry \
@@ -781,7 +792,9 @@ product-ace-acsc2-provenance-local-db:
 		--dataset-run-id=b110a9cd-0052-4436-8504-3d55f6d79094 \
 		--geometries-run-id=acsc2-test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Australia'\''s Coastal Ecosystems with Australian Coastal Sediment Compartments (Secondary) boundaries to calculate coastal ecosystem areas per compartment.", "inputs": ["DEA Coastal Ecosystems raster dataset 10m (2021-2022)", "Australian Coastal Sediment Compartments (Secondary) boundaries"], "methods": ["Intersect and calculate area (per compartment, per year)"], "outputs": ["ACE per ACSC2 Product"], "indicators": ["Mangrove Area (m\u00b2)", "Intertidal Area (m\u00b2)", "Saltmarsh Area (m\u00b2)", "Seagrass Area (m\u00b2)", "Percent Mangrove Area", "Percent Intertidal Area", "Percent Saltmarsh Area", "Percent Seagrass Area"]}'
+
 
 
 # Product DEP Mangrove per EEZ
@@ -811,7 +824,8 @@ product-dep-mangrove-eez-provenance-local-db:
 		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": ["DEP Mangroves raster dataset (open and closed canopy)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
 
 # Product DEP Mangrove per Pacific EEZ
 product-dep-mangrove-pacific-eez-process-geometry-local:
@@ -840,7 +854,8 @@ product-dep-mangrove-pacific-eez-provenance-local-db:
 		--dataset-run-id=924a2b90-9ee9-4afb-b585-3f05e0d22e2d \
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
-		--overwrite
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with Pacific EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": ["DEP Mangroves raster dataset (open and closed canopy)", "Pacific EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
 
 
 
