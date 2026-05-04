@@ -42,6 +42,7 @@ def _meta_provenance(
     source_url: str | None = None,
     source_metadata_url: str | None = None,
     workflow_dag: list | None = None,
+    workflow_dag_simple: str | None = None,
     # extra_info_dict likely includes geometriesRunId for geometries and productRunId for products
     extra_info_dict: dict | None = None,
 ) -> str | None:
@@ -83,6 +84,7 @@ def _meta_provenance(
         source_url=source_url,
         source_metadata_url=source_metadata_url,
         workflow_dag=workflow_dag,
+        workflow_dag_simple=workflow_dag_simple,
         extra_info_dict=extra_info_dict,
     )
 
@@ -147,6 +149,10 @@ def _write_dataset_provenance(
         None,
         help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
+    workflow_dag_simple: str = typer.Option(
+        None,
+        help="Simple workflow diagram as a JSON string for display in the UI.",
+    ),
 ) -> None:
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
@@ -169,6 +175,7 @@ def _write_dataset_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         workflow_dag=workflow_dag_parsed,
+        workflow_dag_simple=workflow_dag_simple,
         extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
     )
     clear_steps()
@@ -212,6 +219,10 @@ def _write_geometry_provenance(
         None,
         help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
+    workflow_dag_simple: str = typer.Option(
+        None,
+        help="Simple workflow diagram as a JSON string for display in the UI.",
+    ),
     post_geometry_outputs: bool = typer.Option(
         False, help="If true, post the geometry outputs to the database"
     ),
@@ -251,6 +262,7 @@ def _write_geometry_provenance(
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
         workflow_dag=workflow_dag_parsed,
+        workflow_dag_simple=workflow_dag_simple,
     )
     logger.info(f"Wrote provenance for geometry: {geometry_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
@@ -287,6 +299,10 @@ def _write_product_provenance(
         None,
         help="Workflow DAG as a JSON array of step objects. If not provided, reads from local provenance step files.",
     ),
+    workflow_dag_simple: str = typer.Option(
+        None,
+        help="Simple workflow diagram as a JSON string for display in the UI.",
+    ),
     post_to_database: bool = typer.Option(
         False, help="If true, post the provenance to the database"
     ),
@@ -321,6 +337,7 @@ def _write_product_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         workflow_dag=workflow_dag_parsed,
+        workflow_dag_simple=workflow_dag_simple,
         extra_info_dict=extra_info_dict,
     )
     logger.info(f"Wrote provenance for product: {product_url}")

@@ -163,6 +163,7 @@ def get_provenance(
     source_url: str | None = None,
     source_metadata_url: str | None = None,
     workflow_dag: list | None = None,
+    workflow_dag_simple: str | None = None,
     # Dataset can pass an extra_info_dict with dataPmtilesUrl, geometry does (including PMTiles url, and geometry run ID). Product probably does (incl. product run ID).
     extra_info_dict: dict[str, str | int] | None = None,
 ) -> dict[str, str | int]:
@@ -196,6 +197,7 @@ def get_provenance(
         # These three get removed from the dict if posting to database
         "provenanceUpdated": datetime.now(UTC).isoformat() + "Z",
         "workflowDag": workflow_dag,
+        "workflowDagSimple": workflow_dag_simple,
         # Extra stuff! e.g. geometriesRunId and productRunId
         **extra_info_dict,
     }
