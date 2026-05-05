@@ -86,7 +86,7 @@ def index_aus_coastal_ecosystems(
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
     dataset_name: str = typer.Option(
-        "Australian Coastal Ecosystems",
+        "Digital Earth Australia Coastal Ecosystems",
         help="Name of the dataset being indexed, used for provenance. Needed because this command is being generalised.",
     ),
 ) -> None:
