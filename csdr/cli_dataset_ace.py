@@ -85,8 +85,12 @@ def index_aus_coastal_ecosystems(
         help="Name of the target parquet file (without extension).",
     ),
     overwrite: bool = typer.Option(True, help="Replace existing index file"),
+    dataset_name: str = typer.Option(
+        "Digital Earth Australia Coastal Ecosystems",
+        help="Name of the dataset being indexed, used for provenance. Needed because this command is being generalised.",
+    ),
 ) -> None:
-    logger.info("Starting ACE indexing process...")
+    logger.info(f"Starting {dataset_name} indexing process...")
     asyncio.run(
         run_index_aus_coastal_ecosystems(
             source_stac_url,
@@ -96,9 +100,9 @@ def index_aus_coastal_ecosystems(
             overwrite,
         )
     )
-    logger.info("ACE indexing process completed.")
+    logger.info(f"{dataset_name} indexing process completed.")
     write_step(
-        label="Index Australian Coastal Ecosystems STAC collection into a single parquet file",
+        label=f"Index {dataset_name} STAC collection into a single parquet file",
         inputs={"source_stac_url": source_stac_url, "stac_collection": stac_collection},
         outputs={"target_file": f"{target_location}/{target_filename}.parquet"},
     )

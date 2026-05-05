@@ -201,6 +201,7 @@ dataset-ace-index-local:
 		--stac-collection=ga_s2_coastalecosystems_cyear_3_v1 \
 		--target-location=./cache/datasets/ace/0-0-1 \
 		--target-filename=ace \
+		--dataset-name="Digital Earth Australia Coastal Ecosystems" \
 		--overwrite
 dataset-ace-provenance-local:
 	csdr provenance dataset \
@@ -220,6 +221,7 @@ dataset-dep-mangrove-index-local:
 		--stac-collection=dep_s2_mangroves \
 		--target-location=./cache/datasets/dep-mangrove/0-0-1 \
 		--target-filename=dep-mangrove \
+		--dataset-name="Digital Earth Pacific Mangroves" \
 		--overwrite
 dataset-dep-mangrove-provenance-local:
 	csdr provenance dataset \

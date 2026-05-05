@@ -485,15 +485,16 @@ def consolidate_product(
     # Write a summary step for the fan-out process-geometry work.
     # Each geometry is processed in its own pod, so we record a single
     # summary step here where the count is known.
+    geom_count = int(len(all_data) / len(years))  # Assuming all geometries have a year
     write_step(
-        label=f"Process {len(all_data) / len(years)} geometr{'ies' if len(all_data) != 1 else 'y'} for {len(years)} year{'s' if len(years) != 1 else ''} to compute indicators",
+        label=f"Process {int(len(all_data) / len(years))} geometr{'ies' if geom_count != 1 else 'y'} for {len(years)} year{'s' if len(years) != 1 else ''} to compute indicators",
         inputs={
             "geometry_provenance_url": geometry_provenance_url,
             "dataset_provenance_url": dataset_provenance_url,
             "indicator_name": indicator_name,
             "years": years,
         },
-        outputs={"geometries_processed": len(all_data) / len(years)},
+        outputs={"geometries_processed": geom_count},
         source_function=process_geometry,
         command=process_geometry_command,
     )
