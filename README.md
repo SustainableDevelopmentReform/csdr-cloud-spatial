@@ -9,7 +9,7 @@ This is a project by the University of New South Wales [Centre for Sustainable D
 This toolkit provides cloud-native geospatial data processing and workflow automation. It supports spatial data ingestion, transformation, calculation, and output, with provenance tracking for reliable and repeatable results.
 
 ### License
-This project is licensed under the terms of the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ### Repositories
 This toolkit is part of a larger system. Additional repositories for the application and workflow templates will be open-sourced and linked here when available. This toolkit is reliant on the app running either locally or hosted somewhere.
