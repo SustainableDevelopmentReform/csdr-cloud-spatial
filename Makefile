@@ -529,7 +529,7 @@ product-gmw-v4-eez-provenance-local-db:
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--no-overwrite \
-		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": ["GMW v4 (2020) 10m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": ["Mangrove Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": [{"description": "GMW v4 (2020) 10m raster dataset", "type": "dataset", "run_id": "cded8fbc-faf2-49fa-afef-145b7870231d"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "755206f2-dc2f-5b11-8355-2a86b34f7984"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-product-gmw-v4-eez-run-id6"}]}'
 
 product-gmw-v4-eez-provenance-s3-db:
 	csdr provenance product \
@@ -540,7 +540,7 @@ product-gmw-v4-eez-provenance-s3-db:
 		--geometries-run-id=755206f2-dc2f-5b11-8355-2a86b34f7984 \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": ["GMW v4 (2020) 10m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": ["Mangrove Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect GMW v4 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": [{"description": "GMW v4 (2020) 10m raster dataset", "type": "dataset", "run_id": "dc364a0b-a719-4a39-b088-653dd28bb7a6"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "755206f2-dc2f-5b11-8355-2a86b34f7984"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4 per EEZ Product 2020"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-product-gmw-v4-eez-run-id"}]}'
 
 
 ### Product GMW v3 by EEZ ###
@@ -583,7 +583,7 @@ product-gmw-v3-eez-provenance-local-db:
 		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect GMW v3 with EEZ boundaries to calculate mangrove area per EEZ annually (1996, 2007-2010, 2015-2020).", "inputs": ["GMW v3 (1996, 2007-2010, 2015-2020) 25m raster dataset", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v3 per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect GMW v3 with EEZ boundaries to calculate mangrove area per EEZ annually (1996, 2007-2010, 2015-2020).", "inputs": [{"description": "GMW v3 (1996, 2007-2010, 2015-2020) 25m raster dataset", "type": "dataset", "run_id": "d97e1dd1-a9eb-481b-9e17-30fdc1fe6838"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "test-run-id"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v3 per EEZ Product"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-product-gmw-v3-eez-run-id"}]}'
 
 
 ### Product Seagrass EEZ v4 ###
@@ -646,7 +646,7 @@ product-seagrass-eez-provenance-local-db:
 		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect DEP Seagrass with EEZ boundaries to calculate seagrass area per EEZ.", "inputs": ["DEP Seagrass raster dataset 10m (2017-2024)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["Seagrass per EEZ Product"], "indicators": ["Seagrass Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect DEP Seagrass with EEZ boundaries to calculate seagrass area per EEZ.", "inputs": [{"description": "DEP Seagrass raster dataset 10m (2017-2024)", "type": "dataset", "run_id": "1a045bf6-9deb-42d4-8150-9ce460e5f2a2"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "test-run-id"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["Seagrass per EEZ Product"], "indicators": [{"description": "Seagrass Area (m²)", "indicator_id": "sum-seagrass-area", "product_run_id": "test-product-seagrass-eez-run-id"}]}'
 
 
 # Product ACA Reef Extent by EEZ
@@ -704,7 +704,7 @@ product-aca-eez-provenance-local-db:
 		--geometries-run-id=test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect Allen Coral Atlas reef extent areas with EEZ boundaries to calculate reef area per EEZ.", "inputs": ["Allen Coral Atlas reef extent vector dataset (2022)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ)"], "outputs": ["ACA Reef Extent per EEZ Product"], "indicators": ["Reef Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect Allen Coral Atlas reef extent areas with EEZ boundaries to calculate reef area per EEZ.", "inputs": [{"description": "Allen Coral Atlas reef extent vector dataset (2022)", "type": "dataset", "run_id": "1a045bf6-9deb-42d4-8150-9ce460e5f2a2"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "test-run-id"}], "methods": ["Intersect and calculate area (per EEZ)"], "outputs": ["ACA Reef Extent per EEZ Product"], "indicators": [{"description": "Reef Area (m²)", "indicator_id": "sum-reef-area", "product_run_id": "test-aca-eez-run-id"}]}'
 
 
 # Product buildings by EEZ
@@ -744,7 +744,7 @@ product-buildings-eez-provenance-local-db:
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect VIDA Google-Microsoft Open Buildings with EEZ boundaries to count buildings per EEZ.", "inputs": ["VIDA Google-Microsoft Open Buildings vector dataset (2024)", "Global EEZ boundaries"], "methods": ["Intersect and count buildings (per EEZ)"], "outputs": ["Buildings per EEZ Product"], "indicators": ["Building Count"]}'
+		--workflow-dag-simple='{"description": "Intersect VIDA Google-Microsoft Open Buildings with EEZ boundaries to count buildings per EEZ.", "inputs": [{"description": "VIDA Google-Microsoft Open Buildings vector dataset (2024)", "type": "dataset", "run_id": "c77dd12e-875b-4d05-b9de-0958f1a4d7ec"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "eez-test-run-id"}], "methods": ["Intersect and count buildings (per EEZ)"], "outputs": ["Buildings per EEZ Product"], "indicators": [{"description": "Building Count", "indicator_id": "count-buildings", "product_run_id": "test-buildings-eez-run-id"}]}'
 
 
 product-gmw-v4-acsc2-process-geometry-local:
@@ -795,7 +795,7 @@ product-ace-acsc2-provenance-local-db:
 		--geometries-run-id=acsc2-test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect Digital Earth Australia'\''s Coastal Ecosystems with Australian Coastal Sediment Compartments (Secondary) boundaries to calculate coastal ecosystem areas per compartment.", "inputs": ["DEA Coastal Ecosystems raster dataset 10m (2021-2022)", "Australian Coastal Sediment Compartments (Secondary) boundaries"], "methods": ["Intersect and calculate area (per compartment, per year)"], "outputs": ["ACE per ACSC2 Product"], "indicators": ["Mangrove Area (m\u00b2)", "Intertidal Area (m\u00b2)", "Saltmarsh Area (m\u00b2)", "Seagrass Area (m\u00b2)", "Percent Mangrove Area", "Percent Intertidal Area", "Percent Saltmarsh Area", "Percent Seagrass Area"]}'
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Australia'\''s Coastal Ecosystems with Australian Coastal Sediment Compartments (Secondary) boundaries to calculate coastal ecosystem areas per compartment.", "inputs": [{"description": "DEA Coastal Ecosystems raster dataset 10m (2021-2022)", "type": "dataset", "run_id": "b110a9cd-0052-4436-8504-3d55f6d79094"}, {"description": "Australian Coastal Sediment Compartments (Secondary) boundaries", "type": "geometry", "run_id": "acsc2-test-run-id"}], "methods": ["Intersect and calculate area (per compartment, per year)"], "outputs": ["ACE per ACSC2 Product"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Intertidal Area (m²)", "indicator_id": "sum-intertidal-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Saltmarsh Area (m²)", "indicator_id": "sum-saltmarsh-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Seagrass Area (m²)", "indicator_id": "sum-seagrass-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Percent Mangrove Area", "indicator_id": "percent-mangrove-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Percent Intertidal Area", "indicator_id": "percent-intertidal-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Percent Saltmarsh Area", "indicator_id": "percent-saltmarsh-area", "product_run_id": "test-ace-acsc2-run-id"}, {"description": "Percent Seagrass Area", "indicator_id": "percent-seagrass-area", "product_run_id": "test-ace-acsc2-run-id"}]}'
 
 
 
@@ -827,7 +827,7 @@ product-dep-mangrove-eez-provenance-local-db:
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": ["DEP Mangroves raster dataset (open and closed canopy)", "Global EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": [{"description": "DEP Mangroves raster dataset (open and closed canopy)", "type": "dataset", "run_id": "924a2b90-9ee9-4afb-b585-3f05e0d22e2d"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "eez-test-run-id"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-dep-mangrove-eez-run-id"}]}'
 
 # Product DEP Mangrove per Pacific EEZ
 product-dep-mangrove-pacific-eez-process-geometry-local:
@@ -857,7 +857,7 @@ product-dep-mangrove-pacific-eez-provenance-local-db:
 		--geometries-run-id=eez-test-run-id \
 		--post-to-database \
 		--overwrite \
-		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with Pacific EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": ["DEP Mangroves raster dataset (open and closed canopy)", "Pacific EEZ boundaries"], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": ["Mangrove Area (m\u00b2)"]}'
+		--workflow-dag-simple='{"description": "Intersect Digital Earth Pacific'\''s Mangroves with Pacific EEZ boundaries to calculate mangrove area per EEZ (2017-2024) at 10m resolution.", "inputs": [{"description": "DEP Mangroves raster dataset (open and closed canopy)", "type": "dataset", "run_id": "924a2b90-9ee9-4afb-b585-3f05e0d22e2d"}, {"description": "Pacific EEZ boundaries", "type": "geometry", "run_id": "eez-test-run-id"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["DEP Mangroves per EEZ Product"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-dep-mangrove-eez-run-id"}]}'
 
 
 
