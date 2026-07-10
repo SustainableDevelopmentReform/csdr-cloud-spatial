@@ -133,7 +133,7 @@ def index_stac(
     )
     logger.info(f"{dataset_name} STAC indexing process completed.")
     write_step(
-        label=f"Index {dataset_name} STAC items into a single parquet file",
+        label=f"Index {item_count} {dataset_name} STAC items into a single parquet file",
         inputs={"source_stac_items": source_items, "asset_name": asset_name},
         outputs={"target_file": f"{target_location}/{target_filename}.parquet"},
     )
