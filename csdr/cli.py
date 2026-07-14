@@ -10,6 +10,7 @@ from csdr.cli_dataset_ace import ace_app
 from csdr.cli_dataset_buildings import buildings_app
 from csdr.cli_dataset_gmw import gmw_app
 from csdr.cli_dataset_seagrass import seagrass_app
+from csdr.cli_dataset_stac import stac_app
 from csdr.cli_geometry_acsc2 import acsc2_app
 from csdr.cli_geometry_aus_states import aus_states_app
 from csdr.cli_geometry_cwa import cwa_app
@@ -38,6 +39,12 @@ app.add_typer(gmw_app, name="gmw", help="Cache and process the GMW datasets.")
 # Seagrass, including from DEP
 app.add_typer(
     seagrass_app, name="seagrass", help="Cache and process Seagrass datasets."
+)
+# Generic static STAC item indexer (e.g. Global Seagrass COG mosaics)
+app.add_typer(
+    stac_app,
+    name="stac",
+    help="Index static STAC items (COGs) into a single STAC-Geoparquet.",
 )
 # ACA
 app.add_typer(aca_app, name="aca", help="Cache and process ACA dataset.")
