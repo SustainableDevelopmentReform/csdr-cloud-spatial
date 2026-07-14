@@ -42,7 +42,7 @@ def _meta_provenance(
     source_url: str | None = None,
     source_metadata_url: str | None = None,
     workflow_dag: list | None = None,
-    workflow_dag_simple: str | None = None,
+    workflow_dag_simple: dict | None = None,
     # extra_info_dict likely includes geometriesRunId for geometries and productRunId for products
     extra_info_dict: dict | None = None,
 ) -> str | None:
@@ -60,6 +60,7 @@ def _meta_provenance(
         source_url (str | None): URL of the original source data.
         source_metadata_url (str): URL of the source metadata.
         workflow_dag (list | None): List of workflow step objects for provenance.
+        workflow_dag_simple (dict | None): Simple workflow diagram object for display in the UI.
         extra_info_dict (dict | None): Additional information to include in the provenance, such as geometriesRunId for geometries and productRunId for products. Dataset run IDs are all made by the DB.
 
     Returns:
@@ -157,6 +158,9 @@ def _write_dataset_provenance(
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    workflow_dag_simple_parsed = (
+        loads(workflow_dag_simple) if workflow_dag_simple else None
+    )
 
     extra_info_dict = {}
     if (
@@ -175,7 +179,7 @@ def _write_dataset_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         workflow_dag=workflow_dag_parsed,
-        workflow_dag_simple=workflow_dag_simple,
+        workflow_dag_simple=workflow_dag_simple_parsed,
         extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
     )
     clear_steps()
@@ -236,6 +240,9 @@ def _write_geometry_provenance(
     logger.info(f"Getting provenance for geometry: {geometry_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    workflow_dag_simple_parsed = (
+        loads(workflow_dag_simple) if workflow_dag_simple else None
+    )
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -262,7 +269,7 @@ def _write_geometry_provenance(
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
         workflow_dag=workflow_dag_parsed,
-        workflow_dag_simple=workflow_dag_simple,
+        workflow_dag_simple=workflow_dag_simple_parsed,
     )
     logger.info(f"Wrote provenance for geometry: {geometry_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created
@@ -315,6 +322,9 @@ def _write_product_provenance(
     parsed_outputs = parse_outputs(df)
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
+    workflow_dag_simple_parsed = (
+        loads(workflow_dag_simple) if workflow_dag_simple else None
+    )
 
     if run_id is not None:
         logger.info(f"Run ID '{run_id}' was provided.")
@@ -337,7 +347,7 @@ def _write_product_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         workflow_dag=workflow_dag_parsed,
-        workflow_dag_simple=workflow_dag_simple,
+        workflow_dag_simple=workflow_dag_simple_parsed,
         extra_info_dict=extra_info_dict,
     )
     logger.info(f"Wrote provenance for product: {product_url}")
