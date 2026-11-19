@@ -65,25 +65,28 @@ The first step is to get the app running. The app repo is not yet available publ
 
 #### Setting up the app
 1. Clone, install. and run the app
-2. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
 
 #### Environment Variables
-3. Add env vars. Use your AWS credentials which you can find at a URL like https://{your-aws}.awsapps.com/start/
+2. Copy `.env.example` to `.env`
+3. Add your AWS credentials which you can find at a URL like https://{your-aws}.awsapps.com/start/
 ```bash
-export AWS_ACCESS_KEY_ID=...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_SESSION_TOKEN=...
-export AWS_DEFAULT_REGION=ap-southeast-2
-export CSDR_API_HOSTNAME=http://localhost:4000
-export CSDR_API_KEY=...
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_SESSION_TOKEN=...
+```
+
+4. 2. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
+```bash
+CSDR_API_HOSTNAME=http://localhost:4000
+CSDR_API_KEY=...
 # Or:
-export CSDR_API_HOSTNAME=https://csdr.dev.oceandevelopmentdata.org
-export CSDR_API_KEY=...
+CSDR_API_HOSTNAME=https://csdr.dev.oceandevelopmentdata.org
+CSDR_API_KEY=...
 ```
 
 #### Clone and install this toolkit
 
-4. Ensure GDAL is installed locally https://gdal.org/en/stable/download.html
+4. Ensure [GDAL](https://gdal.org/en/stable/download.html) and [Tippecanoe](https://github.com/mapbox/tippecanoe#installation) are installed locally. If you're using Homebrew `brew install gdal` and `brew install tippecanoe`.
 
 5. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
 
@@ -91,32 +94,14 @@ export CSDR_API_KEY=...
 git clone https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial.git
 cd csdr-cloud-spatial
 curl -Ls https://astral.sh/uv/install.sh | sh
-python3 -m venv .venv
-source .venv/bin/activate
 
-uv pip install --editable .
-brew install tippecanoe
+uv sync
 ```
 
 For development, install with this command:
 ```bash
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
-
-To update the .venv and uv.lock files run `uv sync`.
-
-#### Install using Poetry
-
-If you prefer using Poetry for dependency management:
-
-```bash
-# Install Poetry if you don't have it already
-pip install poetry
-
-# Install dependencies
-poetry install
-```
-
 
 #### Run premade commands
 
@@ -127,8 +112,8 @@ make geometry-eez-cache-local
 ```
 or make your own command:
 ```bash
-csdr <subcommand> ...
-python -m csdr.cli  eez cache \
+uv run csdr <subcommand> ...
+uv run python -m csdr.cli  eez cache \
   --target-location ./cache/eez-v4/0-0-1/raw \
   --overwrite
 ```
