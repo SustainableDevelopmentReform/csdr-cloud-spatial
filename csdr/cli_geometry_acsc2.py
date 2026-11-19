@@ -52,7 +52,7 @@ async def run_cache_acsc2(
 
     # Dowload zip
 
-    response = get(source_url)
+    response = get(source_url)  # noqa: ASYNC210
     response.raise_for_status()  # Raise an error if the download failed
     zip_bytes = BytesIO(response.content)
     await target_store.put_async(target_file_name, zip_bytes)

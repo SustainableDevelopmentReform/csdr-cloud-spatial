@@ -114,7 +114,7 @@ async def run_cache_gmw(
     results = [file for file in results if file is not None]
     # Write temporary file or print.
     if out_file is not None:
-        with open(out_file, "w") as f:
+        with open(out_file, "w") as f:  # noqa: ASYNC230
             json.dump(results, f, indent=4)
         logger.info(f"Wrote target files to {out_file}")
     else:

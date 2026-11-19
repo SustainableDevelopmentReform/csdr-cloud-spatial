@@ -359,8 +359,7 @@ def _write_product_provenance(
         logger.info("Posting consolidated product data to database")
 
         for indicator, output in parsed_outputs.items():
-            for timePoint in output.keys():
-                outputs = output[timePoint]
+            for timePoint, outputs in output.items():
                 logger.info(f"Posting {len(outputs)} outputs for timePoint {timePoint}")
                 content = {
                     "productRunId": consolidated_run_id,
@@ -372,9 +371,9 @@ def _write_product_provenance(
                 response = post_product_output_bulk(content)
                 try:
                     response.raise_for_status()
-                except HTTPError as e:
+                except HTTPError:
                     logger.exception(
-                        f"Failed to post product output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
+                        f"Failed to post product output to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
                     )
                     raise
                 else:

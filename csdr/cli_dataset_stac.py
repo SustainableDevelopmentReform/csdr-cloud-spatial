@@ -45,7 +45,9 @@ def _rename_asset(item: dict, asset_name: str) -> dict:
     (old_key,) = tuple(assets.keys())
     if old_key != asset_name:
         assets[asset_name] = assets.pop(old_key)
-        logger.info(f"Renamed asset '{old_key}' -> '{asset_name}' for item '{item.get('id')}'")
+        logger.info(
+            f"Renamed asset '{old_key}' -> '{asset_name}' for item '{item.get('id')}'"
+        )
     return item
 
 

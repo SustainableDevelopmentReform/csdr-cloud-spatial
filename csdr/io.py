@@ -77,7 +77,7 @@ def get_store_with_prefix_from_url(
         return from_url(
             url, credential_provider=Boto3CredentialProvider(), **kwargs
         )  # S3 doesn't support mkdir
-    elif url.startswith("http://") or url.startswith("https://"):
+    elif url.startswith(("http://", "https://")):
         return from_url(url, **kwargs)
     elif url.startswith("file://"):
         return from_url(

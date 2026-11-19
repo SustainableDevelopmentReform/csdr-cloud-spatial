@@ -29,10 +29,12 @@ def _get_area_m2_from_stac_geoparquet(
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
-    load_kwargs: dict = {},
+    load_kwargs: dict | None = None,
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     # Get the STAC items filtered by geometry and datetime
+    if load_kwargs is None:
+        load_kwargs = {}
     geom_bbox = geometry_4326.boundingbox
     geom_bbox_list = [geom_bbox.left, geom_bbox.bottom, geom_bbox.right, geom_bbox.top]
     geom_geojson = geometry_4326.geojson(simplify=0)["geometry"]
@@ -214,10 +216,12 @@ def _get_area_m2_from_dataset_geometry(
     indicator: str,
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
-    load_kwargs: dict = {},
+    load_kwargs: dict | None = None,
 ) -> float:
     """Calculate the area (m²) of the dataset within the given geometry."""
 
+    if load_kwargs is None:
+        load_kwargs = {}
     if dataset_type == "stac-geoparquet":
         return _get_area_m2_from_stac_geoparquet(
             dataset_url,
@@ -316,8 +320,10 @@ def process_indicators_for_geometry(
     indicators: dict[str, dict],
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
-    load_kwargs: dict = {},
+    load_kwargs: dict | None = None,
 ) -> dict[str, str | float]:
+    if load_kwargs is None:
+        load_kwargs = {}
     results = {}
     sd = sedona.db.connect()
 
