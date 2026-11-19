@@ -7,10 +7,15 @@ repos:
   - id: check-yaml
   - id: check-json
 
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.17.5
+- repo: local  # uses the ruff pinned in pyproject.toml
   hooks:
     - id: ruff
-      args:
-        - --fix
+      name: ruff
+      entry: uv run ruff check --fix
+      language: system
+      types_or: [python, jupyter]
     - id: ruff-format
+      name: ruff format
+      entry: uv run ruff format
+      language: system
+      types_or: [python, jupyter]
