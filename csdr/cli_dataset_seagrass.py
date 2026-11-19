@@ -1,6 +1,7 @@
 # Set Rust logging environment variables BEFORE importing rustac
 import asyncio
 import logging
+import sys
 
 import typer
 from rustac import search_to
@@ -48,7 +49,7 @@ async def run_index_dep_seagrass(
     logger.info(f"Written {count_items} STAC items to parquet at {target_url}")
     if count_items == 0:
         logger.error("No STAC items found, nothing to index.")
-        exit(1)  # Exit with error code
+        sys.exit(1)  # Exit with error code
 
     logger.info(f"Finished writing parquet file to {target_url}")
 

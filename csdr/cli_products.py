@@ -270,7 +270,7 @@ def process_geometry(
     # Parse indicators_to_extract as JSON
     try:
         indicators_dict = json.loads(indicators_to_extract)
-    except Exception as e:
+    except json.JSONDecodeError as e:
         raise CSDRException(f"Failed to parse indicators_to_extract as JSON: {e}")
     if not isinstance(indicators_dict, dict):
         raise CSDRException(
@@ -418,25 +418,25 @@ def consolidate_product(
             logger.info(f"Skipping provenance file {file}")
             continue
         product = read_dict(store, file)
-        geometry_provenance_url = product.get("metadata", {}).get(
+        file_geometry_provenance_url = product.get("metadata", {}).get(
             "geometryProvenanceUrl", None
         )
-        dataset_provenance_url = product.get("metadata", {}).get(
+        file_dataset_provenance_url = product.get("metadata", {}).get(
             "datasetProvenanceUrl", None
         )
 
         # Do some quality checks
-        if dataset_provenance_url != dataset_provenance_url:
+        if file_dataset_provenance_url != dataset_provenance_url:
             raise CSDRException(
-                f"Dataset provenance URL mismatch in {file}: {dataset_provenance_url} != {dataset_provenance_url}"
+                f"Dataset provenance URL mismatch in {file}: {file_dataset_provenance_url} != {dataset_provenance_url}"
             )
         if product_id != product.get("productId", None):
             raise CSDRException(
                 f"Product ID mismatch in {file}: {product_id} != {product.get('productId', None)}"
             )
-        if geometry_provenance_url != geometry_provenance_url:
+        if file_geometry_provenance_url != geometry_provenance_url:
             raise CSDRException(
-                f"Geometry provenance URL mismatch in {file}: {geometry_provenance_url} != {geometry_provenance_url}"
+                f"Geometry provenance URL mismatch in {file}: {file_geometry_provenance_url} != {geometry_provenance_url}"
             )
 
         all_data.append(product)
@@ -461,7 +461,7 @@ def consolidate_product(
 
     # Extract the unique years from the processed geometry data
     years = sorted(
-        set(item.get("timePoint", "")[:4] for item in all_data if item.get("timePoint"))
+        {item.get("timePoint", "")[:4] for item in all_data if item.get("timePoint")}
     )
 
     # Read the example process-geometry command from the first product's metadata.

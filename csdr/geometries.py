@@ -34,7 +34,7 @@ def convert_gdf_row_to_geometry_output(
 
     # Clean data, replace NaN with None so that it works in JSON
     for key, value in properties.items():
-        if value != value:  # NaN check
+        if value != value:  # noqa: PLR0124 NaN check
             properties[key] = None
 
     assert poly.geom_type in [
@@ -133,9 +133,9 @@ def post_bulk_geometry_outputs_to_database(
 
         try:
             response.raise_for_status()
-        except HTTPError as e:
+        except HTTPError:
             logger.exception(
-                f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
+                f"Failed to post batch {i // batch_size + 1} of geometry outputs to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
             raise
 
@@ -160,10 +160,9 @@ def post_geometry_outputs_to_database(geometry_url: str, run_id: str) -> None:
 
         try:
             response.raise_for_status()
-        except HTTPError as e:
-            logger.error(
-                f"Failed to post geometry output to database.\nError: {e}\nResponse was: \n{dumps(response.json(), indent=2)}",
-                exc_info=True,
+        except HTTPError:
+            logger.exception(
+                f"Failed to post geometry output to database.\nResponse was: \n{dumps(response.json(), indent=2)}",
             )
             logger.error(
                 f"Failed to post geometry output {geometry_output.get('id')} to database."

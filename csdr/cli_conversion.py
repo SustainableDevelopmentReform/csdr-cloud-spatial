@@ -104,10 +104,9 @@ def convert_zipfile_to_parquet(
         zip_bytes = BytesIO(source_store.get(source_zip_name).bytes())
         zip_bytes.seek(0)  # Ensure pointer is at start
 
-        with ZipMemoryFile(zip_bytes) as z:
-            # Open the shapefile within the ZIP
-            with z.open(source_internal_path_name) as src:
-                gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
+        # Open the shapefile within the ZIP
+        with ZipMemoryFile(zip_bytes) as z, z.open(source_internal_path_name) as src:
+            gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
 
         logger.info(f"Loaded {len(gdf)} records from the shapefile.")
 
