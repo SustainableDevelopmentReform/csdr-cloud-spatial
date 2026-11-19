@@ -69,14 +69,15 @@ The first step is to get the app running. The app repo is not yet available publ
 #### Environment Variables
 2. Copy `.env.example` to `.env`
 3. Add your AWS credentials which you can find at a URL like https://{your-aws}.awsapps.com/start/
-```bash
+```dotenv
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_SESSION_TOKEN=...
 ```
 
-4. 2. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
-```bash
+4. Create an API key here http://localhost:3000/console/me/api-keys or in the deployed website. Leave expiry blank so it doesn't expire. Use that for the CSDR_API_KEY env var.
+
+```dotenv
 CSDR_API_HOSTNAME=http://localhost:4000
 CSDR_API_KEY=...
 # Or:
@@ -86,9 +87,9 @@ CSDR_API_KEY=...
 
 #### Clone and install this toolkit
 
-4. Ensure [GDAL](https://gdal.org/en/stable/download.html) and [Tippecanoe](https://github.com/mapbox/tippecanoe#installation) are installed locally. If you're using Homebrew `brew install gdal` and `brew install tippecanoe`.
+5. Ensure [GDAL](https://gdal.org/en/stable/download.html) and [Tippecanoe](https://github.com/mapbox/tippecanoe#installation) are installed locally. If you're using Homebrew `brew install gdal` and `brew install tippecanoe`.
 
-5. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
+6. Clone the repository and install dependencies. Dependencies are defined in [pyproject.toml](pyproject.toml)
 
 ```bash
 git clone https://github.com/SustainableDevelopmentReform/csdr-cloud-spatial.git
