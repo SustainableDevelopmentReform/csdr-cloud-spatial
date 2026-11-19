@@ -301,7 +301,7 @@ def process_geometry(
     target_url = f"{target_location}/{target_path}"
     if exists(target_store, target_path) and not overwrite:
         logger.info(f"Product already exists at {target_url}, skipping processing.")
-        return None  # Exit successfully, nothing to do
+        return  # Exit successfully, nothing to do
     logger.info("JSON doesn't exist or overwrite is True, processing geometry.")
 
     # Load geometry data using Sedona so filtering is done before loading into memory

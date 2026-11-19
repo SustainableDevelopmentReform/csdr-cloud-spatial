@@ -3,12 +3,12 @@ import logging
 from datetime import datetime
 from json import dumps
 
-import shapely.wkb as wkb
 from geopandas import GeoDataFrame
 from odc.geo.geom import Geometry
 from pandas import Series
 from pyproj import crs as pyproj_crs
 from requests.exceptions import HTTPError
+from shapely import wkb
 
 from csdr.app_integration import post_geometry_output, post_geometry_output_bulk
 from csdr.io import read_geospatial_file
