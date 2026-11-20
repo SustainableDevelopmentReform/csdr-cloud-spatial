@@ -55,7 +55,7 @@ def run_command(command: list[str]) -> tuple[bool, str, str]:
         return False, "", f"Command not found: {cmd_zero}"
     except Exception as e:
         cmd_str = " ".join(command)
-        logger.error(f"Failed to run command '{cmd_str}': {e}", exc_info=True)
+        logger.exception(f"Failed to run command '{cmd_str}'")
         return False, "", str(e)
 
 

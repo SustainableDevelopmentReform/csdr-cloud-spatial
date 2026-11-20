@@ -55,9 +55,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: chartboost/ruff-action@v1
+      # Lint the code with Ruff
+      - uses: astral-sh/ruff-action@v4.1.0
         with:
           src: csdr
+          version-file: pyproject.toml
+      # Check the code formatting with Ruff
+      - run: ruff format --check csdr
 
   # Run tests in the same image we're building
   tests:

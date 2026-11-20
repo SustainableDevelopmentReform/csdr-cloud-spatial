@@ -25,7 +25,7 @@ async def _run_cache_aus_states(
     source_url: str, source_file_name: str, target_store: ObjectStore
 ) -> None:
     # Download the file from source_url to target_location
-    response = requests.get(source_url)
+    response = requests.get(source_url)  # noqa: ASYNC210
     response.raise_for_status()  # Raise an error for bad status codes
     # Save the zipfile to the target store
     await target_store.put_async(source_file_name, response.content)

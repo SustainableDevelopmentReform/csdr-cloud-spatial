@@ -129,7 +129,9 @@ async def _run_index_buildings(
         parquet_data["bbox"].tolist(), index=parquet_data.index
     )
     parquet_data["bbox_wkt"] = parquet_data.apply(
-        lambda row: f"POLYGON(({row['minx']} {row['miny']}, {row['maxx']} {row['miny']}, {row['maxx']} {row['maxy']}, {row['minx']} {row['maxy']}, {row['minx']} {row['miny']}))",
+        lambda row: (
+            f"POLYGON(({row['minx']} {row['miny']}, {row['maxx']} {row['miny']}, {row['maxx']} {row['maxy']}, {row['minx']} {row['maxy']}, {row['minx']} {row['miny']}))"
+        ),
         axis=1,
     )
     parquet_data = parquet_data.drop(columns=["bbox"])

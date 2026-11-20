@@ -96,8 +96,6 @@ def version() -> None:
     version = get_version()
     typer.echo(version)
 
-    return
-
 
 if __name__ == "__main__":
     app()
