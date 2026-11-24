@@ -81,6 +81,17 @@ export CSDR_API_HOSTNAME=https://csdr.dev.oceandevelopmentdata.org
 export CSDR_API_KEY=...
 ```
 
+Optional variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CSDR_API_ORGANIZATION_ID` | unset | Organisation to post into, sent as `x-sdf-active-organization-id`. When set, membership is checked once per process before the first request, and requests are refused if the API key's owner is not a member. When unset, the app uses the key owner's active organisation. |
+| `CSDR_API_CONNECT_TIMEOUT` | `10` | Connect timeout in seconds for app API requests. |
+| `CSDR_API_READ_TIMEOUT` | `60` | Read timeout in seconds for app API requests. Raise it for very large bulk posts. |
+| `CSDR_PROVENANCE_STEPS_DIR` | `/tmp/provenance-steps` | Where workflow step files are written and read. |
+
+App API requests never follow redirects: a 3xx response raises an error, so the API key is not resent to another origin.
+
 #### Clone and install this toolkit
 
 4. Ensure GDAL is installed locally https://gdal.org/en/stable/download.html
