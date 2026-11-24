@@ -72,14 +72,19 @@ def write_json(store: ObjectStore, file_name: str, data: dict[str, Any]) -> None
 def get_store_with_prefix_from_url(
     url: str, mkdir: bool = True, **kwargs: dict
 ) -> ObjectStore:
-    url = url.rstrip("/").lower()  # Handle uppercase letters or trailing slash
-    if url.startswith("s3://"):
+    # Object keys, local paths and signed URL parameters are case-sensitive.
+    # Only the scheme is normalised, never the resource identifier.
+    url = url.rstrip("/")
+    scheme = url.split(":", 1)[0].lower() if "://" in url else ""
+    if scheme:
+        url = scheme + url[url.index(":") :]
+    if scheme == "s3":
         return from_url(
             url, credential_provider=Boto3CredentialProvider(), **kwargs
         )  # S3 doesn't support mkdir
-    elif url.startswith(("http://", "https://")):
+    elif scheme in {"http", "https"}:
         return from_url(url, **kwargs)
-    elif url.startswith("file://"):
+    elif scheme == "file":
         return from_url(
             url, mkdir=mkdir, **kwargs
         )  # Can't have a credential provider for local
