@@ -2,12 +2,14 @@ import inspect
 import json
 import logging
 import os
+import re
 import sys
 import types
 from datetime import UTC, datetime
 from io import BytesIO
 from json import load
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from obstore.store import ObjectStore
 
@@ -22,7 +24,15 @@ from csdr.utils import CSDRException
 logger = logging.getLogger(__name__)
 SUPPORTED_DATA_FORMATS = ["stac-geoparquet", "geoparquet", "parquet"]
 
+# Default location of workflow step files. Override with CSDR_PROVENANCE_STEPS_DIR,
+# for example when /tmp is read-only or shared between concurrent local runs.
 PROVENANCE_STEPS_DIR = Path("/tmp/provenance-steps")
+
+
+def get_provenance_steps_dir() -> Path:
+    """Directory for workflow step files: CSDR_PROVENANCE_STEPS_DIR or the default."""
+    configured = os.environ.get("CSDR_PROVENANCE_STEPS_DIR")
+    return Path(configured) if configured else PROVENANCE_STEPS_DIR
 
 
 def _get_github_url(file: str, line: int) -> str | None:
@@ -98,7 +108,7 @@ def write_step(
         "source": source,
     }
 
-    step_dir = PROVENANCE_STEPS_DIR
+    step_dir = get_provenance_steps_dir()
     step_dir.mkdir(parents=True, exist_ok=True)
 
     # Name files by count so ordering is preserved
@@ -113,9 +123,10 @@ def write_step(
 # Read steps and clear steps are needed for local work. In Argo, steps are in individual pods which get cleaned up so they aren't needed.
 def read_steps() -> list[dict]:
     """Read all provenance steps from the steps directory, in order."""
-    if not PROVENANCE_STEPS_DIR.exists():
+    step_dir = get_provenance_steps_dir()
+    if not step_dir.exists():
         return []
-    files = sorted(PROVENANCE_STEPS_DIR.glob("step-*.json"))
+    files = sorted(step_dir.glob("step-*.json"))
     steps = []
     for f in files:
         try:
@@ -127,11 +138,72 @@ def read_steps() -> list[dict]:
 
 def clear_steps() -> None:
     """Remove all provenance step files. Call after reading steps into provenance."""
-    if not PROVENANCE_STEPS_DIR.exists():
+    step_dir = get_provenance_steps_dir()
+    if not step_dir.exists():
         return
-    for f in PROVENANCE_STEPS_DIR.glob("step-*.json"):
+    for f in step_dir.glob("step-*.json"):
         f.unlink()
     logger.info("Cleared provenance step files")
+
+
+# Optional reference to the published workflow file that produced a run.
+# See "Publishing workflow templates with provenance" in the orchestration guide.
+WORKFLOW_TEMPLATE_KINDS = (
+    "argo-workflowtemplate",
+    "shell",
+    "makefile",
+    "notebook",
+    "other",
+)
+WORKFLOW_TEMPLATE_FIELDS = (
+    "workflowTemplateUrl",
+    "workflowTemplateKind",
+    "workflowTemplateName",
+    "workflowTemplateDigest",
+)
+
+
+def get_workflow_template_fields(
+    url: str | None = None,
+    kind: str | None = None,
+    name: str | None = None,
+    digest: str | None = None,
+) -> dict[str, str]:
+    """Validate the optional workflowTemplate* provenance fields.
+
+    Returns only the fields that are set, keyed by their provenance names, or an
+    empty dict when none is set. Any field other than the URL needs the URL.
+    """
+    fields = dict(zip(WORKFLOW_TEMPLATE_FIELDS, (url, kind, name, digest)))
+    present = {key: value for key, value in fields.items() if value}
+    if not present:
+        return {}
+    if not url:
+        raise CSDRException("A workflow template reference needs its URL.")
+    parsed = urlsplit(url)
+    if (
+        parsed.scheme not in ("https", "s3")
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or len(url) > 2048
+    ):
+        raise CSDRException(
+            "The workflow template URL must be https:// or s3://, without credentials, query or fragment."
+        )
+    if kind is not None and kind not in WORKFLOW_TEMPLATE_KINDS:
+        raise CSDRException(
+            f"The workflow template kind must be one of {WORKFLOW_TEMPLATE_KINDS}."
+        )
+    if name is not None and not re.fullmatch(r"[\x21-\x7e][\x20-\x7e]{0,254}", name):
+        raise CSDRException(
+            "The workflow template name must be 1 to 255 printable ASCII characters."
+        )
+    if digest is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        raise CSDRException("The workflow template digest must be sha256:<64 hex>.")
+    return present
 
 
 def get_image_state() -> dict[str, str]:

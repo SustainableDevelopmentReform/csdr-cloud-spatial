@@ -23,13 +23,27 @@ from csdr.io import (
     write_json,
 )
 from csdr.products import parse_outputs
-from csdr.provenance import clear_steps, get_provenance, read_steps
+from csdr.provenance import (
+    clear_steps,
+    get_provenance,
+    get_workflow_template_fields,
+    read_steps,
+)
 from csdr.utils import CSDRException
 
 provenance_app = Typer()
 logger = logging.getLogger(__name__)
 
 ALLOWED_PROVENANCE_TYPES = ["dataset", "geometry", "product"]
+
+WORKFLOW_TEMPLATE_URL_HELP = "URL (https:// or s3://) of the published workflow file that produced this run. Written as workflowTemplateUrl."
+WORKFLOW_TEMPLATE_KIND_HELP = "Kind of workflow file: argo-workflowtemplate, shell, makefile, notebook or other. Written as workflowTemplateKind."
+WORKFLOW_TEMPLATE_NAME_HELP = (
+    "Template or script name as run. Written as workflowTemplateName."
+)
+WORKFLOW_TEMPLATE_DIGEST_HELP = (
+    "sha256:<hex> of the published workflow file. Written as workflowTemplateDigest."
+)
 
 
 def _meta_provenance(
@@ -154,7 +168,26 @@ def _write_dataset_provenance(
         None,
         help="Simple workflow diagram as a JSON string for display in the UI.",
     ),
+    workflow_template_url: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_URL_HELP
+    ),
+    workflow_template_kind: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_KIND_HELP
+    ),
+    workflow_template_name: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_NAME_HELP
+    ),
+    workflow_template_digest: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
+    ),
 ) -> None:
+    # Validate before any work so a malformed reference never writes a file.
+    workflow_template_fields = get_workflow_template_fields(
+        workflow_template_url,
+        workflow_template_kind,
+        workflow_template_name,
+        workflow_template_digest,
+    )
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
@@ -167,6 +200,7 @@ def _write_dataset_provenance(
         pmtiles_url is not None
     ):  # This is optional because geometries and datasets can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url
+    extra_info_dict.update(workflow_template_fields)
 
     # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id = _meta_provenance(
@@ -236,7 +270,26 @@ def _write_geometry_provenance(
     batch_size: int = typer.Option(
         50, help="Batch size for posting geometry outputs in bulk"
     ),
+    workflow_template_url: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_URL_HELP
+    ),
+    workflow_template_kind: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_KIND_HELP
+    ),
+    workflow_template_name: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_NAME_HELP
+    ),
+    workflow_template_digest: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
+    ),
 ) -> None:
+    # Validate before any work so a malformed reference never writes a file.
+    workflow_template_fields = get_workflow_template_fields(
+        workflow_template_url,
+        workflow_template_kind,
+        workflow_template_name,
+        workflow_template_digest,
+    )
     logger.info(f"Getting provenance for geometry: {geometry_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
@@ -256,6 +309,7 @@ def _write_geometry_provenance(
         pmtiles_url is not None
     ):  # This is optional because geometries and datasets can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url
+    extra_info_dict.update(workflow_template_fields)
 
     # Should run_id be passed as a prop instead of nested in extra_info_dict?
     run_id_created = _meta_provenance(
@@ -316,7 +370,26 @@ def _write_product_provenance(
     overwrite: bool = typer.Option(
         False, help="If true, overwrite existing provenance file"
     ),
+    workflow_template_url: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_URL_HELP
+    ),
+    workflow_template_kind: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_KIND_HELP
+    ),
+    workflow_template_name: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_NAME_HELP
+    ),
+    workflow_template_digest: str | None = typer.Option(
+        None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
+    ),
 ) -> None:
+    # Validate before any work so a malformed reference never writes a file.
+    workflow_template_fields = get_workflow_template_fields(
+        workflow_template_url,
+        workflow_template_kind,
+        workflow_template_name,
+        workflow_template_digest,
+    )
     logger.info(f"Getting provenance for product: {product_url}")
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
@@ -337,6 +410,7 @@ def _write_product_provenance(
     }
     if run_id is not None:
         extra_info_dict["productRunId"] = run_id
+    extra_info_dict.update(workflow_template_fields)
 
     # Post to product_run table. Get ID (created if none was provided).
     run_id_created = _meta_provenance(

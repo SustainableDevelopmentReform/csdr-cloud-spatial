@@ -30,6 +30,7 @@ dependencies = [
     "odc-stac",
     "odc-geo",
     "pandas",
+    "pillow>=13.0.0",
     "pyarrow",
     "python_retry",
     "pystac",
