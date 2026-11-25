@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sys
+from enum import StrEnum
 from typing import Any
 
 import dateutil
@@ -30,15 +31,21 @@ from csdr.io import (
 )
 from csdr.products import process_indicators_for_geometry
 from csdr.provenance import read_provenance, write_step
-from csdr.utils import CSDRException, make_uuid
+from csdr.utils import CSDRException, PercentileMethod, make_uuid
 
 products_app = typer.Typer()
 logger = logging.getLogger(__name__)
 
+
+class PercentileMethodName(StrEnum):
+    linear = "linear"
+    histogram = "histogram"
+
+
 # Indicator ids are validated against the registry in csdr.indicators: regex
-# families (sum-<x>-area, percent-<x>-area, count-<x>, and declared families
-# that later builds implement) plus the exact-id allow-list KNOWN_INDICATORS,
-# which stays importable from here for existing callers.
+# families (sum-<x>-area, percent-<x>-area, count-<x>, the zonal statistics
+# families, and any declared family a later build implements) plus the exact-id
+# allow-list KNOWN_INDICATORS, which stays importable from here for existing callers.
 
 
 def _validate_parameters(
@@ -255,6 +262,24 @@ def process_geometry(
     use_dask: bool = typer.Option(
         False, help="Whether to use Dask distributed for processing"
     ),
+    raster_all_touched: bool = typer.Option(
+        True,
+        "--raster-all-touched/--raster-cell-centre",
+        help="Count every raster cell touched by the boundary (existing default), or select cells by their centres. Neither option apportions partial cell area. Recorded in the processing command.",
+    ),
+    percentile_method: PercentileMethodName = typer.Option(
+        PercentileMethodName.linear,
+        help="How p10-/p25-/p50-/p75-/p90-<x> are computed from the valid cells: 'linear' (numpy linear interpolation over the valid values) or 'histogram' (midpoint of the fixed-width bin holding the ceil(q*N)-th valid value; see --percentile-bins and --percentile-range). Recorded in the output metadata.",
+    ),
+    percentile_bins: int = typer.Option(
+        1000,
+        min=1,
+        help="With --percentile-method histogram: number of equal-width bins over --percentile-range.",
+    ),
+    percentile_range: str = typer.Option(
+        "0,1",
+        help="With --percentile-method histogram: 'lo,hi' value range of the bins. Values outside it fall into the end bins (counted in the metadata as histogramClippedCells).",
+    ),
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
@@ -266,6 +291,11 @@ def process_geometry(
     ),
 ) -> None:
     ids = _resolve_geometry_ids(geometry_id, geometry_ids)
+    percentile = PercentileMethod(
+        method=str(percentile_method),
+        bins=percentile_bins,
+        value_range=PercentileMethod.parse_range(percentile_range),
+    )
     logger.info(
         f"Processing {len(ids)} geometry id(s) {ids} from '{geometry_provenance_url}'"
     )
@@ -350,6 +380,8 @@ def process_geometry(
                 datetime_string_match=datetime_string_match,
                 datetime_val=datetime_val,
                 load_kwargs=load_kwargs,
+                raster_all_touched=raster_all_touched,
+                percentile_method=percentile,
             )
 
         # No write_step here — process-geometry fans out to many pods.
@@ -394,6 +426,8 @@ def _process_one_geometry(
     datetime_string_match: str | None,
     datetime_val: str,
     load_kwargs: dict[str, Any],
+    raster_all_touched: bool = True,
+    percentile_method: PercentileMethod | None = None,
 ) -> None:
     """Compute and write one geometry's product JSON (the body of process-geometry)."""
     geometry_df = sd.sql(
@@ -416,12 +450,16 @@ def _process_one_geometry(
     )  # ODC Geometry object. This is just one geometry.
     geometry_4326 = geometry_native.to_crs("EPSG:4326")
 
+    zonal_metadata = {}
     results = process_indicators_for_geometry(
         geometry_4326,
         indicators_dict,
         dataset_provenance_url,
         datetime_string_match=datetime_string_match,
         load_kwargs=load_kwargs,
+        raster_all_touched=raster_all_touched,
+        percentile_method=percentile_method,
+        zonal_metadata=zonal_metadata,
     )
 
     product_output = _create_product_output(
@@ -433,6 +471,8 @@ def _process_one_geometry(
         results,
         run_id,
     )
+    # Zonal statistics: cell rule, cell counts per band and the percentile method.
+    product_output["metadata"].update(zonal_metadata)
 
     logger.info(f"Writing to {target_url}. target_path: {target_path}...")
     write_json(target_store, target_path, product_output)

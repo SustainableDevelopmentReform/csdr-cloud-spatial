@@ -23,13 +23,19 @@ csdr helpers indicator-families --json   # {"families": [...], "exactIds": [...]
 | `sum-<x>-area` | implemented | Area in m² of selected raster classes within the geometry, or of the vector features that intersect it |
 | `percent-<x>-area` | implemented | `sum-<x>-area` as a percentage of the geometry area; depends on `sum-<x>-area` in the same run |
 | `count-<x>` | implemented | Features intersecting the geometry (the building footprints bounding-box index) |
-| `mean-<x>`, `p10-<x>`, `p25-<x>`, `p50-<x>`, `p75-<x>`, `p90-<x>` | declared | Mean and percentiles of valid raster cells |
-| `valid-fraction-<x>` | declared | Valid cells divided by cells inside the geometry |
-| `distinct-<x>-count` | declared | Distinct class values among valid cells |
+| `mean-<x>`, `p10-<x>`, `p25-<x>`, `p50-<x>`, `p75-<x>`, `p90-<x>` | implemented | Mean and percentiles of valid raster cells (`--percentile-method linear\|histogram`) |
+| `valid-fraction-<x>` | implemented | Valid cells divided by cells inside the geometry and the source extent |
+| `distinct-<x>-count` | implemented | Distinct values among valid cells, optionally restricted to `indicator-value` |
+
+The eight statistic families share the handler `zonal-statistics`: one pass per raster band
+and geometry computes all of them, over the union of a multipolygon's parts. Definitions,
+the cell rules, the percentile formulas and the output metadata are in
+[zonal-statistics.md](zonal-statistics.md).
 
 A **declared** family (handler `None`) validates on the command line, so templates and
 catalogue entries can be prepared, but processing stops before reading any source with
-`indicator family <x> is registered but has no handler in this build`. Adding a handler
+`indicator family <x> is registered but has no handler in this build`. No shipped family is
+declared today; the mechanism stays for families a later build adds. Adding a handler
 means setting the family's `handler` and adding its branch in
 `process_indicators_for_geometry`, with tests.
 

@@ -74,6 +74,8 @@ def _family(
 HANDLER_AREA_SUM = "area-sum"
 HANDLER_AREA_PERCENT = "area-percent"
 HANDLER_FEATURE_COUNT = "feature-count"
+# One pass per raster band computes every zonal statistic of that band.
+HANDLER_ZONAL_STATISTICS = "zonal-statistics"
 
 INDICATOR_FAMILIES: tuple[IndicatorFamily, ...] = (
     _family(
@@ -105,56 +107,62 @@ INDICATOR_FAMILIES: tuple[IndicatorFamily, ...] = (
         "mean",
         "mean-<x>",
         r"^mean-.+$",
-        None,
-        "Mean of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "Mean of valid raster cells within the geometry (float64 sum / valid cells).",
     ),
     _family(
         "p10",
         "p10-<x>",
         r"^p10-.+$",
-        None,
-        "10th percentile of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "10th percentile of valid raster cells within the geometry "
+        "(--percentile-method linear or histogram).",
     ),
     _family(
         "p25",
         "p25-<x>",
         r"^p25-.+$",
-        None,
-        "25th percentile of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "25th percentile of valid raster cells within the geometry "
+        "(--percentile-method linear or histogram).",
     ),
     _family(
         "p50",
         "p50-<x>",
         r"^p50-.+$",
-        None,
-        "Median of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "Median of valid raster cells within the geometry "
+        "(--percentile-method linear or histogram).",
     ),
     _family(
         "p75",
         "p75-<x>",
         r"^p75-.+$",
-        None,
-        "75th percentile of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "75th percentile of valid raster cells within the geometry "
+        "(--percentile-method linear or histogram).",
     ),
     _family(
         "p90",
         "p90-<x>",
         r"^p90-.+$",
-        None,
-        "90th percentile of valid raster cells within the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "90th percentile of valid raster cells within the geometry "
+        "(--percentile-method linear or histogram).",
     ),
     _family(
         "valid-fraction",
         "valid-fraction-<x>",
         r"^valid-fraction-.+$",
-        None,
-        "Valid raster cells divided by raster cells inside the geometry.",
+        HANDLER_ZONAL_STATISTICS,
+        "Valid raster cells divided by raster cells inside the geometry and the "
+        "source extent (nodata cells included).",
     ),
     _family(
         "distinct-count",
         "distinct-<x>-count",
         r"^distinct-.+-count$",
-        None,
+        HANDLER_ZONAL_STATISTICS,
         "Number of distinct class values among valid raster cells, optionally "
         "restricted by indicator-value.",
     ),

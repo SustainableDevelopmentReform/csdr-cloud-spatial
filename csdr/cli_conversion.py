@@ -1,8 +1,10 @@
+import json
 import logging
 from pathlib import PurePosixPath
 
 import typer
 
+from csdr import raster_stac
 from csdr.cli_helpers import parse_csv_list
 from csdr.io import (
     exists,
@@ -252,4 +254,157 @@ def convert_vector_to_geoparquet(
             method_notes=method_notes(result, make_valid) or None,
         ),
         outputs=step_outputs(result),
+    )
+
+
+@conversion_app.command("raster-to-stac")
+def convert_raster_to_stac(
+    source: str = typer.Option(
+        ..., help="Local path or store URL (s3://, https://) of a GeoTIFF (.tif/.tiff)."
+    ),
+    target_location: str = typer.Option(
+        ...,
+        help="Local or s3:// folder for cogs/, items/ and collection.json. Local paths are made absolute so STAC hrefs resolve.",
+    ),
+    asset_name: str = typer.Option(
+        ...,
+        help="STAC asset key, i.e. the band name process-geometry selects with indicator-name.",
+    ),
+    datetime_value: str = typer.Option(
+        ...,
+        "--datetime",
+        help="ISO 8601 date or datetime for every item, e.g. 2023-01-01 (UTC when no offset; a bare year means 1 January).",
+    ),
+    collection: str | None = typer.Option(
+        None, help="STAC collection id. Defaults to the output slug."
+    ),
+    target_filename: str | None = typer.Option(
+        None,
+        help="Output slug for COG, item and display names. Defaults to the source file name without extension.",
+    ),
+    band: int = typer.Option(1, min=1, help="Source band to convert (1-based)."),
+    tile_size: int | None = typer.Option(
+        None,
+        min=1,
+        help="Tile edge in pixels: square windows aligned to the source grid from its top-left pixel. Default: one item for the whole raster.",
+    ),
+    tile_degrees: float | None = typer.Option(
+        None,
+        help="Convenience for --tile-size: tile edge in degrees, converted to whole pixels at the raster centre (approximate for a projected CRS; the resolved size is recorded).",
+    ),
+    classification_table: str | None = typer.Option(
+        None,
+        help="Class table for classification:classes on the asset: .dbf (e.g. a .vat.dbf), .csv, .json list of {value, name, ...} or GDAL .aux.xml raster attribute table.",
+    ),
+    class_value_column: str = typer.Option(
+        "Value",
+        help="Classification table column with the raster cell value (matched case-insensitively if absent).",
+    ),
+    class_name_column: str | None = typer.Option(
+        None,
+        help="Classification table column with the class label. Default: the first of name, label, class, title, then the first column ending in 'name'.",
+    ),
+    class_extra_columns: str | None = typer.Option(
+        None,
+        help="Comma-separated classification table columns copied into each class entry (e.g. grouping fields).",
+    ),
+    display_copy: str | None = typer.Option(
+        None,
+        help="Local or s3:// folder for <slug>_display.tif, one coarser COG of the whole raster for map display (source CRS, or --display-crs).",
+    ),
+    display_resolution: float | None = typer.Option(
+        None,
+        help="Display copy pixel size in source CRS units (display CRS units with --display-crs). Default: the coarser of 250 m (or its degree equivalent) and 10x the source resolution.",
+    ),
+    display_resampling: str | None = typer.Option(
+        None,
+        help="Display copy resampling (GDAL name). Default: mode for integer data, average for floating point.",
+    ),
+    display_crs: str | None = typer.Option(
+        None,
+        help="Reproject the display copy to this CRS (e.g. EPSG:3857); --display-resolution is then in its units. Default: the source CRS. The analysis COGs are never warped.",
+    ),
+    nodata: float | None = typer.Option(
+        None,
+        help="Nodata value for the COGs. Sets one when the source has none; replacing a source value is recorded as a method note.",
+    ),
+    source_sha256: str | None = typer.Option(
+        None,
+        help="Expected SHA-256 (64 hex) of the source bytes. Verified before writing; the computed hash is always recorded.",
+    ),
+    item_properties: str | None = typer.Option(
+        None,
+        help='JSON object merged into every item\'s properties, e.g. \'{"epoch": "2020-21"}\'.',
+    ),
+    overview_resampling: str | None = typer.Option(
+        None,
+        help="COG overview resampling (GDAL name). Default: mode for integer data, average for floating point.",
+    ),
+    num_threads: str = typer.Option(
+        "ALL_CPUS", help="GDAL NUM_THREADS for COG compression and overviews."
+    ),
+    overwrite: bool = typer.Option(
+        True,
+        help="Rewrite existing COGs and items. Items of this slug and collection that the run did not write (an earlier tiling) are removed. With --no-overwrite, tiles whose COG and item exist are kept (resume) and earlier items are kept with a warning.",
+    ),
+) -> None:
+    """Convert one raster band to COGs indexed by STAC items, without warping."""
+    properties = None
+    if item_properties is not None:
+        try:
+            properties = json.loads(item_properties)
+        except json.JSONDecodeError as error:
+            raise CSDRException(f"--item-properties is not JSON: {error}") from None
+        if not isinstance(properties, dict):
+            raise CSDRException("--item-properties must be a JSON object.")
+    extra_columns = parse_csv_list(class_extra_columns) if class_extra_columns else None
+    result = raster_stac.convert_raster(
+        source,
+        target_location,
+        asset_name=asset_name,
+        item_datetime=raster_stac.parse_datetime(datetime_value),
+        collection_id=collection,
+        target_filename=target_filename,
+        band=band,
+        tile_size=tile_size,
+        tile_degrees=tile_degrees,
+        classification_table=classification_table,
+        class_value_column=class_value_column,
+        class_name_column=class_name_column,
+        class_extra_columns=extra_columns,
+        display_copy=display_copy,
+        display_resolution=display_resolution,
+        display_resampling=display_resampling,
+        display_crs=display_crs,
+        nodata=nodata,
+        source_sha256=source_sha256,
+        item_properties=properties,
+        overview_resampling=overview_resampling,
+        num_threads=num_threads,
+        overwrite=overwrite,
+    )
+    typer.echo(
+        f"Wrote {len(result.item_urls)} COGs and STAC items to {result.target_location} "
+        f"({result.skipped_all_nodata} all-nodata tiles skipped)."
+    )
+    write_step(
+        label=f"Convert raster band to {len(result.cog_urls)} COGs indexed by STAC items",
+        inputs=raster_stac.step_inputs(
+            result,
+            band=band,
+            asset_name=asset_name,
+            datetime=datetime_value,
+            collection=result.collection_id,
+            class_value_column=class_value_column
+            if classification_table is not None
+            else None,
+            class_name_column=class_name_column,
+            class_extra_columns=extra_columns,
+            item_properties=properties,
+            overview_resampling=overview_resampling,
+            display_resampling=display_resampling,
+            overwrite=overwrite,
+            method_notes=raster_stac.method_notes(result),
+        ),
+        outputs=raster_stac.step_outputs(result),
     )
