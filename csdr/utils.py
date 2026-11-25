@@ -469,7 +469,8 @@ def xarray_zonal_cells(
     if extent is not None:
         in_extent = raster_extent_mask(geobox, extent)
         if in_extent is not None:
-            inside = inside & in_extent
+            # In place, so no third full-grid boolean array is allocated.
+            np.logical_and(inside, in_extent, out=inside)
 
     array = data.data
     lazy = dask.is_dask_collection(array)
