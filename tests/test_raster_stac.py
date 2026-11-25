@@ -901,8 +901,9 @@ def test_raster_to_stac_to_area_and_zonal_statistics_through_consolidate(
     """raster-to-stac -> stac index -> process-geometry -> consolidate -> parse_outputs.
 
     The area sum and the zonal statistics families run in one process-geometry
-    call over a boundary that crosses six tiles and part of the skipped
-    all-nodata tile (rows 0-19, columns 40-49), which no item covers.
+    call over a boundary that crosses six tiles, the nodata cells of column 0
+    (rows 20-49, inside the source extent) and part of the skipped all-nodata
+    tile (rows 0-19, columns 40-49), which no item covers.
     """
     out = tmp_path / "raster"
     convert(
@@ -921,8 +922,8 @@ def test_raster_to_stac_to_area_and_zonal_statistics_through_consolidate(
     assert index.exit_code == 0, index.output
     parquet = tmp_path / "index" / "classes.parquet"
 
-    # Pixel rows 15-34 and columns 5-44 under the cell-centre rule.
-    rows, cols = slice(15, 35), slice(5, 45)
+    # Pixel rows 15-34 and columns 0-44 under the cell-centre rule.
+    rows, cols = slice(15, 35), slice(0, 45)
     x0, x1 = ORIGIN_X + (cols.start + 0.25) * RES, ORIGIN_X + (cols.stop + 0.25) * RES
     y1, y0 = ORIGIN_Y - (rows.start + 0.25) * RES, ORIGIN_Y - (rows.stop + 0.25) * RES
     gpd.GeoDataFrame(
@@ -981,6 +982,7 @@ def test_raster_to_stac_to_area_and_zonal_statistics_through_consolidate(
     valid = (window != NODATA) & in_extent
     values = window[valid].astype("float64")
     assert in_extent.sum() < window.size  # part of the boundary has no source
+    assert valid.sum() < in_extent.sum()  # nodata cells inside the extent
 
     def value(indicator: str) -> object:
         [row] = outputs[indicator]["2023-01-01T00:00:00Z"]
