@@ -12,6 +12,7 @@ from csdr.cli_products import _validate_parameters
 from csdr.indicators import (
     INDICATOR_FAMILIES,
     KNOWN_INDICATORS,
+    _family,
     family_for,
     order_indicators,
 )
@@ -46,21 +47,21 @@ def test_sample_ids_match_exactly_one_family() -> None:
         assert matches == [name]
 
 
-def test_existing_families_are_implemented_and_new_ones_declared() -> None:
+def test_every_family_is_implemented() -> None:
     status = {family.name: family.status for family in INDICATOR_FAMILIES}
-    assert status == {
-        "sum-area": "implemented",
-        "percent-area": "implemented",
-        "count": "implemented",
-        "mean": "declared",
-        "p10": "declared",
-        "p25": "declared",
-        "p50": "declared",
-        "p75": "declared",
-        "p90": "declared",
-        "valid-fraction": "declared",
-        "distinct-count": "declared",
-    }
+    assert status == dict.fromkeys(SAMPLE_IDS, "implemented")
+    handlers = {family.name: family.handler for family in INDICATOR_FAMILIES}
+    for name in (
+        "mean",
+        "p10",
+        "p25",
+        "p50",
+        "p75",
+        "p90",
+        "valid-fraction",
+        "distinct-count",
+    ):
+        assert handlers[name] == "zonal-statistics"
 
 
 def test_validation_accepts_any_family_id_including_declared_ones() -> None:
@@ -74,7 +75,7 @@ def test_unknown_indicator_error_lists_families_and_exact_ids() -> None:
     message = str(error.value)
     assert "['max-height']" in message
     assert "sum-<x>-area (implemented)" in message
-    assert "distinct-<x>-count (declared)" in message
+    assert "distinct-<x>-count (implemented)" in message
     assert "sum-mangrove-area" in message
     assert "csdr helpers indicator-families" in message
 
@@ -86,36 +87,27 @@ def test_dependent_families_run_after_the_family_they_need() -> None:
     assert list(ordered) == ["count-b", "mean-c", "sum-z-area", "percent-a-area"]
 
 
-ZONAL_FAMILIES = {
-    "mean",
-    "p10",
-    "p25",
-    "p50",
-    "p75",
-    "p90",
-    "valid-fraction",
-    "distinct-count",
-}
-
-
-@pytest.mark.parametrize(
-    "indicator", [v for k, v in SAMPLE_IDS.items() if k in ZONAL_FAMILIES]
-)
 def test_declared_family_is_refused_before_any_source_is_read(
-    indicator: str, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Every shipped family has a handler; a family a future build declares first
+    # must still be refused before any source is read.
+    declared = _family("max", "max-<x>", r"^max-.+$", None, "Maximum (declared).")
+    monkeypatch.setattr(
+        "csdr.indicators.INDICATOR_FAMILIES", (*INDICATOR_FAMILIES, declared)
+    )
     monkeypatch.setattr(
         "csdr.products.read_provenance",
         lambda url: pytest.fail("No source may be read for an unimplemented family"),
     )
-    family = family_for(indicator)
+    assert _validate_parameters(["max-height"], "2024", None) == "2024"
     with pytest.raises(
         CSDRException,
-        match=f"^indicator family {family.template} is registered but has no handler in this build$",
+        match=r"^indicator family max-<x> is registered but has no handler in this build$",
     ):
         process_indicators_for_geometry(
             Geometry(box(0, 0, 1, 1), crs="EPSG:4326"),
-            {"sum-wetland-area": {}, indicator: {"indicator-name": "x"}},
+            {"sum-wetland-area": {}, "max-height": {"indicator-name": "x"}},
             "unused.provenance.json",
         )
 
@@ -153,7 +145,7 @@ def test_helpers_prints_the_registry_as_a_table_and_json() -> None:
     runner = CliRunner()
     table = runner.invoke(helpers_app, ["indicator-families"])
     assert table.exit_code == 0, table.output
-    assert "valid-fraction-<x>  declared" in table.output
+    assert "valid-fraction-<x>  implemented" in table.output
     assert "percent-<x>-area    implemented  sum-<x>-area" in table.output
     assert "sum-mangrove-area" in table.output
 
@@ -168,8 +160,9 @@ def test_helpers_prints_the_registry_as_a_table_and_json() -> None:
         "family": "mean",
         "idPattern": "mean-<x>",
         "regex": "^mean-.+$",
-        "status": "declared",
-        "handler": None,
+        "status": "implemented",
+        "handler": "zonal-statistics",
         "dependsOn": None,
-        "description": "Mean of valid raster cells within the geometry.",
+        "description": "Mean of valid raster cells within the geometry (float64 "
+        "sum / valid cells).",
     }
