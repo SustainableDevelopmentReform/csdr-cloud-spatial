@@ -1,16 +1,21 @@
+import json
 import logging
 
 import pandas as pd
 import sedona.db
-from odc.geo.geom import Geometry, box
+from odc.geo.geom import Geometry, box, unary_union
+from odc.stac import parse_item
 from pystac import ItemCollection
 from python_retry import retry
 from rustac import search_sync as rustac_search_sync
+from xarray import Dataset
 
 from csdr.indicators import (
     HANDLER_AREA_PERCENT,
     HANDLER_AREA_SUM,
     HANDLER_FEATURE_COUNT,
+    HANDLER_ZONAL_STATISTICS,
+    IndicatorFamily,
     family_for,
     order_indicators,
 )
@@ -18,29 +23,31 @@ from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
     CSDRException,
+    PercentileMethod,
+    ZonalCells,
     load_xarray_stacgeoparquet,
     xarray_calculate_area_m2,
+    xarray_zonal_cells,
 )
 
 logger = logging.getLogger(__name__)
 
 
-# The _get_area_m2_from_stac_geoparquet function does the following:
-# 1. Loads a STAC-Geoparquet using rustac.
-# 2. If items found, loads the xarray dataset from the STAC items.
-# 4. Calculates the area where the specified indicators equals the given value/s within the geometry.
-def _get_area_m2_from_stac_geoparquet(
+# The zonal statistics families refuse a geometry no STAC item covers: a
+# statistic of no cells is undefined. (sum-<x>-area reports 0.0 instead.)
+_NO_STAC_ITEMS_MESSAGE = (
+    "No STAC items cover the requested geometry and time. "
+    "Check the source coverage and reporting period before processing. "
+    "Zonal statistics of missing source coverage are undefined."
+)
+
+
+def _search_stac_items(
     dataset_url: str,
     geometry_4326: Geometry,
-    indicator: str,
-    value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
-    load_kwargs: dict | None = None,
-) -> float:
-    """Calculate the area of the dataset within the given geometry."""
-    # Get the STAC items filtered by geometry and datetime
-    if load_kwargs is None:
-        load_kwargs = {}
+) -> list[dict]:
+    """STAC items of a STAC-GeoParquet that intersect the geometry and time."""
     geom_bbox = geometry_4326.boundingbox
     geom_bbox_list = [geom_bbox.left, geom_bbox.bottom, geom_bbox.right, geom_bbox.top]
     geom_geojson = geometry_4326.geojson(simplify=0)["geometry"]
@@ -51,18 +58,16 @@ def _get_area_m2_from_stac_geoparquet(
         intersects=geom_geojson,
         datetime=datetime_string_match,
     )
+    return list(items) if items else []
 
-    if not items or len(items) == 0:
-        logger.info(
-            "No STAC items found for the given geometry and datetime filter. Returning area of 0.0"
-        )
-        return 0.0
-    logger.info(
-        f"Found {len(items)} STAC items for the given geometry and datetime filter."
-    )
 
-    items = ItemCollection(items)
-
+def _load_stac_band(
+    items: ItemCollection,
+    geometry_4326: Geometry,
+    indicator: str,
+    load_kwargs: dict,
+) -> Dataset:
+    """Load the items (chunked) over the geometry's bounding box and check the band."""
     # Force the use of Dask. Important for loading the xarray. Without chunking, large datasets may not fit into memory. Chunked (lazy, parallel) loading is scaleable.
     if load_kwargs.get("chunks") is None:
         load_kwargs["chunks"] = {}
@@ -81,13 +86,146 @@ def _get_area_m2_from_stac_geoparquet(
         raise CSDRException(
             f"Indicator {indicator} not found in dataset. Available: {list(data.data_vars)}"
         )
+    return data
+
+
+# The _get_area_m2_from_stac_geoparquet function does the following:
+# 1. Loads a STAC-Geoparquet using rustac.
+# 2. If items found, loads the xarray dataset from the STAC items.
+# 4. Calculates the area where the specified indicators equals the given value/s within the geometry.
+def _get_area_m2_from_stac_geoparquet(
+    dataset_url: str,
+    geometry_4326: Geometry,
+    indicator: str,
+    value_list: list[float] | None = None,
+    datetime_string_match: str | None = None,
+    load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
+) -> float:
+    """Calculate the area of the dataset within the given geometry."""
+    # Get the STAC items filtered by geometry and datetime
+    if load_kwargs is None:
+        load_kwargs = {}
+    items = _search_stac_items(dataset_url, geometry_4326, datetime_string_match)
+
+    if not items or len(items) == 0:
+        # sum-<x>-area keeps reporting missing coverage as 0.0; the zonal
+        # statistics families refuse it instead (_zonal_cells_for_parts).
+        logger.warning(
+            "No STAC items found for the given geometry and datetime filter. Returning area of 0.0"
+        )
+        return 0.0
+    logger.info(
+        f"Found {len(items)} STAC items for the given geometry and datetime filter."
+    )
+
+    data = _load_stac_band(ItemCollection(items), geometry_4326, indicator, load_kwargs)
 
     # Calculate area (m²). This also does the indicator/value/s filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[indicator], geometry_4326, indicator=indicator, value_list=value_list
+        data[indicator],
+        geometry_4326,
+        indicator=indicator,
+        value_list=value_list,
+        all_touched=raster_all_touched,
     )
 
     return total_area_m2
+
+
+EXTENT_SOURCE_PROJ = "proj"
+EXTENT_SOURCE_FOOTPRINT = "footprint"
+EXTENT_SOURCE_NONE = "none"
+
+
+def _raster_extent(items: ItemCollection) -> tuple[Geometry | None, str]:
+    """Union of the source rasters' extents and where it came from.
+
+    Each item's exact native grid (STAC projection fields, as odc-stac reads
+    them) is used when present (``proj``), otherwise its footprint geometry
+    (``footprint``, which can over-cover the raster). With an item that has
+    neither, no extent is applied (``none``).
+    """
+    extents = []
+    source = EXTENT_SOURCE_PROJ
+    for item in items:
+        geoboxes = parse_item(item).geoboxes()
+        if geoboxes:
+            extents.extend(geobox.extent for geobox in geoboxes)
+        elif item.geometry is not None:
+            extents.append(Geometry(item.geometry, crs="EPSG:4326"))
+            source = EXTENT_SOURCE_FOOTPRINT
+        else:
+            return None, EXTENT_SOURCE_NONE
+    if not extents:
+        return None, EXTENT_SOURCE_NONE
+    crs = extents[0].crs
+    return unary_union([extent.to_crs(crs) for extent in extents]), source
+
+
+def _get_zonal_cells_from_stac_geoparquet(
+    dataset_url: str,
+    geometry_4326: Geometry,
+    indicator: str,
+    *,
+    datetime_string_match: str | None = None,
+    load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
+    collect_values: bool = False,
+    histogram: PercentileMethod | None = None,
+    collect_distinct: bool = False,
+) -> ZonalCells | None:
+    """One pass over one band inside one geometry part; None when no item covers it.
+
+    A part outside every source raster contributes no cells (it is outside the
+    raster extent); the caller refuses a geometry none of whose parts is covered.
+    """
+    load_kwargs = dict(load_kwargs or {})
+    items = _search_stac_items(dataset_url, geometry_4326, datetime_string_match)
+    if not items:
+        logger.info("No STAC items cover this geometry part.")
+        return None
+    logger.info(
+        f"Found {len(items)} STAC items for the given geometry and datetime filter."
+    )
+    items = ItemCollection(items)
+    data = _load_stac_band(items, geometry_4326, indicator, load_kwargs)
+    extent, extent_source = _raster_extent(items)
+    if extent_source != EXTENT_SOURCE_PROJ:
+        logger.warning(
+            f"STAC items for {indicator} lack projection fields; the source extent "
+            f"is '{extent_source}' (item footprint or none), which can count fill "
+            "cells outside the raster in the valid-fraction denominator."
+        )
+    cells = xarray_zonal_cells(
+        data[indicator],
+        geometry_4326,
+        all_touched=raster_all_touched,
+        extent=extent,
+        collect_values=collect_values,
+        histogram=histogram,
+        collect_distinct=collect_distinct,
+    )
+    cells.extent_source = extent_source
+    return cells
+
+
+def _get_zonal_cells_from_dataset_geometry(
+    dataset_url: str,
+    dataset_type: str,
+    geometry_4326: Geometry,
+    indicator: str,
+    **kwargs: object,
+) -> ZonalCells | None:
+    """Zonal cell populations for one geometry part (raster datasets only)."""
+    if dataset_type == "stac-geoparquet":
+        return _get_zonal_cells_from_stac_geoparquet(
+            dataset_url, geometry_4326, indicator, **kwargs
+        )
+    raise CSDRException(
+        "Zonal statistics (mean, percentiles, valid fraction, distinct count) need a "
+        f"'stac-geoparquet' raster dataset; got '{dataset_type}'."
+    )
 
 
 # TODO: Generalise this to work for any geoparquet dataset, not just ACA reef.
@@ -223,6 +361,7 @@ def _get_area_m2_from_dataset_geometry(
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
     load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
 ) -> float:
     """Calculate the area (m²) of the dataset within the given geometry."""
 
@@ -236,6 +375,7 @@ def _get_area_m2_from_dataset_geometry(
             value_list,
             datetime_string_match=datetime_string_match,
             load_kwargs=load_kwargs,
+            raster_all_touched=raster_all_touched,
         )
     elif dataset_type == "geoparquet":
         # This path config is specific to the the partitioned ACA reef geoparquet structure.
@@ -327,15 +467,21 @@ def process_indicators_for_geometry(
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
     load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
+    percentile_method: PercentileMethod | None = None,
+    zonal_metadata: dict | None = None,
 ) -> dict[str, str | float]:
     if load_kwargs is None:
         load_kwargs = {}
+    if percentile_method is None:
+        percentile_method = PercentileMethod()
     results = {}
 
     # Resolve every indicator to a registered family with a handler before any
     # source is read (csdr.indicators). Declared families validate on the CLI but
     # have no handler in this build.
     handlers = {}
+    families = {}
     for key in indicators:
         family = family_for(key)
         if family is None:
@@ -347,6 +493,8 @@ def process_indicators_for_geometry(
                 f"indicator family {family.template} is registered but has no handler in this build"
             )
         handlers[key] = family.handler
+        families[key] = family
+    zonal_plan = _zonal_statistics_plan(indicators, families, percentile_method)
 
     sd = sedona.db.connect()
 
@@ -358,6 +506,15 @@ def process_indicators_for_geometry(
     # Dependent families (percent-<x>-area needs sum-<x>-area) run after the
     # family they depend on; otherwise by id.
     indicators = order_indicators(indicators)
+
+    if zonal_plan and dataset_type != "stac-geoparquet":
+        raise CSDRException(
+            "Zonal statistics (mean, percentiles, valid fraction, distinct count) need a "
+            f"'stac-geoparquet' raster dataset; got '{dataset_type}'."
+        )
+
+    # Every statistic of one band comes from one pass over the geometry's parts.
+    zonal_cells_by_band: dict[str, ZonalCells] = {}
 
     for var_key, var_info in indicators.items():
         indicator_name = var_info.get("indicator-name")
@@ -406,6 +563,26 @@ def process_indicators_for_geometry(
         # For example this makes Australia's 8 geometries into 86.
         geoms_tiled = _tile_geometries(geoms)
 
+        if handlers[var_key] == HANDLER_ZONAL_STATISTICS:
+            cells = zonal_cells_by_band.get(indicator_name)
+            if cells is None:
+                cells = _zonal_cells_for_parts(
+                    dataset_url,
+                    dataset_type,
+                    geoms_tiled,
+                    indicator_name,
+                    zonal_plan[indicator_name],
+                    datetime_string_match=datetime_string_match,
+                    load_kwargs=load_kwargs,
+                    raster_all_touched=raster_all_touched,
+                )
+                zonal_cells_by_band[indicator_name] = cells
+            results[var_key] = _zonal_statistic(
+                families[var_key], cells, indicator_value_list, percentile_method
+            )
+            logger.info(f"Calculated {var_key}: {results[var_key]}")
+            continue
+
         # These total_* indicators are the sums over all single geometries in the multipolygon
         # TODO: When doing the indicator refactor, generalise these.
         total_multipolygon_area_m2 = 0.0  # Need for percent area calculations
@@ -428,6 +605,7 @@ def process_indicators_for_geometry(
                     indicator=indicator_name,
                     value_list=indicator_value_list,
                     load_kwargs=load_kwargs,
+                    raster_all_touched=raster_all_touched,
                 )
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2
@@ -464,18 +642,214 @@ def process_indicators_for_geometry(
                 f"Calculated {var_key}: {area_percent:.2f} % (Indicator area: {indicator_area_m2:.2f} m², Total geom area: {total_multipolygon_area_m2:.2f} m²)"
             )
 
+    if zonal_metadata is not None and zonal_cells_by_band:
+        zonal_metadata.update(
+            _zonal_statistics_metadata(
+                indicators,
+                families,
+                zonal_cells_by_band,
+                percentile_method,
+                raster_all_touched,
+            )
+        )
+
     return results
 
 
+# Zonal statistics families: the statistic each family computes from ZonalCells.
+_PERCENTILE_FAMILIES = {"p10": 0.1, "p25": 0.25, "p50": 0.5, "p75": 0.75, "p90": 0.9}
+_ZONAL_FAMILIES = {"mean", "valid-fraction", "distinct-count", *_PERCENTILE_FAMILIES}
+
+
+def _zonal_statistics_plan(
+    indicators: dict[str, dict],
+    families: dict[str, IndicatorFamily],
+    percentile_method: PercentileMethod,
+) -> dict[str, dict]:
+    """What one pass per band must collect, validated before any source is read."""
+    plan: dict[str, dict] = {}
+    for key, info in indicators.items():
+        family = families[key]
+        if family.handler != HANDLER_ZONAL_STATISTICS:
+            continue
+        if family.name not in _ZONAL_FAMILIES:
+            raise CSDRException(f"No zonal statistic is defined for {family.template}.")
+        band = info.get("indicator-name")
+        if not band:
+            raise CSDRException(
+                f"{key} needs an indicator-name: the raster band (asset key) to summarise."
+            )
+        value = info.get("indicator-value")
+        if value is not None and family.name != "distinct-count":
+            raise CSDRException(
+                f"{key}: indicator-value applies only to distinct-<x>-count. Means, "
+                "percentiles and valid fractions use every valid cell of the band."
+            )
+        if value is not None and not _is_numeric_value_list(value):
+            raise CSDRException(
+                f"{key}: indicator-value must be a number or a comma-separated list "
+                f"of numbers (raster class values); got {value!r}."
+            )
+        needs = plan.setdefault(
+            band,
+            {"collect_values": False, "histogram": None, "collect_distinct": False},
+        )
+        if family.name in _PERCENTILE_FAMILIES:
+            if percentile_method.is_histogram:
+                needs["histogram"] = percentile_method
+            else:
+                needs["collect_values"] = True
+        elif family.name == "distinct-count":
+            needs["collect_distinct"] = True
+    return plan
+
+
+def _is_numeric_value_list(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int | float):
+        return True
+    if not isinstance(value, str):
+        return False
+    try:
+        [float(part) for part in value.split(",")]
+    except ValueError:
+        return False
+    return True
+
+
+def _zonal_cells_for_parts(
+    dataset_url: str,
+    dataset_type: str,
+    parts: list[Geometry],
+    indicator: str,
+    needs: dict,
+    *,
+    datetime_string_match: str | None,
+    load_kwargs: dict,
+    raster_all_touched: bool,
+) -> ZonalCells:
+    """Combine every part's cells into one population (the union of the parts).
+
+    Counts, sums, histograms and distinct values add up exactly; valid values are
+    concatenated for linear percentiles. Parts do not overlap, so with the
+    cell-centre rule each cell belongs to at most one part. With all-touched, a
+    cell touched by two parts is counted in both, as the area sum does.
+    """
+    combined = ZonalCells()
+    covered_parts = 0
+    for i, part in enumerate(parts):
+        logger.info(f"Zonal statistics for {indicator}: part {i + 1} of {len(parts)}")
+        cells = _get_zonal_cells_from_dataset_geometry(
+            dataset_url,
+            dataset_type,
+            part,
+            indicator,
+            datetime_string_match=datetime_string_match,
+            load_kwargs=load_kwargs,
+            raster_all_touched=raster_all_touched,
+            **needs,
+        )
+        if cells is None:
+            continue
+        covered_parts += 1
+        combined.merge(cells)
+    # Unlike sum-<x>-area, which reports missing coverage as 0.0, the zonal
+    # families refuse a boundary that no item covers or that has no valid cell.
+    if covered_parts == 0:
+        raise CSDRException(_NO_STAC_ITEMS_MESSAGE)
+    # Support is checked over the whole boundary before any statistic.
+    combined.require_support()
+    return combined
+
+
+def _zonal_statistic(
+    family: IndicatorFamily,
+    cells: ZonalCells,
+    value_list: list | None,
+    percentile_method: PercentileMethod,
+) -> float | int:
+    if family.name == "mean":
+        return cells.mean()
+    if family.name == "valid-fraction":
+        return cells.valid_fraction()
+    if family.name in _PERCENTILE_FAMILIES:
+        return cells.percentile(_PERCENTILE_FAMILIES[family.name], percentile_method)
+    if family.name == "distinct-count":
+        return cells.distinct_count(value_list)
+    raise CSDRException(f"No zonal statistic is defined for {family.template}.")
+
+
+def _zonal_statistics_metadata(
+    indicators: dict[str, dict],
+    families: dict[str, IndicatorFamily],
+    cells_by_band: dict[str, ZonalCells],
+    percentile_method: PercentileMethod,
+    raster_all_touched: bool,
+) -> dict:
+    """Method parameters and cell counts recorded in the per-geometry metadata."""
+    metadata: dict = {
+        "rasterCellRule": "all-touched" if raster_all_touched else "cell-centre",
+        "zonalCellCounts": {
+            band: cells.cell_counts() for band, cells in cells_by_band.items()
+        },
+    }
+    if any(families[key].name in _PERCENTILE_FAMILIES for key in indicators):
+        metadata.update(percentile_method.metadata())
+    return metadata
+
+
+# Run-level keys that process-geometry writes on every row. They are already in
+# the product run's provenance, so they are not posted again with each output
+# (the full command line and store paths would inflate every posted value).
+RUN_LEVEL_METADATA_KEYS = frozenset(
+    ("command", "geometryProvenanceUrl", "datasetProvenanceUrl")
+)
+
+
+def _metadata_json_value(value: object) -> object:
+    # Parquet structs read through pandas can contain NumPy arrays/scalars.
+    # Convert them without rounding coordinates or other captured evidence.
+    if hasattr(value, "tolist"):
+        return value.tolist()
+    raise TypeError("Product metadata must contain JSON-compatible values.")
+
+
 def parse_outputs(df: pd.DataFrame) -> dict:
+    """Group a consolidated product's rows by indicator and time point.
+
+    Each output carries the row's ``metadata`` (method parameters and cell
+    counts from process-geometry), converted to plain JSON values, without the
+    run-level keys in ``RUN_LEVEL_METADATA_KEYS``; when nothing else remains
+    the output has no ``metadata`` key, as before. Absent
+    values (None or NaN) are skipped: Parquet unions struct fields across
+    rows, so an indicator missing from one row reads back as null, which is
+    not an observed value and which the app rejects.
+    """
     outputs = {}
 
     for _, row in df.iterrows():
         timePoint = row["timePoint"]
+        metadata = None
+        if isinstance(row.get("metadata"), dict):
+            kept = {
+                key: value
+                for key, value in row["metadata"].items()
+                if key not in RUN_LEVEL_METADATA_KEYS
+            }
+            if kept:
+                metadata = json.loads(
+                    json.dumps(kept, default=_metadata_json_value, allow_nan=False)
+                )
         for indicator, value in row["indicators"].items():
+            if value is None or pd.isna(value):
+                continue
             if indicator not in outputs:
                 outputs[indicator] = {}
             output = {"geometryOutputId": row["geometryOutputId"], "value": value}
+            if metadata is not None:
+                # A copy per output, so callers can edit one without the others.
+                output["metadata"] = json.loads(json.dumps(metadata))
 
             if timePoint not in outputs[indicator]:
                 outputs[indicator][timePoint] = []
