@@ -586,6 +586,93 @@ product-batched-list-geometries-years-local:
 helpers-indicator-families:
 	csdr helpers indicator-families
 
+### ZONAL STATISTICS ###
+# mean-/p10-/p25-/p50-/p75-/p90-/valid-fraction-<x> and distinct-<x>-count over a STAC raster
+# (docs/zonal-statistics.md). These use the continuous and categorical rasters from the
+# convert-raster-*-local and convert-raster-*-index-local targets above, and the regions
+# geometry set from convert-vector-geometry-local. Load on the native grid (no
+# --load-kwargs crs/resolution) when results must match a native-grid reference.
+ZONAL_GEOMETRIES := ./cache/geometries/regions/0-0-1/runs/test-run-id/regions.parquet.provenance.json
+CONTINUOUS_DATASET := ./cache/datasets/raster-continuous/0-0-1/index.parquet.provenance.json
+CATEGORICAL_DATASET := ./cache/datasets/raster-categorical/0-0-1/classes.parquet.provenance.json
+ZONAL_GEOMETRY_ID ?= example-region
+CONTINUOUS_INDICATORS := {"mean-index": {"indicator-name": "index"}, "p10-index": {"indicator-name": "index"}, "p25-index": {"indicator-name": "index"}, "p50-index": {"indicator-name": "index"}, "p75-index": {"indicator-name": "index"}, "p90-index": {"indicator-name": "index"}, "valid-fraction-index": {"indicator-name": "index"}}
+
+convert-raster-continuous-provenance-local:
+	csdr provenance dataset \
+		--id=raster-continuous \
+		--dataset-url=./cache/datasets/raster-continuous/0-0-1/index.parquet \
+		--dataset-type=stac-geoparquet \
+		--source-url=./cache/datasets/raster-continuous/0-0-1/raw/index.tif \
+		--source-metadata-url=https://example.org/raster-continuous \
+		--source-sha256=$(call SHA256,./cache/datasets/raster-continuous/0-0-1/raw/index.tif) \
+		--overwrite
+
+convert-raster-categorical-provenance-local:
+	csdr provenance dataset \
+		--id=raster-categorical \
+		--dataset-url=./cache/datasets/raster-categorical/0-0-1/classes.parquet \
+		--dataset-type=stac-geoparquet \
+		--source-url=./cache/datasets/raster-categorical/0-0-1/raw/classes.tif \
+		--source-metadata-url=https://example.org/raster-categorical \
+		--source-sha256=$(call SHA256,./cache/datasets/raster-categorical/0-0-1/raw/classes.tif) \
+		--overwrite
+
+# Continuous raster, numpy linear percentiles (the default method), cell-centre rule.
+product-continuous-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=continuous-regions \
+		--run-id=test-continuous-regions-run-id \
+		--geometry-provenance-url=$(ZONAL_GEOMETRIES) \
+		--dataset-provenance-url=$(CONTINUOUS_DATASET) \
+		--target-location=./cache/products/continuous-regions/0-0-1/runs/test-continuous-regions-run-id \
+		--indicators-to-extract='$(CONTINUOUS_INDICATORS)' \
+		--datetime=2023 \
+		--geometry-id=$(ZONAL_GEOMETRY_ID) \
+		--raster-cell-centre \
+		--overwrite
+
+# Same product with fixed-bin percentiles: midpoint of the 1000-bin histogram over [0, 1]
+# (the parity method for a fixed-bin reference implementation).
+product-continuous-histogram-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=continuous-regions \
+		--run-id=test-continuous-regions-histogram-run-id \
+		--geometry-provenance-url=$(ZONAL_GEOMETRIES) \
+		--dataset-provenance-url=$(CONTINUOUS_DATASET) \
+		--target-location=./cache/products/continuous-regions/0-0-1/runs/test-continuous-regions-histogram-run-id \
+		--indicators-to-extract='$(CONTINUOUS_INDICATORS)' \
+		--datetime=2023 \
+		--geometry-id=$(ZONAL_GEOMETRY_ID) \
+		--raster-cell-centre \
+		--percentile-method=histogram \
+		--percentile-bins=1000 \
+		--percentile-range=0,1 \
+		--overwrite
+
+product-continuous-consolidate-local:
+	csdr products consolidate \
+		--product-id=continuous-regions \
+		--location=./cache/products/continuous-regions/0-0-1/runs/test-continuous-regions-run-id \
+		--geometry-provenance-url=$(ZONAL_GEOMETRIES) \
+		--dataset-provenance-url=$(CONTINUOUS_DATASET) \
+		--indicator-name=many-indicators
+
+# Categorical raster: class area and distinct classes among valid cells, counting only
+# listed class codes.
+product-categorical-process-geometry-local:
+	csdr products process-geometry \
+		--product-id=categorical-regions \
+		--run-id=test-categorical-regions-run-id \
+		--geometry-provenance-url=$(ZONAL_GEOMETRIES) \
+		--dataset-provenance-url=$(CATEGORICAL_DATASET) \
+		--target-location=./cache/products/categorical-regions/0-0-1/runs/test-categorical-regions-run-id \
+		--indicators-to-extract='{"sum-selected-area": {"indicator-name": "classes", "indicator-value": "1,2,3"}, "distinct-class-count": {"indicator-name": "classes", "indicator-value": "1,2,3,4,5"}}' \
+		--datetime=2023 \
+		--geometry-id=$(ZONAL_GEOMETRY_ID) \
+		--raster-cell-centre \
+		--overwrite
+
 
 ### PRODUCTS ###
 

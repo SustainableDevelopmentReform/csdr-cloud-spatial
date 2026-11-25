@@ -154,6 +154,7 @@ python -m csdr.cli  eez cache \
 | `csdr products list-geometries-years --batch-size N` | Items `{"year", "ids": "a,b,c"}` for batched fan-out (per-id items without it) | [fan-out-batching](docs/fan-out-batching.md) |
 | `csdr products process-geometry --geometry-ids a,b,c` | Several geometries in one process and Dask client, one output file each; resumes with `--no-overwrite` | [fan-out-batching](docs/fan-out-batching.md) |
 | `csdr provenance dataset\|geometry ... --source-sha256 --source-version-id --provenance-extra '<json>'`; `csdr provenance product ... --provenance-extra '<json>'` | Source identity (dataset and geometry only) and declarations in the provenance file and `provenanceJson` | [provenance-passthrough](docs/provenance-passthrough.md) |
+| `csdr products process-geometry` with `mean-<x>`, `p10-/p25-/p50-/p75-/p90-<x>`, `valid-fraction-<x>`, `distinct-<x>-count` | Zonal statistics of a STAC raster band in one pass per geometry, over the union of multipolygon parts; `--percentile-method linear\|histogram`, `--percentile-bins`, `--percentile-range`; `--raster-all-touched` (default) or `--raster-cell-centre`, also for `sum-<x>-area`; method and cell counts in the output metadata | [zonal-statistics](docs/zonal-statistics.md) |
 | `csdr helpers indicator-families [--json]` | Prints the indicator registry: families, implemented or declared, exact ids | [indicator-families](docs/indicator-families.md) |
 
 ### Debugging
