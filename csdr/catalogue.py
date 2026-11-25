@@ -1,8 +1,9 @@
 """Read-only catalogue reader for checks that bind a calculation to app records.
 
 ``CatalogueReader`` reads single records
-(``GET /api/v0/{product,dataset-run,geometries-run,geometry-output,indicator,
-product-run}/{id}``) and paginated lists such as ``geometries-run/{id}/outputs``.
+(``GET /api/v0/{product,dataset-run,geometries-run,geometry-output,
+indicator/measured,product-run}/{id}``) and paginated lists such as
+``geometries-run/{id}/outputs``.
 Responses are capped in size and must identify the requested record. Requests
 go through ``csdr.app_integration._get``, so they follow the same transport
 rules as posts: organisation header and membership preflight, timeouts and no

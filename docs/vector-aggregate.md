@@ -99,8 +99,9 @@ density and on `areaCrs`. An edge is straight between its vertices in the CRS wh
 is evaluated (`areaCrs`), not in longitude and latitude. A long edge along a parallel in EPSG:4326
 is curved in EPSG:3577, so a feature vertex that lies on the boundary's EPSG:4326 edge can be
 metres off the boundary's projected chord. Example: `box(148, -34, 148.5, -33.5)` inside
-`box(148, -34, 149, -33)` is `within` in EPSG:6933 but not in EPSG:3577. The reference pipeline
-reprojects both layers the same way, so a spec reproduces it when it declares the same `areaCrs`.
+`box(148, -34, 149, -33)` is `within` in EPSG:6933 but not in EPSG:3577. Results from another
+tool that reprojects both layers the same way are reproduced when the spec declares the same
+`areaCrs`.
 Densify boundaries before conversion if shared edges must hold in the projected CRS.
 
 ## Execution
