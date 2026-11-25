@@ -58,7 +58,9 @@ from csdr.utils import (
 logger = logging.getLogger(__name__)
 
 OGR_SUFFIXES = (".shp", ".gpkg", ".geojson", ".json")
-SOURCE_SUFFIXES = (*OGR_SUFFIXES, ".parquet", ".zip")
+# GeoParquet sources; registers are often exported with the .geoparquet extension.
+PARQUET_SUFFIXES = (".parquet", ".geoparquet")
+SOURCE_SUFFIXES = (*OGR_SUFFIXES, *PARQUET_SUFFIXES, ".zip")
 SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg")
 LAYER_COLUMN = "layer"
 MAKE_VALID_METHOD = (
@@ -216,9 +218,15 @@ def _read_parquet(path: str, where: str | None) -> gpd.GeoDataFrame:
     # for Parquet. SedonaDB evaluates the same SQL WHERE syntax at read time.
     import sedona.db
 
-    sd = sedona.db.connect()
-    sd.read_parquet(path).to_view("source", overwrite=True)
-    result = sd.sql(f"SELECT * FROM source WHERE {where}").to_pandas()
+    with TemporaryDirectory(prefix="csdr-vector-") as directory:
+        if url_suffix(path) != ".parquet":
+            # SedonaDB lists local files by the .parquet extension only.
+            alias = Path(directory) / "source.parquet"
+            alias.symlink_to(Path(path).resolve())
+            path = str(alias)
+        sd = sedona.db.connect()
+        sd.read_parquet(path).to_view("source", overwrite=True)
+        result = sd.sql(f"SELECT * FROM source WHERE {where}").to_pandas()
     if not isinstance(result, gpd.GeoDataFrame):
         raise CSDRException("The Parquet source has no geometry column.")
     return result
@@ -250,7 +258,7 @@ def read_vector_source(
     with stage_source(source) as staged:
         suffix = url_suffix(str(staged.path))
         member = None
-        if suffix == ".parquet":
+        if suffix in PARQUET_SUFFIXES:
             if layer is not None:
                 raise CSDRException("--layer does not apply to a Parquet source.")
             gdf = _read_parquet(str(staged.path), where)

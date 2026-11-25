@@ -41,3 +41,8 @@ means setting the family's `handler` and adding its branch in
 
 Dependent families run after the family they depend on (`dependency_stage`), whatever
 order the JSON lists them in; ids within a stage run in sorted order.
+
+The registry applies to `process-geometry`. `csdr products vector-aggregate`
+([vector-aggregate.md](vector-aggregate.md)) takes any indicator id its specification
+declares (letters, digits, `.`, `_`, `-`), because the specification states how each one is
+measured; online runs check that each id exists as a measured indicator in the catalogue.

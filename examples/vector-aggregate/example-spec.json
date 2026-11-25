@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "productId": "example-vector-product",
+  "productRunId": "example-vector-product-run",
+  "datasetRunId": "example-dataset-run",
+  "geometriesRunId": "vector-fixture-regions-run",
+  "timePoint": "2024-06-30",
+  "sourceDate": "2024-06-30",
+  "areaCrs": "EPSG:6933",
+  "evidenceClass": "observed_register",
+  "caveat": "Synthetic fixture features; not an observation of any real place.",
+  "countingRule": "Per class: clipped area of the unioned features; features counted when they intersect the region; whole-feature attribute values never apportioned.",
+  "overlapPolicy": "union",
+  "classification": {"column": "kind", "values": ["park", "forest"]},
+  "measures": [
+    {"indicatorId": "sum-park-area", "measure": "area-m2", "class": {"column": "kind", "values": ["park"]}},
+    {"indicatorId": "count-park", "measure": "count", "class": {"column": "kind", "values": ["park"]}},
+    {"indicatorId": "count-park-within", "measure": "count", "relation": "within", "class": {"column": "kind", "values": ["park"]}},
+    {"indicatorId": "sum-forest-area", "measure": "area-m2", "class": {"column": "kind", "values": ["forest"]}},
+    {"indicatorId": "distinct-state-count", "measure": "distinct-attribute", "attribute": "state"}
+  ]
+}
