@@ -27,7 +27,9 @@ from csdr.provenance import (
     clear_steps,
     get_provenance,
     get_workflow_template_fields,
+    parse_provenance_extra,
     read_steps,
+    source_identity_fields,
 )
 from csdr.utils import CSDRException
 
@@ -44,6 +46,9 @@ WORKFLOW_TEMPLATE_NAME_HELP = (
 WORKFLOW_TEMPLATE_DIGEST_HELP = (
     "sha256:<hex> of the published workflow file. Written as workflowTemplateDigest."
 )
+SOURCE_SHA256_HELP = "SHA-256 (64 hex) of the source bytes. Written as sourceSha256 to the provenance file and provenanceJson."
+SOURCE_VERSION_ID_HELP = "Source object version (e.g. S3 VersionId or a release tag). Written as sourceVersionId to the provenance file and provenanceJson."
+PROVENANCE_EXTRA_HELP = "JSON object merged at the top level of the provenance file and provenanceJson (not the run body), e.g. a method's declaration about the source. Reserved keys are refused."
 
 
 def _meta_provenance(
@@ -59,6 +64,7 @@ def _meta_provenance(
     workflow_dag_simple: dict | None = None,
     # extra_info_dict likely includes geometriesRunId for geometries and productRunId for products
     extra_info_dict: dict | None = None,
+    provenance_json_only_keys: tuple[str, ...] = (),
 ) -> str | None:
     # The json is written next to where it read from. e.g. local to local, and s3 to s3.
     """
@@ -117,7 +123,9 @@ def _meta_provenance(
 
     if post_to_database:
         # Should the DB write respect the overwrite flag? Currently I am not sure what would happen if something was rerun. Duplicate entries or error?
-        response = post_provenance(provenance, type=type)
+        response = post_provenance(
+            provenance, type=type, json_only_keys=provenance_json_only_keys
+        )
         try:
             response.raise_for_status()
         except HTTPError:
@@ -180,6 +188,9 @@ def _write_dataset_provenance(
     workflow_template_digest: str | None = typer.Option(
         None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
     ),
+    source_sha256: str | None = typer.Option(None, help=SOURCE_SHA256_HELP),
+    source_version_id: str | None = typer.Option(None, help=SOURCE_VERSION_ID_HELP),
+    provenance_extra: str | None = typer.Option(None, help=PROVENANCE_EXTRA_HELP),
 ) -> None:
     # Validate before any work so a malformed reference never writes a file.
     workflow_template_fields = get_workflow_template_fields(
@@ -188,6 +199,8 @@ def _write_dataset_provenance(
         workflow_template_name,
         workflow_template_digest,
     )
+    extra = parse_provenance_extra(provenance_extra)
+    identity = source_identity_fields(source_sha256, source_version_id)
     logger.info(f"Getting provenance for dataset: {dataset_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
@@ -201,6 +214,8 @@ def _write_dataset_provenance(
     ):  # This is optional because geometries and datasets can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url
     extra_info_dict.update(workflow_template_fields)
+    extra_info_dict.update(identity)
+    extra_info_dict.update(extra)
 
     # Datasets do not need to use run IDs in their file paths, so the run id is just created by the DB and not used elsewhere. This is because geometry runs do not create new info (unlike geometries and products).
     dataset_run_id = _meta_provenance(
@@ -215,6 +230,7 @@ def _write_dataset_provenance(
         workflow_dag=workflow_dag_parsed,
         workflow_dag_simple=workflow_dag_simple_parsed,
         extra_info_dict=extra_info_dict,  # extra_info_dict can contain dataPmtilesUrl (needed for ACA Reef dataset)
+        provenance_json_only_keys=tuple(extra),
     )
     clear_steps()
     logger.info(f"dataset_run_id: {dataset_run_id}")
@@ -282,6 +298,9 @@ def _write_geometry_provenance(
     workflow_template_digest: str | None = typer.Option(
         None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
     ),
+    source_sha256: str | None = typer.Option(None, help=SOURCE_SHA256_HELP),
+    source_version_id: str | None = typer.Option(None, help=SOURCE_VERSION_ID_HELP),
+    provenance_extra: str | None = typer.Option(None, help=PROVENANCE_EXTRA_HELP),
 ) -> None:
     # Validate before any work so a malformed reference never writes a file.
     workflow_template_fields = get_workflow_template_fields(
@@ -290,6 +309,8 @@ def _write_geometry_provenance(
         workflow_template_name,
         workflow_template_digest,
     )
+    extra = parse_provenance_extra(provenance_extra)
+    identity = source_identity_fields(source_sha256, source_version_id)
     logger.info(f"Getting provenance for geometry: {geometry_url}")
 
     workflow_dag_parsed = loads(workflow_dag) if workflow_dag else read_steps()
@@ -310,6 +331,8 @@ def _write_geometry_provenance(
     ):  # This is optional because geometries and datasets can optionally have PMTiles
         extra_info_dict["dataPmtilesUrl"] = pmtiles_url
     extra_info_dict.update(workflow_template_fields)
+    extra_info_dict.update(identity)
+    extra_info_dict.update(extra)
 
     # Should run_id be passed as a prop instead of nested in extra_info_dict?
     run_id_created = _meta_provenance(
@@ -322,6 +345,7 @@ def _write_geometry_provenance(
         overwrite=overwrite,
         post_to_database=post_to_database,
         extra_info_dict=extra_info_dict,
+        provenance_json_only_keys=tuple(extra),
         workflow_dag=workflow_dag_parsed,
         workflow_dag_simple=workflow_dag_simple_parsed,
     )
@@ -382,6 +406,7 @@ def _write_product_provenance(
     workflow_template_digest: str | None = typer.Option(
         None, help=WORKFLOW_TEMPLATE_DIGEST_HELP
     ),
+    provenance_extra: str | None = typer.Option(None, help=PROVENANCE_EXTRA_HELP),
 ) -> None:
     # Validate before any work so a malformed reference never writes a file.
     workflow_template_fields = get_workflow_template_fields(
@@ -390,6 +415,7 @@ def _write_product_provenance(
         workflow_template_name,
         workflow_template_digest,
     )
+    extra = parse_provenance_extra(provenance_extra)
     logger.info(f"Getting provenance for product: {product_url}")
     df = read_geospatial_file(product_url)
     parsed_outputs = parse_outputs(df)
@@ -411,6 +437,7 @@ def _write_product_provenance(
     if run_id is not None:
         extra_info_dict["productRunId"] = run_id
     extra_info_dict.update(workflow_template_fields)
+    extra_info_dict.update(extra)
 
     # Post to product_run table. Get ID (created if none was provided).
     run_id_created = _meta_provenance(
@@ -423,6 +450,7 @@ def _write_product_provenance(
         workflow_dag=workflow_dag_parsed,
         workflow_dag_simple=workflow_dag_simple_parsed,
         extra_info_dict=extra_info_dict,
+        provenance_json_only_keys=tuple(extra),
     )
     logger.info(f"Wrote provenance for product: {product_url}")
     consolidated_run_id = run_id if run_id is not None else run_id_created

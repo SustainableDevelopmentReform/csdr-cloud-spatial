@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "features",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "big", "state": "A", "kind": "park" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.002072833562243, 0.0 ], [ 0.002072833562243, 0.001567726300296 ], [ 0.0, 0.001567726300296 ], [ 0.0, 0.0 ], [ 0.002072833562243, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "name": "east", "state": "B", "kind": "park" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.011400584592334, 0.0 ], [ 0.011400584592334, 0.000783863150076 ], [ 0.010364167811213, 0.000783863150076 ], [ 0.010364167811213, 0.0 ], [ 0.011400584592334, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "name": "north", "state": "A", "kind": "forest" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.001036416781121, 0.007838631524324 ], [ 0.001036416781121, 0.008622494682254 ], [ 0.0, 0.008622494682254 ], [ 0.0, 0.007838631524324 ], [ 0.001036416781121, 0.007838631524324 ] ] ] } }
+]
+}

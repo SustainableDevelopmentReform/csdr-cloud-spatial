@@ -1,22 +1,95 @@
+import hashlib
 import logging
 import subprocess
 import uuid
+import warnings
 from collections.abc import Generator
 from contextlib import contextmanager
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import geopandas as gpd
+import numpy as np
+import pandas as pd
 import pystac
+from obstore.store import ObjectStore
 from odc.geo.geom import Geometry
 from odc.geo.xr import mask
 from odc.stac import load
 from xarray import DataArray, Dataset
+
+from csdr.io import exists, find_matching_files, write_gdf_to_parquet
 
 logger = logging.getLogger(__name__)
 
 
 class CSDRException(Exception):
     pass
+
+
+# Source identity helpers shared by the conversion engines (vector_convert and
+# any later one): a declared SHA-256 is normalised and verified, and the bytes
+# actually read are hashed while they are staged.
+SHA256_CHUNK = 8 * 1024 * 1024
+_SHA256_HEX = frozenset("0123456789abcdef")
+
+
+def normalise_sha256(value: str | None) -> str | None:
+    """Return a lower-case 64-hex SHA-256 or refuse the value."""
+    if value is None:
+        return None
+    digest = value.strip().lower()
+    if len(digest) != 64 or not set(digest) <= _SHA256_HEX:
+        raise CSDRException(
+            "A source SHA-256 must be 64 hexadecimal characters (no 'sha256:' prefix)."
+        )
+    return digest
+
+
+def verify_sha256(declared: str | None, actual: str) -> None:
+    """Refuse a declared SHA-256 that differs from the bytes read."""
+    if declared is not None and declared != actual:
+        raise CSDRException(
+            f"Source SHA-256 mismatch: declared {declared}, read {actual}. "
+            "The source changed or the declaration is wrong; nothing was written."
+        )
+
+
+def sha256_file(path: Path) -> str:
+    """SHA-256 of a local file, read in chunks."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(SHA256_CHUNK), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def is_remote_url(source: str) -> bool:
+    """True for store URLs (s3://, https://); False for local paths and file://."""
+    return "://" in source and not source.lower().startswith("file://")
+
+
+def local_file_path(source: str) -> Path:
+    """A local path from a plain path or a file:// URL."""
+    if source.lower().startswith("file://"):
+        source = source[len("file://") :]
+    return Path(source)
+
+
+def url_suffix(name: str) -> str:
+    """Lower-case final extension of a path or URL (``.tif``, ``.dbf``)."""
+    return PurePosixPath(name).suffix.lower()
+
+
+def download_with_sha256(store: ObjectStore, name: str, target: Path) -> str:
+    """Stream one object to disk, returning its SHA-256."""
+    digest = hashlib.sha256()
+    result = store.get(name)
+    with target.open("wb") as output:
+        for chunk in result.stream(min_chunk_size=SHA256_CHUNK):
+            output.write(chunk)
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def run_command(command: list[str]) -> tuple[bool, str, str]:
@@ -153,3 +226,91 @@ def get_geom_from_gdf(gdf: gpd.GeoDataFrame, geometry_id: str) -> Geometry:
 
     # Convert to ODC geometry
     return Geometry(feature.geometry, crs=gdf.crs)
+
+
+PARTITION_PREFIX = "partition/"
+_PARTITION_HELPER_COLUMNS = ["lon", "lat", "lon_bin", "lat_bin", "partition"]
+
+
+def partition_parquet(
+    target_store: ObjectStore,
+    gdf: gpd.GeoDataFrame,
+    grid_chunks: int = 10,
+    overwrite: bool = True,
+    file_prefix: str = "part",
+) -> int:
+    """Partition a GeoDataFrame into ``partition/<file_prefix>_<lon>_<lat>.parquet``.
+
+    This is the ``geoparquet`` dataset contract the product engine reads
+    (``<dir>/<name>.parquet`` plus ``<dir>/partition/*.parquet``). Features are
+    assigned to a global grid by centroid: ``grid_chunks * 2`` longitude cells by
+    ``grid_chunks`` latitude cells (the default 10 gives 18 degree cells).
+
+    Partition files are always written in EPSG:4326, because the product engine
+    intersects them with EPSG:4326 boundaries. A source in another CRS is
+    reprojected for the partitions only; the caller keeps its native-CRS file.
+    The caller's GeoDataFrame is not modified. Returns the number of partition
+    files written.
+    """
+    if grid_chunks < 1:
+        raise CSDRException("grid_chunks must be at least 1.")
+    if gdf.crs is None:
+        raise CSDRException(
+            "Cannot partition a GeoDataFrame without a CRS. Set the source CRS first."
+        )
+    if gdf.crs.to_epsg() != 4326:
+        gdf = gdf.to_crs(4326)
+    else:
+        gdf = gdf.copy()
+
+    # Number of edges is one more than number of intervals.
+    lon_edges = np.linspace(-180, 180, grid_chunks * 2 + 1)
+    lat_edges = np.linspace(-90, 90, grid_chunks + 1)
+    # Centroids in degrees only choose a grid cell; their small geographic error
+    # does not matter for partitioning, so the geographic-CRS warning is muted.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="Geometry is in a geographic CRS")
+        centroids = gdf.geometry.centroid
+    gdf["lon"] = centroids.x
+    gdf["lat"] = centroids.y
+    gdf["lon_bin"] = pd.cut(gdf["lon"], lon_edges, labels=False, include_lowest=True)
+    gdf["lat_bin"] = pd.cut(gdf["lat"], lat_edges, labels=False, include_lowest=True)
+    # Null or empty geometries have no centroid and no cell; they are not
+    # partitioned. Bins are integers so file names never become floats.
+    binned = gdf["lon_bin"].notna() & gdf["lat_bin"].notna()
+    if not binned.all():
+        logger.warning(
+            f"{int((~binned).sum())} features without a centroid (null or empty "
+            "geometry) are not partitioned."
+        )
+        gdf = gdf[binned].copy()
+    gdf["lon_bin"] = gdf["lon_bin"].astype(int)
+    gdf["lat_bin"] = gdf["lat_bin"].astype(int)
+    gdf["partition"] = gdf["lon_bin"].astype(str) + "_" + gdf["lat_bin"].astype(str)
+
+    # With overwrite on, delete every existing partition file first. Otherwise a
+    # changed grid would leave duplicate features in two partition layouts.
+    if overwrite:
+        partition_files = find_matching_files(
+            target_store, prefix=PARTITION_PREFIX, pattern=r"\.parquet$"
+        )
+        logger.info(f"Deleting {len(partition_files)} existing partition files ...")
+        for file in partition_files:
+            target_store.delete(file)
+    else:
+        logger.info("Overwrite is off, existing partition files will be preserved ...")
+
+    written = 0
+    for partition, group in gdf.groupby("partition"):
+        file_name = f"{PARTITION_PREFIX}{file_prefix}_{partition}.parquet"
+        if exists(target_store, file_name) and not overwrite:
+            logger.info(
+                f"Skipping partition {partition}, already exists and overwrite is off."
+            )
+            continue
+        write_gdf_to_parquet(
+            group.drop(_PARTITION_HELPER_COLUMNS, axis=1), target_store, file_name
+        )
+        written += 1
+    logger.info(f"Wrote {written} partition files.")
+    return written

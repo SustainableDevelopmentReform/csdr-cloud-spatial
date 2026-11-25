@@ -282,6 +282,87 @@ def get_provenance(
     return provenance
 
 
+# Keys the provenance writer, the run endpoints or the app set themselves. A
+# --provenance-extra object may not use them, so a declaration can never replace
+# identity, lineage or image fields.
+RESERVED_PROVENANCE_KEYS = frozenset(
+    {
+        "id",
+        "dataType",
+        "dataEtag",
+        "dataSize",
+        "dataUrl",
+        "dataPmtilesUrl",
+        "description",
+        "imageCode",
+        "imageTag",
+        "provenanceUrl",
+        "provenanceUpdated",
+        "provenanceJson",
+        "workflowDag",
+        "workflowDagSimple",
+        "sourceUrl",
+        "sourceMetadataUrl",
+        "sourceSha256",
+        "sourceVersionId",
+        "geometriesRunId",
+        "datasetRunId",
+        "productRunId",
+        "datasetId",
+        "geometriesId",
+        "productId",
+        *WORKFLOW_TEMPLATE_FIELDS,
+    }
+)
+
+# Written to the provenance file and provenanceJson only, never to the top-level
+# run body (strict run schemas need not know them).
+PROVENANCE_JSON_ONLY_KEYS = ("sourceSha256", "sourceVersionId")
+
+
+def source_identity_fields(
+    source_sha256: str | None, source_version_id: str | None
+) -> dict[str, str]:
+    """``sourceSha256`` / ``sourceVersionId`` provenance fields, when given."""
+    fields: dict[str, str] = {}
+    if source_sha256 is not None:
+        digest = source_sha256.strip().lower()
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise CSDRException(
+                "--source-sha256 must be 64 hexadecimal characters (no 'sha256:' prefix)."
+            )
+        fields["sourceSha256"] = digest
+    if source_version_id is not None:
+        if not source_version_id.strip():
+            raise CSDRException("--source-version-id must not be blank.")
+        fields["sourceVersionId"] = source_version_id
+    return fields
+
+
+def parse_provenance_extra(text: str | None) -> dict:
+    """Parse ``--provenance-extra``: a JSON object whose keys are not reserved.
+
+    The object is merged at the top level of the provenance file and
+    ``provenanceJson``. This is how a method's declarations about a run (for
+    example the role or release of its source) are written with the toolkit.
+    """
+    if text is None:
+        return {}
+    try:
+        extra = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise CSDRException(f"--provenance-extra is not valid JSON: {error}") from None
+    if not isinstance(extra, dict):
+        raise CSDRException("--provenance-extra must be a JSON object.")
+    reserved = sorted(set(extra) & RESERVED_PROVENANCE_KEYS)
+    if reserved:
+        raise CSDRException(
+            f"--provenance-extra may not set reserved provenance keys: {reserved}. "
+            "Use the dedicated options for source identity and workflow fields."
+        )
+    return extra
+
+
 def read_provenance(url: str) -> dict[str, str | int]:
     """
     This function reads a provenance JSON file from the given URL (which can be local, S3, or HTTP). It uses the appropriate store to fetch the file, loads the JSON content, and returns it as a Python dictionary.

@@ -1,5 +1,4 @@
 import logging
-import re
 
 import pandas as pd
 import sedona.db
@@ -8,6 +7,13 @@ from pystac import ItemCollection
 from python_retry import retry
 from rustac import search_sync as rustac_search_sync
 
+from csdr.indicators import (
+    HANDLER_AREA_PERCENT,
+    HANDLER_AREA_SUM,
+    HANDLER_FEATURE_COUNT,
+    family_for,
+    order_indicators,
+)
 from csdr.io import split_path_and_file_name_from_url
 from csdr.provenance import read_provenance
 from csdr.utils import (
@@ -325,6 +331,23 @@ def process_indicators_for_geometry(
     if load_kwargs is None:
         load_kwargs = {}
     results = {}
+
+    # Resolve every indicator to a registered family with a handler before any
+    # source is read (csdr.indicators). Declared families validate on the CLI but
+    # have no handler in this build.
+    handlers = {}
+    for key in indicators:
+        family = family_for(key)
+        if family is None:
+            raise CSDRException(
+                f"Indicator {key} matches no indicator family, so no handler can compute it."
+            )
+        if not family.implemented:
+            raise CSDRException(
+                f"indicator family {family.template} is registered but has no handler in this build"
+            )
+        handlers[key] = family.handler
+
     sd = sedona.db.connect()
 
     logger.info(f"Loading dataset from {dataset_provenance_url}")
@@ -332,15 +355,9 @@ def process_indicators_for_geometry(
     dataset_url = provenance.get("dataUrl")
     dataset_type = provenance.get("dataType")
 
-    # Order sum area indicators first, then area percentages. Area percentages are dependent on area calculations.
-    indicators = dict(
-        sorted(indicators.items(), key=lambda item: ("percent-" in item[0], item[0]))
-    )  # TODO: Make this more robust when there are non-area percent indicators.
-
-    sum_area_var_pattern = re.compile(r"^sum-.*-area$")
-    area_percent_var_pattern = re.compile(r"^percent-.*-area$")
-    count_var_pattern = re.compile(r"^count-.*$")
-    # TODO: Extend to other indicator types as needed by future products.
+    # Dependent families (percent-<x>-area needs sum-<x>-area) run after the
+    # family they depend on; otherwise by id.
+    indicators = order_indicators(indicators)
 
     for var_key, var_info in indicators.items():
         indicator_name = var_info.get("indicator-name")
@@ -401,9 +418,7 @@ def process_indicators_for_geometry(
             geom_area_m2 = geometry_6933.area
             total_multipolygon_area_m2 += geom_area_m2
             # Area indicators
-            if sum_area_var_pattern.match(
-                var_key
-            ):  # ["sum-mangrove-area", "sum-seagrass-area", "sum-reef-area", "sum-intertidal-area", "sum-saltmarsh-area"]
+            if handlers[var_key] == HANDLER_AREA_SUM:  # sum-<x>-area
                 area_m2 = _get_area_m2_from_dataset_geometry(
                     sd,
                     dataset_url,
@@ -419,7 +434,7 @@ def process_indicators_for_geometry(
                 logger.info(
                     f"Total area by value: {total_indicator_area_m2} m² for indicator {var_key}, value/s {indicator_value_s}"
                 )
-            elif count_var_pattern.match(var_key):  # ["count-buildings"]
+            elif handlers[var_key] == HANDLER_FEATURE_COUNT:  # count-<x>
                 logger.info("Starting count indicator analysis...")
                 # TODO: Try to parallelise this to improve performance on multipolygons with many parts, that each intersect many parquet files.
                 count = _get_count_points_in_polygon_geoparquet(
@@ -432,7 +447,7 @@ def process_indicators_for_geometry(
                 )
 
         # Handle area percent indicators outside of the single geometry loop, since they depend on total area calculations
-        if area_percent_var_pattern.match(var_key):
+        if handlers[var_key] == HANDLER_AREA_PERCENT:  # percent-<x>-area
             logger.info(
                 "Calculating percent area now that all geoms have been processed..."
             )

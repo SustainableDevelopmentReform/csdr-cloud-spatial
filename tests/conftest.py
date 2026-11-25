@@ -81,13 +81,16 @@ def s3_client(aws_credentials: None) -> boto3.client:
 @pytest.fixture
 def s3_testdata_obstore(aws_credentials: None, s3_client: boto3.client) -> S3Store:
     """Create a moto S3 server and S3Store that works with obstore"""
+    import socket
     import threading
     import time
 
     from moto.server import DomainDispatcherApplication, create_backend_app, run_simple
 
-    # Start moto server
-    port = 5555
+    # Start moto server on a free port, so several checkouts can run the suite at once.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
     endpoint_url = f"http://127.0.0.1:{port}"
 
     def start_server() -> None:

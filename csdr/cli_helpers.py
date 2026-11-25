@@ -1,9 +1,11 @@
+import json
 import logging
 import os
 from datetime import datetime
 
 import typer
 
+from csdr.indicators import KNOWN_INDICATORS, registry_rows
 from csdr.io import (
     get_store_with_prefix_from_url,
     read_geospatial_file,
@@ -114,4 +116,48 @@ def filter_geometries_by_name(
         label="Filter geometries by name from source parquet",
         inputs={"source_url": source_url, "geometry_names": geometry_names},
         outputs={"target_url": target_url},
+    )
+
+
+@helpers_app.command("indicator-families")
+def indicator_families(
+    as_json: bool = typer.Option(
+        False, "--json", help="Print the registry as JSON instead of a table."
+    ),
+) -> None:
+    """Print the indicator registry: families, their status and the exact ids."""
+    rows = registry_rows()
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {"families": rows, "exactIds": KNOWN_INDICATORS},
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return
+    columns = [
+        ("ID pattern", "idPattern"),
+        ("Status", "status"),
+        ("Depends on", "dependsOn"),
+        ("Description", "description"),
+    ]
+    cells = [[str(row[key] or "-") for _, key in columns] for row in rows]
+    widths = [
+        max(len(title), *(len(line[i]) for line in cells))
+        for i, (title, _) in enumerate(columns)
+    ]
+
+    def line(values: list[str]) -> str:
+        return "  ".join(v.ljust(w) for v, w in zip(values, widths)).rstrip()
+
+    typer.echo(line([title for title, _ in columns]))
+    typer.echo(line(["-" * w for w in widths]))
+    for row in cells:
+        typer.echo(line(row))
+    typer.echo("")
+    typer.echo("Exact ids (allow-list): " + ", ".join(KNOWN_INDICATORS))
+    typer.echo(
+        "Declared families validate but stop processing with an error until a "
+        "build implements their handler."
     )
