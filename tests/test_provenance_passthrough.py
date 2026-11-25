@@ -2,8 +2,8 @@
 
 import hashlib
 import json
-from unittest.mock import MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import geopandas as gpd
 import pandas as pd
