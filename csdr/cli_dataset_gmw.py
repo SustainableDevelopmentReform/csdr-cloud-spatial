@@ -2,10 +2,14 @@
 import asyncio
 import json
 import logging
+import posixpath
 import sys
+import tarfile
+from collections.abc import Callable
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
+from typing import IO
 from zipfile import ZipFile
 
 import typer
@@ -27,6 +31,9 @@ from csdr.utils import CSDRException, suppress_rust_output
 
 gmw_app = typer.Typer()
 logger = logging.getLogger(__name__)
+
+
+Archive = ZipFile | tarfile.TarFile
 
 
 async def cache_single_source(
@@ -170,13 +177,13 @@ def cache_gmw(
 
 async def process_single_file(
     out_cog_name: str,
-    zip_file: ZipFile,
+    open_member: Callable[[str], IO[bytes]],
     target_location: str,
     target_store: ObjectStore,
     overwrite: bool,
     semaphore: asyncio.Semaphore,
 ) -> None:
-    """Process a single file from the zip archive."""
+    """Process a single file from the archive (zip or tar.gz)."""
     async with semaphore:
         out_cog_url = f"{target_location}/{out_cog_name}"
         out_stac_name = out_cog_name.replace(".tif", ".stac-item.json")
@@ -194,7 +201,7 @@ async def process_single_file(
                 logger.info(f"STAC does not exist for {out_stac_url}, processing.")
 
         # Get the data from memory into a rasterio dataset
-        data = open_rasterio(zip_file.open(out_cog_name))
+        data = open_rasterio(open_member(out_cog_name))
 
         if type(data) is not xr.DataArray:  # skip
             logger.info(
@@ -248,6 +255,45 @@ async def process_single_file(
             )
 
 
+def _is_tif_member(name: str) -> bool:
+    # Exclude macOS AppleDouble resource-fork files (e.g. "._file.tif"), which
+    # end in ".tif" but aren't real GeoTIFFs.
+    return name.endswith(".tif") and not posixpath.basename(name).startswith("._")
+
+
+def _list_tif_members(archive: Archive) -> list[str]:
+    """Return the archive's member names for usable (non-hidden) .tif files."""
+    if isinstance(archive, tarfile.TarFile):
+        return [
+            member.name
+            for member in archive.getmembers()
+            if member.isfile() and _is_tif_member(member.name)
+        ]
+    return [name for name in archive.namelist() if _is_tif_member(name)]
+
+
+def _get_member_opener(
+    archive: Archive, member_names: list[str]
+) -> Callable[[str], IO[bytes]]:
+    """Return a callable that opens a member by its normalized output name."""
+    archive_names_by_output_name = {
+        posixpath.normpath(name): name for name in member_names
+    }
+
+    def open_member(output_name: str) -> IO[bytes]:
+        archive_name = archive_names_by_output_name[output_name]
+        if isinstance(archive, tarfile.TarFile):
+            member = archive.extractfile(archive_name)
+            if member is None:
+                raise CSDRException(
+                    f"Could not extract {archive_name} from tar.gz archive."
+                )
+            return member
+        return archive.open(archive_name)
+
+    return open_member
+
+
 async def run_extract_gmw(
     source_location: str,
     source_zip_name: str,
@@ -277,48 +323,51 @@ async def run_extract_gmw(
 
     target_store = get_store_with_prefix_from_url(target_location)
 
-    # Open the zip file, and extract all files into memory
+    # Open the archive, and extract all files into memory
     # Load the file as bytes first
     logger.info("Loading data into memory")
-    zip_bytes = BytesIO(store.get(source_zip_name).bytes())
+    archive_bytes = BytesIO(store.get(source_zip_name).bytes())
     logger.info("Finished loading data")
 
     # Create semaphore to limit concurrent operations
     semaphore = asyncio.Semaphore(max_concurrent)
 
-    with ZipFile(zip_bytes) as z:
-        # Get list of TIF files to process
-        tif_files = [name for name in z.namelist() if name.endswith(".tif")]
+    is_tar_gz = source_zip_name.endswith((".tar.gz", ".tgz"))
+
+    with (
+        tarfile.open(fileobj=archive_bytes, mode="r:gz")
+        if is_tar_gz
+        else ZipFile(archive_bytes)
+    ) as archive:
+        member_names = _list_tif_members(archive)
+        output_names = [posixpath.normpath(name) for name in member_names]
         logger.info(
-            f"Found {len(tif_files)} TIF files to process with max {max_concurrent} concurrent operations."
+            f"Found {len(output_names)} TIF files to process with max {max_concurrent} concurrent operations."
         )
-
-        # Create tasks for parallel processing
-        tasks = [
-            process_single_file(
-                name, z, target_location, target_store, overwrite, semaphore
-            )
-            for name in tif_files
-        ]
-
-        # Execute all tasks concurrently
-        await asyncio.gather(*tasks)
+        open_member = _get_member_opener(archive, member_names)
+        await asyncio.gather(
+            *[
+                process_single_file(
+                    name, open_member, target_location, target_store, overwrite, semaphore
+                )
+                for name in output_names
+            ]
+        )
 
     logger.info("GMW extraction process completed.")
 
 
-# This is run on a single source zip of many geotiffs.
-# Unzips. For each geotiff, writes COG and STAC item. Uses Rasterio to read geotiff into memory as xarray. writes COG using ODC. Make json using rio-stac and write it.
+# This is run on a single source archive (zip or tar.gz) of many geotiffs.
+# Extracts the archive. For each geotiff, writes COG and STAC item. Uses Rasterio to read geotiff into memory as xarray. writes COG using ODC. Make json using rio-stac and write it.
 @gmw_app.command("extract")
 def extract_gmw(
     source_location: str = typer.Option(
         ...,
         help="Local or remote path (local or s3://) to store the extracted GMW files.",
     ),
-    # This is just for the V3 workflow where we extract many zip files. Each zip file has an extract command so we could get rid of the source_zip_name param.
     source_zip_name: str = typer.Option(
         ...,
-        help="Name of the zip file to extract the GMW data from.",
+        help="Name of the zip or tar.gz file to extract the GMW data from.",
     ),
     target_location: str = typer.Option(
         ...,
