@@ -502,6 +502,10 @@ def consolidate_product(
         if file.endswith(".provenance.json"):
             logger.info(f"Skipping provenance file {file}")
             continue
+        if file.endswith(".method.json"):
+            # Run-level method record written beside vector-aggregate outputs.
+            logger.info(f"Skipping method file {file}")
+            continue
         product = read_dict(store, file)
         file_geometry_provenance_url = product.get("metadata", {}).get(
             "geometryProvenanceUrl", None
@@ -553,10 +557,18 @@ def consolidate_product(
     # Any single example is sufficient since they all share the same structure.
     # Replace the geometry-specific values with placeholders to show the template.
     first_product = all_data[0]
+    # vector-aggregate outputs share the format; their step points at that command.
+    aggregate = first_product.get("metadata", {}).get("vectorAggregate")
+    source_command = vector_aggregate_command if aggregate else process_geometry
     process_geometry_command = first_product.get("metadata", {}).get(
-        "command", "csdr products process-geometry"
+        "command",
+        "csdr products vector-aggregate"
+        if aggregate
+        else "csdr products process-geometry",
     )
-    first_datetime = first_product.get("timePoint", "")[:4]  # e.g. "2020"
+    # e.g. "2020". The vector-aggregate time point comes from its specification,
+    # not the command line, so its command keeps every value except the ids.
+    first_datetime = "" if aggregate else first_product.get("timePoint", "")[:4]
     process_geometry_command = _template_process_geometry_command(
         process_geometry_command, first_datetime
     )
@@ -565,16 +577,19 @@ def consolidate_product(
     # Each geometry is processed in its own pod, so we record a single
     # summary step here where the count is known.
     geom_count = int(len(all_data) / len(years))  # Assuming all geometries have a year
+    summary_inputs = {
+        "geometry_provenance_url": geometry_provenance_url,
+        "dataset_provenance_url": dataset_provenance_url,
+        "indicator_name": indicator_name,
+        "years": years,
+    }
+    if aggregate:
+        summary_inputs["specification_sha256"] = aggregate.get("specificationSha256")
     write_step(
-        label=f"Process {int(len(all_data) / len(years))} geometr{'ies' if geom_count != 1 else 'y'} for {len(years)} year{'s' if len(years) != 1 else ''} to compute indicators",
-        inputs={
-            "geometry_provenance_url": geometry_provenance_url,
-            "dataset_provenance_url": dataset_provenance_url,
-            "indicator_name": indicator_name,
-            "years": years,
-        },
+        label=f"{'Aggregate vector features for' if aggregate else 'Process'} {int(len(all_data) / len(years))} geometr{'ies' if geom_count != 1 else 'y'} for {len(years)} year{'s' if len(years) != 1 else ''} to compute indicators",
+        inputs=summary_inputs,
         outputs={"geometries_processed": geom_count},
-        source_function=process_geometry,
+        source_function=source_command,
         command=process_geometry_command,
     )
     write_step(
@@ -584,4 +599,76 @@ def consolidate_product(
             "indicator_name": indicator_name,
         },
         outputs={"target_url": target_url},
+    )
+
+
+@products_app.command("vector-aggregate")
+def vector_aggregate_command(
+    spec: str = typer.Option(
+        ...,
+        help="Version 1 vector-aggregate specification JSON (local path or store URL). See docs/vector-aggregate.md.",
+    ),
+    run_id: str = typer.Option(
+        ..., help="ID of the product run. Must equal the specification's productRunId."
+    ),
+    target_location: str = typer.Option(
+        ...,
+        help="Location for one JSON per geometry (<indicator or many-indicators>/<timePoint>/<productId>-<geometry id>.json) and the run's .method.json.",
+    ),
+    dataset_provenance_url: str = typer.Option(
+        ...,
+        help="Dataset provenance file of the specification's datasetRunId: a geoparquet dataUrl with the partition/ layout.",
+    ),
+    geometry_provenance_url: str = typer.Option(
+        ...,
+        help="Geometry provenance file of the specification's geometriesRunId (its dataUrl is the geometries parquet).",
+    ),
+    geometry_id: str | None = typer.Option(
+        None,
+        help="ID of the geometry to process. Give exactly one of --geometry-id, --geometry-ids or --all-geometries.",
+    ),
+    geometry_ids: str | None = typer.Option(
+        None,
+        help="Comma-separated geometry IDs processed one after another in this process, one output file each.",
+    ),
+    all_geometries: bool = typer.Option(
+        False,
+        "--all-geometries",
+        help="Process every geometry of the geometries parquet in this process (local runs).",
+    ),
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="Skip catalogue reads (run identity, indicator existence and units). Outputs are marked not-verified and area-ha unit checks are recorded as unchecked.",
+    ),
+    overwrite: bool = typer.Option(
+        False,
+        "--overwrite/--no-overwrite",
+        help="Replace existing per-geometry outputs. With --no-overwrite (default) finished geometries are skipped, so a retried batch resumes.",
+    ),
+) -> None:
+    """Aggregate a partitioned vector dataset over boundaries with declared counting rules."""
+    from csdr.vector_aggregate import run_vector_aggregate
+
+    given = sum(
+        [geometry_id is not None, geometry_ids is not None, bool(all_geometries)]
+    )
+    if given != 1:
+        raise CSDRException(
+            "Give exactly one of --geometry-id, --geometry-ids or --all-geometries."
+        )
+    ids = None if all_geometries else _resolve_geometry_ids(geometry_id, geometry_ids)
+    summary = run_vector_aggregate(
+        spec_url=spec,
+        run_id=run_id,
+        target_location=target_location,
+        dataset_provenance_url=dataset_provenance_url,
+        geometry_provenance_url=geometry_provenance_url,
+        geometry_ids=ids,
+        offline=offline,
+        overwrite=overwrite,
+    )
+    # No write_step: this command fans out; consolidate writes the summary step.
+    typer.echo(
+        f"Wrote {summary['written']} geometry output(s); skipped {summary['skipped']} finished."
     )
