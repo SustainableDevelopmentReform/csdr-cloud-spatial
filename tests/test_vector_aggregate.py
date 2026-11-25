@@ -498,6 +498,44 @@ def test_a_different_specification_cannot_mix_into_a_target(tmp_path: Path) -> N
     )
 
 
+def test_a_changed_specification_is_refused_when_every_output_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = build(tmp_path)
+    spec = spec_for(
+        [
+            {
+                "indicatorId": "count-a",
+                "measure": "count",
+                "class": {"column": "kind", "values": ["a"]},
+            }
+        ]
+    )
+    target = run(tmp_path, inputs, spec, "--all-geometries")
+    # The unchanged specification resumes as a no-op.
+    run(tmp_path, inputs, spec, "--geometry-ids", "main,half,empty", target=target)
+    changed = copy.deepcopy(spec)
+    changed["countingRule"] = "A different rule."
+    import csdr.vector_aggregate as engine
+
+    # Refused from the method record alone, before any input is read.
+    monkeypatch.setattr(
+        engine, "read_provenance", lambda url: pytest.fail("finished batch read inputs")
+    )
+    with pytest.raises(CSDRException, match="different specification"):
+        run(
+            tmp_path,
+            inputs,
+            changed,
+            "--geometry-ids",
+            "main,half,empty",
+            target=target,
+        )
+    assert output(target, "count-a")["metadata"]["vectorAggregate"][
+        "specificationSha256"
+    ] == engine.digest(spec)
+
+
 @pytest.mark.parametrize(
     "ids,message",
     [

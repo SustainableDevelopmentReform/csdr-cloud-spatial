@@ -757,6 +757,13 @@ def _partition_source(data_url: str) -> str:
     return prefix
 
 
+def _refuse_mixed_target(method_file: str) -> None:
+    _fail(
+        "This target already holds outputs of a different specification or input set "
+        f"({method_file}). Use a new target location, or --overwrite to replace them."
+    )
+
+
 def run_vector_aggregate(
     *,
     spec_url: str,
@@ -789,7 +796,17 @@ def run_vector_aggregate(
         if overwrite or not exists(store, output_path(spec, plan, one))
     ]
     skipped = len(geometry_ids) - len(pending)
+    method_file = method_path(spec, plan)
     if not pending:
+        # Nothing to measure, but a changed specification must still not be
+        # accepted silently: compare it with the run's method record. Only the
+        # specification is compared here, so a finished batch reads no inputs.
+        if (
+            not overwrite
+            and exists(store, method_file)
+            and read_dict(store, method_file).get("specificationSha256") != digest(spec)
+        ):
+            _refuse_mixed_target(method_file)
         logger.info("Every requested geometry already has an output; nothing to do.")
         return {"written": 0, "skipped": skipped}
 
@@ -816,16 +833,12 @@ def run_vector_aggregate(
         partition_source=partition_source,
         offline=offline,
     )
-    method_file = method_path(spec, plan)
     if (
         exists(store, method_file)
         and not overwrite
         and read_dict(store, method_file) != method
     ):
-        _fail(
-            "This target already holds outputs of a different specification or input set "
-            f"({method_file}). Use a new target location, or --overwrite to replace them."
-        )
+        _refuse_mixed_target(method_file)
 
     reader = None if offline else CatalogueReader.from_environment()
     before = (
