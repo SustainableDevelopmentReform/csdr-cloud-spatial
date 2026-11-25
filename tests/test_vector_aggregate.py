@@ -26,28 +26,6 @@ from csdr.vector_aggregate import validate_vector_aggregate_spec
 
 runner = CliRunner()
 
-
-def _parse_outputs_passes_metadata_through() -> bool:
-    frame = pd.DataFrame(
-        [
-            {
-                "timePoint": "t",
-                "geometryOutputId": "g",
-                "indicators": {"i": 1},
-                "metadata": {"m": 1},
-            }
-        ]
-    )
-    return "metadata" in parse_outputs(frame)["i"]["t"][0]
-
-
-# parse_outputs passes each row's metadata through to its outputs once the
-# metadata passthrough from issue #170 lands; until then the assertions that read
-# metadata back from parse_outputs are skipped, not weakened.
-needs_metadata_passthrough = pytest.mark.skipif(
-    not _parse_outputs_passes_metadata_through(),
-    reason="parse_outputs does not pass row metadata through yet",
-)
 ORIGIN = {"EPSG:3577": (1_000_000, -3_500_000), "EPSG:6933": (14_500_000, -4_000_000)}
 BOUNDARY = box(0, 0, 200, 100)  # 20,000 m²
 
@@ -751,7 +729,6 @@ def test_consolidate_and_parse_outputs_end_to_end(
     )
 
 
-@needs_metadata_passthrough
 def test_parse_outputs_carries_the_counting_rule_metadata(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

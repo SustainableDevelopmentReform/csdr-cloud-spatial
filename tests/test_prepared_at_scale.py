@@ -28,19 +28,6 @@ from csdr.utils import CSDRException
 
 runner = CliRunner()
 
-
-def _parse_outputs_skips_absent_values() -> bool:
-    frame = pd.DataFrame(
-        [{"timePoint": "t", "geometryOutputId": "g", "indicators": {"i": None}}]
-    )
-    return "i" not in parse_outputs(frame)
-
-
-# As in test_precomputed.py: gated on parse_outputs skipping absent values (#170 C4).
-needs_absent_value_skipping = pytest.mark.skipif(
-    not _parse_outputs_skips_absent_values(),
-    reason="parse_outputs does not skip absent (null/NaN) indicator values yet",
-)
 ROWS = [
     {"region_id": "region-101", "group": "x", "area_ha": 12.5, "count": 3, "note": "a"},
     {"region_id": "region-102", "group": "x", "area_ha": 0.0, "count": 0, "note": "b"},
@@ -277,7 +264,6 @@ def test_paginated_listing_contract(monkeypatch: pytest.MonkeyPatch) -> None:
         reader.list_records("geometries-run", "g", "outputs")
 
 
-@needs_absent_value_skipping
 def test_parquet_bindings_equal_the_json_path(tmp_path: Path) -> None:
     source = parquet_source(tmp_path)
     json_source = tmp_path / "source.json"

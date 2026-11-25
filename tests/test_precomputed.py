@@ -16,22 +16,6 @@ from csdr.products import parse_outputs
 from csdr.utils import CSDRException
 
 
-def _parse_outputs_skips_absent_values() -> bool:
-    frame = pd.DataFrame(
-        [{"timePoint": "t", "geometryOutputId": "g", "indicators": {"i": None}}]
-    )
-    return "i" not in parse_outputs(frame)
-
-
-# Parquet unions struct fields across rows, so an indicator absent from one row reads
-# back as null. parse_outputs skips those once issue #170 C4 lands; until then the
-# tests that rely on it are skipped, not weakened.
-needs_absent_value_skipping = pytest.mark.skipif(
-    not _parse_outputs_skips_absent_values(),
-    reason="parse_outputs does not skip absent (null/NaN) indicator values yet",
-)
-
-
 def fixture(tmp_path: Path) -> tuple[dict, dict, Path, Path]:
     document = {
         "provenance": {"origin": "Synthetic test source"},
@@ -128,7 +112,6 @@ def test_exact_values_null_receipt_and_existing_product_format(tmp_path: Path) -
     assert source.read_text() == json.dumps(document)
 
 
-@needs_absent_value_skipping
 def test_sparse_parquet_fields_never_become_values(tmp_path: Path) -> None:
     _, spec, source, spec_file = fixture(tmp_path)
     spec["bindings"][1]["geometryOutputId"] = "other-region"
