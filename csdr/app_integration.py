@@ -23,6 +23,8 @@ ORGANIZATION_HEADER = "x-sdf-active-organization-id"
 DEFAULT_CONNECT_TIMEOUT_SECONDS = 10.0
 DEFAULT_READ_TIMEOUT_SECONDS = 60.0
 MEMBERSHIP_RESPONSE_LIMIT_BYTES = 2 * 1024**2
+# Default cap on a read-only GET response body (catalogue records and pages).
+GET_RESPONSE_LIMIT_BYTES = 2 * 1024**2
 
 # (hostname, api key, organisation id) combinations already verified by this process.
 _verified_memberships: set[tuple[str, str, str]] = set()
@@ -148,6 +150,54 @@ def _post(url: str, json: dict) -> Response:
             "Check CSDR_API_HOSTNAME."
         )
     return response
+
+
+def _get(
+    url: str,
+    *,
+    hostname: str,
+    api_key: str,
+    organization_id: str | None = None,
+    limit_bytes: int = GET_RESPONSE_LIMIT_BYTES,
+) -> tuple[int, bytes]:
+    """Read-only GET with the same transport rules as ``_post``.
+
+    The organisation is checked with ``check_organization_membership`` and sent
+    in its header, ``request_timeout()`` applies and redirects are refused. The
+    body is streamed and refused above ``limit_bytes``. Returns the status and,
+    for HTTP 200 only, the body. Transport errors (``requests`` exceptions)
+    propagate for the caller to report without echoing URLs or headers.
+    """
+    check_organization_membership(hostname, api_key, organization_id)
+    headers = {
+        "x-api-key": api_key,
+        "Accept": "application/json",
+        **organization_headers(organization_id),
+    }
+    with requests.get(
+        url,
+        headers=headers,
+        allow_redirects=False,
+        timeout=request_timeout(),
+        stream=True,
+    ) as response:
+        status = response.status_code
+        if 300 <= status < 400:
+            # Following a redirect would resend the API key to another origin.
+            raise CSDRException(
+                f"The app API redirected the request (HTTP {status}). "
+                "Check CSDR_API_HOSTNAME."
+            )
+        if status != 200:
+            return status, b""
+        raw = bytearray()
+        for chunk in response.iter_content(64 * 1024):
+            raw.extend(chunk)
+            if len(raw) > limit_bytes:
+                raise CSDRException(
+                    f"The app API response exceeds {limit_bytes / 1024**2:g} MiB."
+                )
+        return status, bytes(raw)
 
 
 def post_provenance(
