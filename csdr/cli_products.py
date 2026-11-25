@@ -255,6 +255,11 @@ def process_geometry(
     use_dask: bool = typer.Option(
         False, help="Whether to use Dask distributed for processing"
     ),
+    raster_all_touched: bool = typer.Option(
+        True,
+        "--raster-all-touched/--raster-cell-centre",
+        help="Count every raster cell touched by the boundary (existing default), or select cells by their centres. Neither option apportions partial cell area. Recorded in the processing command.",
+    ),
     dask_client_opts: dict[str, str] = typer.Option(
         {},
         "--dask-opts",
@@ -350,6 +355,7 @@ def process_geometry(
                 datetime_string_match=datetime_string_match,
                 datetime_val=datetime_val,
                 load_kwargs=load_kwargs,
+                raster_all_touched=raster_all_touched,
             )
 
         # No write_step here — process-geometry fans out to many pods.
@@ -394,6 +400,7 @@ def _process_one_geometry(
     datetime_string_match: str | None,
     datetime_val: str,
     load_kwargs: dict[str, Any],
+    raster_all_touched: bool = True,
 ) -> None:
     """Compute and write one geometry's product JSON (the body of process-geometry)."""
     geometry_df = sd.sql(
@@ -422,6 +429,7 @@ def _process_one_geometry(
         dataset_provenance_url,
         datetime_string_match=datetime_string_match,
         load_kwargs=load_kwargs,
+        raster_all_touched=raster_all_touched,
     )
 
     product_output = _create_product_output(

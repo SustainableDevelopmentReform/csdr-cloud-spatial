@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 import pystac
 from obstore.store import ObjectStore
+from odc.geo.geobox import GeoBox
 from odc.geo.geom import Geometry
-from odc.geo.xr import mask
+from odc.geo.xr import rasterize
 from odc.stac import load
 from xarray import DataArray, Dataset
 
@@ -153,29 +154,72 @@ def load_xarray_stacgeoparquet(
     return data
 
 
+def raster_boundary_mask(
+    geobox: GeoBox, geometry_4326: Geometry, all_touched: bool = True
+) -> np.ndarray:
+    """Cells of ``geobox`` inside the boundary, as a 2-D boolean array.
+
+    This is the rasterisation every raster measurement uses: the boundary goes
+    from EPSG:4326 to EPSG:6933 and then to the grid's CRS, and is burned with
+    ``all_touched`` (every touched cell) or the cell-centre rule.
+    """
+    geom_6933 = geometry_4326.to_crs("EPSG:6933")
+    return rasterize(geom_6933, geobox, all_touched=all_touched).data
+
+
+def raster_valid_mask(
+    data: DataArray | np.ndarray, nodata: float | None
+) -> DataArray | np.ndarray:
+    """Finite cells that are not the nodata value (same type as ``data``)."""
+    valid = np.isfinite(data)
+    if nodata is not None:
+        valid = valid & (data != nodata)
+    return valid
+
+
 def xarray_calculate_area_m2(
     data: Dataset | DataArray,
     geometry_4326: Geometry,
     indicator: str | None = None,
     value_list: list[float] | None = None,
+    all_touched: bool = True,
 ) -> float:
+    """Area in m² of the valid cells inside the boundary (of the selected values).
+
+    A cell is valid when it is finite and not the band's nodata value; the
+    value selection applies to valid cells only, so a nodata value is never
+    counted. ``all_touched`` burns every cell the boundary touches (the
+    default); ``False`` selects cells by their centres.
+
+    With no valid cell inside the boundary the area is reported as 0.0 with a
+    warning, as it always has been for sum-<x>-area. The zonal statistics
+    families share the masks below but refuse a boundary without valid cells
+    (``ZonalCells.require_support``), because a mean of no cells is undefined.
+    """
     # Work with a dataarray, not a dataset, so it's a singular thing
     if type(data) is not DataArray:
         if indicator is None:
             raise CSDRException("Indicator must be specified when data is a Dataset.")
         data = data[indicator]
 
-    # Only select specific value/s. This will convert to float, with nans
-    if value_list is not None:
-        data = data.where(data.isin(value_list))
+    # Decide which cells are valid before selecting values, so a declared
+    # nodata value is never counted as data.
+    inside = raster_boundary_mask(data.odc.geobox, geometry_4326, all_touched)
+    valid = raster_valid_mask(data, data.odc.nodata) & inside
+    selected = valid if value_list is None else valid & data.isin(value_list)
 
-    # Mask out regions outside the geometry.
-    geom_6933 = geometry_4326.to_crs("EPSG:6933")
-    data = mask(data, geom_6933)
+    # Compute both counts together so a lazy source need not be read twice.
+    counts = Dataset(
+        {"valid_cells": valid.sum(), "selected_cells": selected.sum()}
+    ).compute()
+    if counts["valid_cells"].item() == 0:
+        logger.warning(
+            "No valid raster cells cover the requested geometry; reporting an area "
+            "of 0.0. Check the source coverage and reporting period."
+        )
+        return 0.0
 
-    # Count all the non-nan cells, and multiply by area
-    # This is where the data actally loads. Values calls dask compute.
-    count = float(data.notnull().sum().values)
+    count = float(counts["selected_cells"].item())
     one_pixel_area_m2 = abs(data.odc.geobox.resolution.x * data.odc.geobox.resolution.y)
 
     return round(float(count) * one_pixel_area_m2, 2)

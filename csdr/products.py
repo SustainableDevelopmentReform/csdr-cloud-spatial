@@ -36,6 +36,7 @@ def _get_area_m2_from_stac_geoparquet(
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
     load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
 ) -> float:
     """Calculate the area of the dataset within the given geometry."""
     # Get the STAC items filtered by geometry and datetime
@@ -53,7 +54,9 @@ def _get_area_m2_from_stac_geoparquet(
     )
 
     if not items or len(items) == 0:
-        logger.info(
+        # sum-<x>-area keeps reporting missing coverage as 0.0; the zonal
+        # statistics families refuse it instead.
+        logger.warning(
             "No STAC items found for the given geometry and datetime filter. Returning area of 0.0"
         )
         return 0.0
@@ -84,7 +87,11 @@ def _get_area_m2_from_stac_geoparquet(
 
     # Calculate area (m²). This also does the indicator/value/s filter.
     total_area_m2 = xarray_calculate_area_m2(
-        data[indicator], geometry_4326, indicator=indicator, value_list=value_list
+        data[indicator],
+        geometry_4326,
+        indicator=indicator,
+        value_list=value_list,
+        all_touched=raster_all_touched,
     )
 
     return total_area_m2
@@ -223,6 +230,7 @@ def _get_area_m2_from_dataset_geometry(
     value_list: list[float] | None = None,
     datetime_string_match: str | None = None,
     load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
 ) -> float:
     """Calculate the area (m²) of the dataset within the given geometry."""
 
@@ -236,6 +244,7 @@ def _get_area_m2_from_dataset_geometry(
             value_list,
             datetime_string_match=datetime_string_match,
             load_kwargs=load_kwargs,
+            raster_all_touched=raster_all_touched,
         )
     elif dataset_type == "geoparquet":
         # This path config is specific to the the partitioned ACA reef geoparquet structure.
@@ -327,6 +336,7 @@ def process_indicators_for_geometry(
     dataset_provenance_url: str,
     datetime_string_match: str | None = None,
     load_kwargs: dict | None = None,
+    raster_all_touched: bool = True,
 ) -> dict[str, str | float]:
     if load_kwargs is None:
         load_kwargs = {}
@@ -428,6 +438,7 @@ def process_indicators_for_geometry(
                     indicator=indicator_name,
                     value_list=indicator_value_list,
                     load_kwargs=load_kwargs,
+                    raster_all_touched=raster_all_touched,
                 )
                 total_indicator_area_m2 += area_m2
                 results[var_key] = total_indicator_area_m2

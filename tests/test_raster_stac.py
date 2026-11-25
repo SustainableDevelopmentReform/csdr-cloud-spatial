@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pystac
@@ -19,9 +20,12 @@ import rasterio.warp
 from obstore.store import LocalStore
 from pystac.validation.stac_validator import JsonSchemaSTACValidator
 from rasterio.transform import from_origin
+from shapely.geometry import box
 from typer.testing import CliRunner
 
+from csdr.cli import app as csdr_app
 from csdr.cli_conversion import conversion_app
+from csdr.cli_products import products_app
 from csdr.raster_stac import (
     classification_classes,
     plan_tiles,
@@ -801,3 +805,90 @@ def test_an_entirely_nodata_source_is_refused(tmp_path: Path) -> None:
             "--asset-name", "a", "--datetime", "2023",
         )  # fmt: skip
 
+
+# ---------------------------------------------------------------------------
+# stac index + process-geometry end to end
+# ---------------------------------------------------------------------------
+
+
+def write_provenance(path: Path, **fields: str) -> str:
+    path.write_text(json.dumps(fields))
+    return str(path)
+
+
+def test_stac_index_and_process_geometry_measure_class_area_without_nodata(
+    tmp_path: Path, categorical: Path, class_dbf: Path
+) -> None:
+    out = tmp_path / "raster"
+    convert(
+        "--source", str(categorical), "--target-location", str(out),
+        "--asset-name", "landcover", "--datetime", "2023-01-01", "--tile-size", "20",
+        "--classification-table", str(class_dbf),
+    )  # fmt: skip
+    item_paths = sorted(str(p) for p in (out / "items").glob("*.json"))
+    index = runner.invoke(
+        csdr_app,
+        [
+            "stac", "index", "--source-stac-items", ",".join(item_paths),
+            "--target-location", str(tmp_path / "index"), "--target-filename", "classes",
+        ],
+    )  # fmt: skip
+    assert index.exit_code == 0, index.output
+    parquet = tmp_path / "index" / "classes.parquet"
+    assert len(gpd.read_parquet(parquet)) == 8
+
+    # A boundary over pixel rows 15-34 and columns 5-44 (cell-centre rule; edges
+    # sit a quarter pixel past pixel edges). It crosses six tiles, the nodata
+    # column 0 is outside it, and it covers part of the nodata tile (rows 15-19,
+    # columns 40-44).
+    rows, cols = slice(15, 35), slice(5, 45)
+    x0, x1 = ORIGIN_X + (cols.start + 0.25) * RES, ORIGIN_X + (cols.stop + 0.25) * RES
+    y1, y0 = ORIGIN_Y - (rows.start + 0.25) * RES, ORIGIN_Y - (rows.stop + 0.25) * RES
+    boundary = gpd.GeoDataFrame(
+        {"csdr-id": ["zone"], "csdr-name": ["Zone"]},
+        geometry=[box(x0, y0, x1, y1)],
+        crs=CRS,
+    ).to_crs(4326)
+    boundary.to_parquet(tmp_path / "boundaries.parquet")
+    geometry_provenance = write_provenance(
+        tmp_path / "boundaries.parquet.provenance.json",
+        dataUrl=str(tmp_path / "boundaries.parquet"),
+    )
+    dataset_provenance = write_provenance(
+        tmp_path / "index" / "classes.parquet.provenance.json",
+        dataUrl=str(parquet),
+        dataType="stac-geoparquet",
+    )
+    result = runner.invoke(
+        products_app,
+        [
+            "process-geometry", "--product-id", "p", "--run-id", "r",
+            "--geometry-provenance-url", geometry_provenance,
+            "--dataset-provenance-url", dataset_provenance,
+            "--indicators-to-extract",
+            json.dumps(
+                {
+                    "sum-wet-area": {"indicator-name": "landcover", "indicator-value": 3},
+                    "sum-vegetated-area": {
+                        "indicator-name": "landcover", "indicator-value": "1,2,3",
+                    },
+                    "sum-mapped-area": {"indicator-name": "landcover"},
+                }
+            ),
+            "--datetime", "2023", "--target-location", str(tmp_path / "product"),
+            "--geometry-id", "zone", "--raster-cell-centre",
+        ],
+    )  # fmt: skip
+    assert result.exit_code == 0, result.output
+    output = json.loads(
+        (tmp_path / "product/many-indicators/2023/p-zone.json").read_text()
+    )
+    window = categorical_values()[rows, cols]
+    valid = window != NODATA
+    cell = RES * RES
+    assert output["indicators"]["sum-wet-area"] == (window == 3).sum() * cell
+    assert output["indicators"]["sum-vegetated-area"] == (
+        np.isin(window, [1, 2, 3]).sum() * cell
+    )
+    assert output["indicators"]["sum-mapped-area"] == valid.sum() * cell
+    assert valid.sum() < window.size  # nodata cells were inside and excluded
