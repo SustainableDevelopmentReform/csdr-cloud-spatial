@@ -155,6 +155,8 @@ python -m csdr.cli  eez cache \
 | `csdr provenance dataset\|geometry ... --source-sha256 --source-version-id --provenance-extra '<json>'`; `csdr provenance product ... --provenance-extra '<json>'` | Source identity (dataset and geometry only) and declarations in the provenance file and `provenanceJson` | [provenance-passthrough](docs/provenance-passthrough.md) |
 | `csdr helpers indicator-families [--json]` | Prints the indicator registry: families, implemented or declared, exact ids | [indicator-families](docs/indicator-families.md) |
 | `csdr products vector-aggregate --spec <json> --run-id R --target-location <dir> (--geometry-id \| --geometry-ids \| --all-geometries) [--offline]` | Declared counting rules over a partitioned vector dataset: clipped area (union or per-feature sum), counts by relation (`intersects`, `within`/`contains`, `centroid-within`, `representative-point-within`, `covers-boundary`), whole-feature attribute sums, distinct values; `process-geometry` output format for `consolidate` | [vector-aggregate](docs/vector-aggregate.md) |
+| `csdr products bind-regions --geometries-run-id R --key-column <attr>` | Bindings template with one binding per geometry output (key to `geometryOutputId`) for `prepare-precomputed` | [precomputed-products](docs/precomputed-products.md#generating-bindings-bind-regions) |
+| `csdr products prepare-precomputed --source <json or parquet> --spec <json> --output <dir> [--source-format parquet [--key-column C]]` | Copies explicitly bound pre-computed values (JSON Pointers into a pinned JSON or Parquet source) into product rows, with a receipt and read-only catalogue checks; no recalculation | [precomputed-products](docs/precomputed-products.md) |
 
 ### Debugging
 

@@ -584,6 +584,17 @@ product-vector-fixture-vector-aggregate-consolidate-local:
 		--dataset-provenance-url=./cache/datasets/vector-fixture/0-0-1/features.parquet.provenance.json \
 		--indicator-name=many-indicators
 
+# Prepared values at scale (docs/precomputed-products.md): a bindings template with one
+# binding per region of the fixture regions (geometry-vector-fixture-convert-local first),
+# keyed by the name attribute.
+product-bind-regions-local:
+	csdr products bind-regions \
+		--geometries-run-id=vector-fixture-regions-run \
+		--key-column=name \
+		--key-template='region-{key}' \
+		--offline-geometries-url=$(VECTOR_FIXTURE_REGIONS)/regions.parquet \
+		--out-file=./cache/tmp/bindings-template.json
+
 
 ### PRODUCTS ###
 
