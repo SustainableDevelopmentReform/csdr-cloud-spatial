@@ -72,10 +72,9 @@ csdr provenance dataset --id <dataset-id> --dataset-url <file> --dataset-type pa
   --provenance-extra '{"precomputedSource": {"version": 1, "sourceSha256": "<64 hex>", "role": "context"}}'
 ```
 
-The command checks the actual product parents, boundary output membership, units,
-organisation and access decision (a `metadata.preparedViewAccess` on a run must be
-`{"version": 1, "status": "available"}`). It requires a fresh product run ID and
-checks the catalogue before and after the projection. It does not independently
+The command checks the actual product parents, boundary output membership, units
+and organisation. It requires a fresh product run ID and checks the catalogue
+before and after the projection. It does not independently
 certify source rights or scientific quality.
 
 The new directory contains `product.parquet` and `method.json`. The receipt
@@ -148,10 +147,9 @@ After review, use the existing storage and provenance/output import
 workflow. Register the original method as pre-computed, preserve the receipt,
 and set the main run explicitly only after read-back verification. This command
 does not provide atomic catalogue promotion or make mutable output rows immutable.
-Prepared API views still need a pinned value digest and current access checks.
 
 Tests: `tests/test_precomputed.py` and `tests/test_prepared_at_scale.py`. They cover
 real Parquet read-back, the existing parser, input tampering, sparse and null fields,
-concurrent catalogue changes, incorrect parent, geography, organisation, unit and
-access declarations, keyed and indexed Parquet pointers, and `bind-regions` templates
+concurrent catalogue changes, incorrect parent, geography, organisation and unit
+declarations, keyed and indexed Parquet pointers, and `bind-regions` templates
 from the catalogue and from a geometries parquet.

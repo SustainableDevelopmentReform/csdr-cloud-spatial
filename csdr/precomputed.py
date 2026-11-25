@@ -401,18 +401,6 @@ def _related(record: dict, key: str) -> str | None:
     return value.get("id") if isinstance(value, dict) else None
 
 
-def _available(record: dict) -> None:
-    metadata = record.get("metadata")
-    if isinstance(metadata, dict) and "preparedViewAccess" in metadata:
-        decision = metadata["preparedViewAccess"]
-        if (
-            not isinstance(decision, dict)
-            or decision.get("version") != 1
-            or decision.get("status") != "available"
-        ):
-            _fail("A catalogue input is withheld or has an invalid access decision.")
-
-
 def verify_catalogue(spec: dict, reader: CatalogueReader) -> dict:
     """Identity/units checks, not a licence or scientific approval decision."""
     product = reader.read("product", spec["productId"])
@@ -432,8 +420,6 @@ def verify_catalogue(spec: dict, reader: CatalogueReader) -> dict:
         or _related(product, "geometries") != _related(geometry, "geometries")
     ):
         _fail("The product and input runs do not form the same catalogue chain.")
-    for record in (dataset, geometry):
-        _available(record)
     provenance = dataset.get("provenanceJson")
     declaration = (
         provenance.get("precomputedSource") if isinstance(provenance, dict) else None

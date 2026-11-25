@@ -186,12 +186,6 @@ def test_source_identity_and_ambiguous_json_fail_before_output(tmp_path: Path) -
             "unit differs",
         ),
         (
-            lambda r: r.records[("dataset-run", "dr")].update(
-                metadata={"preparedViewAccess": {"version": 1, "status": "withheld"}}
-            ),
-            "withheld",
-        ),
-        (
             lambda r: r.records[("dataset-run", "dr")]["provenanceJson"][
                 "precomputedSource"
             ].update(sourceSha256="0" * 64),
