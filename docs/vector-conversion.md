@@ -11,7 +11,7 @@ sources: a geometry set (with `csdr-id`/`csdr-name`) or a `geoparquet` dataset t
 
 ```bash
 csdr convert vector-to-geoparquet \
-  --source <path or s3:// or https:// URL to .shp|.zip|.gpkg|.geojson|.json|.parquet> \
+  --source <path or s3:// or https:// URL to .shp|.zip|.gpkg|.geojson|.json|.parquet|.geoparquet> \
   --target-location <dir> [--target-filename <slug>] \
   [--zip-member <path in zip>] [--layer <layer>] [--where "<SQL WHERE>"] [--keep-columns a,b] \
   [--filter-geometry <vector file> [--clip]] \
@@ -52,6 +52,8 @@ and `--append`.
 ## Coordinate reference systems
 
 - `<slug>.parquet` keeps the source's native CRS, as `zip-to-parquet` always has.
+- A `.geoparquet` source is read as GeoParquet, the same as `.parquet`. The default slug is its stem,
+  so `register.geoparquet` gives `register.parquet`.
 - Partition files are an EPSG:4326 copy. The product engine intersects partitions with
   EPSG:4326 boundaries (SedonaDB refuses mismatched CRS arguments), so the `geoparquet`
   dataset contract requires it. Area is measured in EPSG:6933.

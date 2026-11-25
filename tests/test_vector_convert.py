@@ -892,3 +892,27 @@ def test_local_bare_shapefile_records_its_sidecar_hashes(
         name: sha256(folder / name)
         for name in ("features.shx", "features.dbf", "features.prj", "features.cpg")
     }
+
+
+def test_geoparquet_extension_is_a_geoparquet_source(
+    tmp_path: Path, steps_dir: Path
+) -> None:
+    # Register exports often use the .geoparquet extension for the same format.
+    source = tmp_path / "register.geoparquet"
+    shutil.copy(VECTOR / "features.parquet", source)
+    convert("--source", str(source), "--target-location", str(tmp_path / "all"))
+    assert len(gpd.read_parquet(tmp_path / "all" / "register.parquet")) == 3
+    assert last_step(steps_dir)["inputs"]["source_sha256"] == sha256(source)
+    convert(
+        "--source",
+        str(source),
+        "--target-location",
+        str(tmp_path / "filtered"),
+        "--where",
+        "state = 'A'",
+        "--partition",
+    )
+    filtered = gpd.read_parquet(tmp_path / "filtered" / "register.parquet")
+    assert sorted(filtered["name"]) == ["big", "north"]
+    assert last_step(steps_dir)["inputs"]["where_engine"] == "sedonadb-sql"
+    assert list((tmp_path / "filtered" / "partition").glob("register_*.parquet"))
