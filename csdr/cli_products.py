@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import sys
 from typing import Any
 
@@ -9,6 +10,7 @@ import pandas as pd
 import sedona.db
 import typer
 from dask.distributed import Client
+from obstore.store import ObjectStore
 from odc.geo.geom import Geometry
 
 from csdr.cli_helpers import parse_csv_list
@@ -159,6 +161,11 @@ def list_geometries_years(
     out_file: str = typer.Option(
         None, help="Tempfile to write list of IDs to (otherwise print to console)"
     ),
+    batch_size: int | None = typer.Option(
+        None,
+        min=1,
+        help='Group ids into batches of up to N per year: [{"year": y, "ids": "a,b,c"}] for process-geometry --geometry-ids. Without it, one {"year", "id"} item per geometry (unchanged).',
+    ),
 ) -> None:
     logger.info(f"Dumping list of geometry ids for {geometry_provenance_url}")
 
@@ -184,9 +191,14 @@ def list_geometries_years(
     years_list = parse_csv_list(years)
     geometries_years = []
     for year in years_list:
-        for id in ids_list:
-            item = {"year": year, "id": id}
-            geometries_years.append(item)
+        if batch_size is None:
+            for id in ids_list:
+                item = {"year": year, "id": id}
+                geometries_years.append(item)
+        else:
+            for start in range(0, len(ids_list), batch_size):
+                batch = ids_list[start : start + batch_size]
+                geometries_years.append({"year": year, "ids": ",".join(batch)})
 
     if out_file is not None:
         target_path, target_file_name = split_path_and_file_name_from_url(out_file)
@@ -227,9 +239,13 @@ def process_geometry(
         ...,
         help="Location to write the JSON result to",
     ),
-    geometry_id: str = typer.Option(
-        ..., help="ID of the geometry to process."
+    geometry_id: str | None = typer.Option(
+        None, help="ID of the geometry to process. Give this or --geometry-ids."
     ),  # This is the actual single geometry being processed. Not to be confused with the EEZ Geometry. This is one geometry within that i.e. one EEZ e.g. Fiji.
+    geometry_ids: str | None = typer.Option(
+        None,
+        help="Comma-separated geometry IDs processed one after another in this process (one Dask client), one output file each, so consolidate and --no-overwrite work as for single ids. Give this or --geometry-id.",
+    ),
     load_kwargs: dict[str, str] = typer.Option(
         {},
         "--load-kwargs",
@@ -249,8 +265,9 @@ def process_geometry(
         False, help="If true, overwrite existing product file"
     ),
 ) -> None:
+    ids = _resolve_geometry_ids(geometry_id, geometry_ids)
     logger.info(
-        f"Processing geometry id '{geometry_id}' from '{geometry_provenance_url}'"
+        f"Processing {len(ids)} geometry id(s) {ids} from '{geometry_provenance_url}'"
     )
     logger.info(f"Run ID: '{run_id}'")
     logger.info(f"indicators_to_extract (raw JSON): {indicators_to_extract}")
@@ -280,17 +297,27 @@ def process_geometry(
         ]  # Use the only item's indicator-name
     else:
         indicator_for_path = "many-indicators"
-    target_path = get_product_path(
-        product_id,
-        indicator_for_path,
-        datetime=datetime_val,
-        geometry_id=geometry_id,
-    )
-    target_url = f"{target_location}/{target_path}"
-    if exists(target_store, target_path) and not overwrite:
-        logger.info(f"Product already exists at {target_url}, skipping processing.")
+
+    # One output file per geometry, exactly as for a single id. Finished ids are
+    # skipped before any source is read, so a retried batch resumes.
+    pending = []
+    for one_id in ids:
+        target_path = get_product_path(
+            product_id,
+            indicator_for_path,
+            datetime=datetime_val,
+            geometry_id=one_id,
+        )
+        target_url = f"{target_location}/{target_path}"
+        if exists(target_store, target_path) and not overwrite:
+            logger.info(f"Product already exists at {target_url}, skipping processing.")
+            continue
+        pending.append((one_id, target_path, target_url))
+    if not pending:
         return  # Exit successfully, nothing to do
-    logger.info("JSON doesn't exist or overwrite is True, processing geometry.")
+    logger.info(
+        f"{len(pending)} of {len(ids)} geometries to process (JSON missing or overwrite is True)."
+    )
 
     # Load geometry data using Sedona so filtering is done before loading into memory
     # TODO: Make this a function get_geometry_parquet_sedona
@@ -302,6 +329,73 @@ def process_geometry(
         geometry_file_url,
         options={"aws.skip_signature": True, "aws.region": aws_region},
     ).to_view("geometries", overwrite=True)
+
+    # Set up Dask client once for the whole batch
+    client = _setup_dask_client(use_dask, dask_client_opts)
+
+    try:
+        for one_id, target_path, target_url in pending:
+            _process_one_geometry(
+                sd,
+                geometry_file_url,
+                one_id,
+                target_store,
+                target_path,
+                target_url,
+                product_id=product_id,
+                run_id=run_id,
+                geometry_provenance_url=geometry_provenance_url,
+                dataset_provenance_url=dataset_provenance_url,
+                indicators_dict=indicators_dict,
+                datetime_string_match=datetime_string_match,
+                datetime_val=datetime_val,
+                load_kwargs=load_kwargs,
+            )
+
+        # No write_step here — process-geometry fans out to many pods.
+        # A single summary step is written by consolidate instead.
+
+    finally:
+        # Release resources
+        if client is not None:
+            client.close()
+
+
+def _resolve_geometry_ids(
+    geometry_id: str | None, geometry_ids: str | None
+) -> list[str]:
+    """Exactly one of --geometry-id / --geometry-ids; a batch is unique and non-empty."""
+    if (geometry_id is None) == (geometry_ids is None):
+        raise CSDRException("Give exactly one of --geometry-id or --geometry-ids.")
+    if geometry_id is not None:
+        return [geometry_id]
+    ids = [one_id.strip() for one_id in parse_csv_list(geometry_ids)]
+    if not ids or any(not one_id for one_id in ids):
+        raise CSDRException("--geometry-ids must be a comma-separated list of ids.")
+    duplicates = sorted({one_id for one_id in ids if ids.count(one_id) > 1})
+    if duplicates:
+        raise CSDRException(f"--geometry-ids repeats ids: {duplicates}")
+    return ids
+
+
+def _process_one_geometry(
+    sd: sedona.db.context.SedonaContext,
+    geometry_file_url: str,
+    geometry_id: str,
+    target_store: ObjectStore,
+    target_path: str,
+    target_url: str,
+    *,
+    product_id: str,
+    run_id: str,
+    geometry_provenance_url: str,
+    dataset_provenance_url: str,
+    indicators_dict: dict[str, Any],
+    datetime_string_match: str | None,
+    datetime_val: str,
+    load_kwargs: dict[str, Any],
+) -> None:
+    """Compute and write one geometry's product JSON (the body of process-geometry)."""
     geometry_df = sd.sql(
         f'SELECT st_srid(geometry) as crs, geometry, "csdr-name", "csdr-id" FROM geometries WHERE "csdr-id" = \'{geometry_id}\''
     ).to_pandas()
@@ -322,39 +416,42 @@ def process_geometry(
     )  # ODC Geometry object. This is just one geometry.
     geometry_4326 = geometry_native.to_crs("EPSG:4326")
 
-    # Set up Dask client
-    client = _setup_dask_client(use_dask, dask_client_opts)
+    results = process_indicators_for_geometry(
+        geometry_4326,
+        indicators_dict,
+        dataset_provenance_url,
+        datetime_string_match=datetime_string_match,
+        load_kwargs=load_kwargs,
+    )
 
-    try:
-        results = process_indicators_for_geometry(
-            geometry_4326,
-            indicators_dict,
-            dataset_provenance_url,
-            datetime_string_match=datetime_string_match,
-            load_kwargs=load_kwargs,
-        )
+    product_output = _create_product_output(
+        product_id,
+        geometry_id,
+        geometry_provenance_url,
+        dataset_provenance_url,
+        datetime_val,
+        results,
+        run_id,
+    )
 
-        product_output = _create_product_output(
-            product_id,
-            geometry_id,
-            geometry_provenance_url,
-            dataset_provenance_url,
-            datetime_val,
-            results,
-            run_id,
-        )
+    logger.info(f"Writing to {target_url}. target_path: {target_path}...")
+    write_json(target_store, target_path, product_output)
+    logger.info(f"Wrote results to {target_url}")
 
-        logger.info(f"Writing to {target_url}. target_path: {target_path}...")
-        write_json(target_store, target_path, product_output)
-        logger.info(f"Wrote results to {target_url}")
 
-        # No write_step here — process-geometry fans out to many pods.
-        # A single summary step is written by consolidate instead.
+def _template_process_geometry_command(command: str, first_datetime: str) -> str:
+    """Replace the geometry-specific values of a process-geometry command with placeholders.
 
-    finally:
-        # Release resources
-        if client is not None:
-            client.close()
+    Only the values of --geometry-id and --geometry-ids are templated (both the
+    "--opt value" and "--opt=value" forms), so an id that also occurs inside
+    another value is left alone.
+    """
+    # A batched run lists several ids; template the whole list.
+    command = re.sub(r"(--geometry-ids(?:=|\s+))\S+", r"\1{geometry_ids}", command)
+    command = re.sub(r"(--geometry-id(?:=|\s+))\S+", r"\1{geometry_id}", command)
+    if first_datetime:
+        command = command.replace(first_datetime, "{datetime}")
+    return command
 
 
 @products_app.command("consolidate")
@@ -459,16 +556,10 @@ def consolidate_product(
     process_geometry_command = first_product.get("metadata", {}).get(
         "command", "csdr products process-geometry"
     )
-    first_geometry_id = first_product.get("geometryOutputId", "")
     first_datetime = first_product.get("timePoint", "")[:4]  # e.g. "2020"
-    if first_geometry_id:
-        process_geometry_command = process_geometry_command.replace(
-            first_geometry_id, "{geometry_id}"
-        )
-    if first_datetime:
-        process_geometry_command = process_geometry_command.replace(
-            first_datetime, "{datetime}"
-        )
+    process_geometry_command = _template_process_geometry_command(
+        process_geometry_command, first_datetime
+    )
 
     # Write a summary step for the fan-out process-geometry work.
     # Each geometry is processed in its own pod, so we record a single
