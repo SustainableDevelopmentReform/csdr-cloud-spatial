@@ -542,6 +542,48 @@ product-batched-list-geometries-years-local:
 helpers-indicator-families:
 	csdr helpers indicator-families
 
+# Vector aggregation with declared counting rules (docs/vector-aggregate.md), on the fixture:
+# run convert-vector-fixture-local and convert-vector-fixture-provenance-local first. The
+# fixture features double as the regions; the example spec uses placeholder ids, so --offline.
+VECTOR_AGGREGATE_RUN := ./cache/products/vector-fixture-aggregate/0-0-1/runs/example-vector-product-run
+VECTOR_FIXTURE_REGIONS := ./cache/geometries/vector-fixture-regions/0-0-1/runs/vector-fixture-regions-run
+
+geometry-vector-fixture-convert-local:
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/features.geojson \
+		--name-field=name \
+		--geometry-id=vector-fixture-regions \
+		--target-location=$(VECTOR_FIXTURE_REGIONS) \
+		--target-filename=regions
+
+geometry-vector-fixture-provenance-local:
+	csdr provenance geometry \
+		--id=vector-fixture-regions \
+		--run-id=vector-fixture-regions-run \
+		--geometry-url=$(VECTOR_FIXTURE_REGIONS)/regions.parquet \
+		--source-url=$(VECTOR_FIXTURES)/features.geojson \
+		--source-metadata-url=https://example.org/vector-fixture \
+		--geometry-type=geoparquet \
+		--overwrite
+
+product-vector-fixture-vector-aggregate-local:
+	csdr products vector-aggregate \
+		--spec=examples/vector-aggregate/example-spec.json \
+		--run-id=example-vector-product-run \
+		--target-location=$(VECTOR_AGGREGATE_RUN) \
+		--dataset-provenance-url=./cache/datasets/vector-fixture/0-0-1/features.parquet.provenance.json \
+		--geometry-provenance-url=$(VECTOR_FIXTURE_REGIONS)/regions.parquet.provenance.json \
+		--all-geometries \
+		--offline
+
+product-vector-fixture-vector-aggregate-consolidate-local:
+	csdr products consolidate \
+		--product-id=example-vector-product \
+		--location=$(VECTOR_AGGREGATE_RUN) \
+		--geometry-provenance-url=$(VECTOR_FIXTURE_REGIONS)/regions.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/vector-fixture/0-0-1/features.parquet.provenance.json \
+		--indicator-name=many-indicators
+
 
 ### PRODUCTS ###
 
