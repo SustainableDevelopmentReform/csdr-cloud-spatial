@@ -672,3 +672,97 @@ def vector_aggregate_command(
     typer.echo(
         f"Wrote {summary['written']} geometry output(s); skipped {summary['skipped']} finished."
     )
+
+
+@products_app.command("prepare-precomputed")
+def prepare_precomputed_command(
+    source: str = typer.Option(
+        ...,
+        help="Pinned local JSON (or, with --source-format parquet, Parquet) containing pre-computed values.",
+    ),
+    spec: str = typer.Option(
+        ..., help="Version 1 explicit value bindings and provenance declaration."
+    ),
+    output: str = typer.Option(
+        ..., help="New local directory for product.parquet and method.json."
+    ),
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="Skip catalogue reads for preparation review; receipt remains unverified.",
+    ),
+    source_format: str = typer.Option(
+        "json",
+        help="json (default) or parquet. A Parquet source is projected to /rows/<index>/<column>, or with --key-column to /rows/<key>/<column>. sourceSha256 is the hash of the source file's bytes either way.",
+    ),
+    key_column: str | None = typer.Option(
+        None,
+        help="Parquet only: column (or comma-separated columns, one pointer level each) whose unique values key /rows. Without it, rows are addressed by index.",
+    ),
+) -> None:
+    """Prepare existing values for SDF without recalculating or posting them."""
+    from pathlib import Path
+
+    from csdr.precomputed import prepare_precomputed
+
+    receipt = prepare_precomputed(
+        Path(source),
+        Path(spec),
+        Path(output),
+        offline=offline,
+        source_format=source_format,
+        key_columns=parse_csv_list(key_column) if key_column else None,
+    )
+    typer.echo(
+        f"Prepared {receipt['valueCount']} values in {receipt['rowCount']} product rows. No catalogue records changed."
+    )
+
+
+@products_app.command("bind-regions")
+def bind_regions_command(
+    geometries_run_id: str = typer.Option(
+        ..., help="Geometries run whose geometry outputs are bound."
+    ),
+    key_column: str | None = typer.Option(
+        None,
+        help="Geometry-output attribute holding each region's key (properties, then metadata; offline: a column of the geometries parquet). Required with --key-source metadata.",
+    ),
+    key_source: str = typer.Option(
+        "metadata",
+        help="Where the key comes from: metadata (the --key-column attribute), name (csdr-name) or csdr-id (the geometry output id).",
+    ),
+    key_template: str | None = typer.Option(
+        None,
+        help="Pattern applied to each key, with {key} once, e.g. 'region-{key}', so keys match the prepared source's key column.",
+    ),
+    out_file: str = typer.Option(
+        "bindings-template.json",
+        help="New local file for the bindings template (an existing file is not overwritten).",
+    ),
+    offline_geometries_url: str | None = typer.Option(
+        None,
+        help="Read this geometries parquet (csdr-id, csdr-name and attribute columns) instead of the catalogue; geometryOutputId = csdr-id.",
+    ),
+) -> None:
+    """Generate a prepare-precomputed bindings template with one binding per region."""
+    from pathlib import Path
+
+    from csdr.precomputed import bind_regions
+
+    target = Path(out_file)
+    if target.exists():
+        raise CSDRException(f"{out_file} exists. Choose a new bindings template path.")
+    template = bind_regions(
+        geometries_run_id,
+        key_column=key_column,
+        key_source=key_source,
+        key_template=key_template,
+        offline_geometries_url=offline_geometries_url,
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("x") as stream:
+        json.dump(template, stream, indent=2, allow_nan=False)
+        stream.write("\n")
+    typer.echo(
+        f"Wrote {len(template['bindings'])} region bindings to {out_file}. Replace every {{{{...}}}} placeholder (one binding per indicator) before prepare-precomputed."
+    )
