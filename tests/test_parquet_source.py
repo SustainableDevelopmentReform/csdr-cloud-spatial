@@ -137,6 +137,27 @@ def test_limit_prevents_download(monkeypatch: pytest.MonkeyPatch) -> None:
     client.get_object.assert_not_called()
 
 
+def test_staging_limit_comes_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = Mock()
+    client.head_object.return_value = {"ContentLength": 20, "ETag": "revision"}
+    monkeypatch.setattr("csdr.parquet_source.boto3.client", lambda service: client)
+    monkeypatch.setenv("CSDR_PARQUET_SOURCE_MAX_BYTES", "10")
+    with (
+        pytest.raises(CSDRException, match="staging limit"),
+        parquet_source("s3://private-bucket/Agency/Source.parquet"),
+    ):
+        pytest.fail("Oversized input must not be read")
+    client.get_object.assert_not_called()
+    monkeypatch.setenv("CSDR_PARQUET_SOURCE_MAX_BYTES", "0")
+    with (
+        pytest.raises(CSDRException, match="must be positive"),
+        parquet_source("s3://private-bucket/Agency/Source.parquet"),
+    ):
+        pytest.fail("A zero limit must be refused")
+
+
 def test_private_download_is_measured_by_real_sedona(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

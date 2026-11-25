@@ -4,7 +4,8 @@ Three cases, decided before any bytes are read:
 
 * A single S3 object with resolvable AWS credentials is staged to disk with the
   normal boto3 chain (profile, environment, pod role, temporary credentials),
-  pinned by ETag and VersionId, after a size and disk-space check. The reader
+  pinned by ETag and VersionId, after a size and disk-space check (size limit
+  CSDR_PARQUET_SOURCE_MAX_BYTES, default 8 GiB, or ``max_bytes``). The reader
   gets a local path. No credentials are handed to the reader.
 * An S3 prefix (a key ending in ``/``, or a key with no object but with
   children) is passed through unchanged. Partitioned datasets such as
@@ -145,7 +146,7 @@ def parquet_source(
     limit = (
         max_bytes
         if max_bytes is not None
-        else int(os.environ.get("CSDR_PRIVATE_PARQUET_MAX_BYTES", str(8 * 1024**3)))
+        else int(os.environ.get("CSDR_PARQUET_SOURCE_MAX_BYTES", str(8 * 1024**3)))
     )
     if limit <= 0:
         raise CSDRException("The private Parquet staging limit must be positive.")
