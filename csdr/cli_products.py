@@ -12,6 +12,11 @@ from dask.distributed import Client
 from odc.geo.geom import Geometry
 
 from csdr.cli_helpers import parse_csv_list
+from csdr.indicators import (
+    KNOWN_INDICATORS,  # noqa: F401  (re-exported for existing callers)
+    unknown_indicator_message,
+    unknown_indicators,
+)
 from csdr.io import (
     exists,
     get_store_with_prefix_from_url,
@@ -28,26 +33,10 @@ from csdr.utils import CSDRException, make_uuid
 products_app = typer.Typer()
 logger = logging.getLogger(__name__)
 
-# In future we will get indicators/variables from the DB.
-# In future, indicators will be called indicators and can be computed or derived (currently only computed).
-# There are currently 3 types of indicators:
-# 1. sum-{}-area: for area-based indicators
-# 2. count-{}: for count-based indicators
-# 3. percent-{}-area: for percentage area-based indicators
-# There will likely be a more diverse set of indicators in the future.
-KNOWN_INDICATORS = [
-    "sum-mangrove-area",  # Used for GMW v3, GMW v4, and ACE
-    "sum-seagrass-area",  # Used for seagrass and ACE
-    "sum-reef-area",
-    "count-buildings",
-    # ACE indicators:
-    "sum-intertidal-area",
-    "sum-saltmarsh-area",
-    "percent-mangrove-area",
-    "percent-intertidal-area",
-    "percent-saltmarsh-area",
-    "percent-seagrass-area",
-]
+# Indicator ids are validated against the registry in csdr.indicators: regex
+# families (sum-<x>-area, percent-<x>-area, count-<x>, and declared families
+# that later builds implement) plus the exact-id allow-list KNOWN_INDICATORS,
+# which stays importable from here for existing callers.
 
 
 def _validate_parameters(
@@ -56,10 +45,9 @@ def _validate_parameters(
     datetime_string_match: str | None,
 ) -> str:
     """Validate parameters and return the datetime to use."""
-    if set(indicators_to_extract) - set(KNOWN_INDICATORS):
-        raise CSDRException(
-            f"Unknown indicator to extract: {indicators_to_extract}. Known indicators are: {KNOWN_INDICATORS}"
-        )
+    unknown = unknown_indicators(indicators_to_extract)
+    if unknown:
+        raise CSDRException(unknown_indicator_message(unknown))
     if datetime is None:
         if datetime_string_match is None:
             raise CSDRException(
