@@ -90,6 +90,7 @@ def convert_zipfile_to_parquet(
         make_valid=False,
         overwrite=overwrite,
         drop_empty=False,
+        count_invalid=False,
     )
     if result.skipped:
         logger.info(
@@ -247,7 +248,8 @@ def convert_vector_to_geoparquet(
             geometry_id=geometry_id,
             layer_column_value=layer_column_value,
             append=append or None,
-            grid_chunks=grid_chunks if partition else None,
+            # Also when existing partitions were rewritten without --partition.
+            grid_chunks=grid_chunks if result.partition_count is not None else None,
             make_valid=make_valid,
             method_notes=method_notes(result, make_valid) or None,
         ),

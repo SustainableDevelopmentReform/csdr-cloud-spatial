@@ -175,7 +175,7 @@ def test_resume_with_no_overwrite_skips_finished_ids(
     finished.write_text(json.dumps({"sentinel": True}))
 
     processed = []
-    import csdr.cli_products as cli_products
+    from csdr import cli_products
 
     real = cli_products.process_indicators_for_geometry
 
