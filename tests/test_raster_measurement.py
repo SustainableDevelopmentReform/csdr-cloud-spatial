@@ -16,7 +16,7 @@ from shapely.geometry import box
 
 from csdr.utils import xarray_calculate_area_m2
 
-NO_COVERAGE_WARNING = "No valid raster cells cover the requested geometry"
+NO_COVERAGE_WARNING = "No valid raster cells in this part of the geometry"
 
 
 @pytest.mark.parametrize("chunked", [False, True])

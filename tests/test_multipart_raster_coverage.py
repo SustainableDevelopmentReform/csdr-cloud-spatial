@@ -80,7 +80,7 @@ def test_a_part_without_valid_cells_adds_zero_with_a_warning(
     with caplog.at_level(logging.WARNING, logger="csdr.utils"):
         result = calculate(MIXED, reverse=reverse)
     assert result == {"sum-mangrove-area": 200.0, "sum-saltmarsh-area": 200.0}
-    assert "No valid raster cells cover the requested geometry" in caplog.text
+    assert "No valid raster cells in this part of the geometry" in caplog.text
 
 
 def test_wholly_unsupported_geometry_is_reported_as_zero_area() -> None:

@@ -799,6 +799,14 @@ def _zonal_statistics_metadata(
     return metadata
 
 
+# Run-level keys that process-geometry writes on every row. They are already in
+# the product run's provenance, so they are not posted again with each output
+# (the full command line and store paths would inflate every posted value).
+RUN_LEVEL_METADATA_KEYS = frozenset(
+    ("command", "geometryProvenanceUrl", "datasetProvenanceUrl")
+)
+
+
 def _metadata_json_value(value: object) -> object:
     # Parquet structs read through pandas can contain NumPy arrays/scalars.
     # Convert them without rounding coordinates or other captured evidence.
@@ -811,7 +819,9 @@ def parse_outputs(df: pd.DataFrame) -> dict:
     """Group a consolidated product's rows by indicator and time point.
 
     Each output carries the row's ``metadata`` (method parameters and cell
-    counts from process-geometry), converted to plain JSON values. Absent
+    counts from process-geometry), converted to plain JSON values, without the
+    run-level keys in ``RUN_LEVEL_METADATA_KEYS``; when nothing else remains
+    the output has no ``metadata`` key, as before. Absent
     values (None or NaN) are skipped: Parquet unions struct fields across
     rows, so an indicator missing from one row reads back as null, which is
     not an observed value and which the app rejects.
@@ -820,18 +830,26 @@ def parse_outputs(df: pd.DataFrame) -> dict:
 
     for _, row in df.iterrows():
         timePoint = row["timePoint"]
+        metadata = None
+        if isinstance(row.get("metadata"), dict):
+            kept = {
+                key: value
+                for key, value in row["metadata"].items()
+                if key not in RUN_LEVEL_METADATA_KEYS
+            }
+            if kept:
+                metadata = json.loads(
+                    json.dumps(kept, default=_metadata_json_value, allow_nan=False)
+                )
         for indicator, value in row["indicators"].items():
             if value is None or pd.isna(value):
                 continue
             if indicator not in outputs:
                 outputs[indicator] = {}
             output = {"geometryOutputId": row["geometryOutputId"], "value": value}
-            if isinstance(row.get("metadata"), dict):
-                output["metadata"] = json.loads(
-                    json.dumps(
-                        row["metadata"], default=_metadata_json_value, allow_nan=False
-                    )
-                )
+            if metadata is not None:
+                # A copy per output, so callers can edit one without the others.
+                output["metadata"] = json.loads(json.dumps(metadata))
 
             if timePoint not in outputs[indicator]:
                 outputs[indicator][timePoint] = []

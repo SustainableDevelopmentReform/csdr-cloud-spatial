@@ -38,7 +38,7 @@ def sha256(path: Path) -> str:
 
 
 def last_step(steps_dir: Path) -> dict:
-    return json.loads(sorted(steps_dir.glob("step-*.json"))[-1].read_text())
+    return json.loads(max(steps_dir.glob("step-*.json")).read_text())
 
 
 def convert(*args: str) -> None:
@@ -563,8 +563,14 @@ def test_zip_to_parquet_accepts_geojson_and_geopackage_members(
 
 
 def test_zip_to_parquet_shapefile_keeps_its_historical_output(
-    tmp_path: Path, steps_dir: Path
+    tmp_path: Path, steps_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # zip-to-parquet neither repairs nor records invalid geometries, so it must
+    # not pay for the per-feature validity scan.
+    monkeypatch.setattr(
+        "csdr.vector_convert.repair_geometries",
+        lambda *args: pytest.fail("zip-to-parquet must not scan geometry validity"),
+    )
     result = runner.invoke(
         conversion_app,
         [
@@ -793,6 +799,8 @@ def test_existing_partitions_are_rewritten_on_append_and_overwrite(
     outputs = last_step(steps_dir)["outputs"]
     assert outputs["partition_rewritten"] is True
     assert outputs["partition_count"] >= 1
+    # The grid used for the rewrite is recorded even without --partition.
+    assert last_step(steps_dir)["inputs"]["grid_chunks"] == 10
 
     # A plain overwrite without --partition also rewrites them.
     convert(

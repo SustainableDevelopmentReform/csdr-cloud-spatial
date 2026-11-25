@@ -238,8 +238,7 @@ def xarray_calculate_area_m2(
     ).compute()
     if counts["valid_cells"].item() == 0:
         logger.warning(
-            "No valid raster cells cover the requested geometry; reporting an area "
-            "of 0.0. Check the source coverage and reporting period."
+            "No valid raster cells in this part of the geometry; it contributes 0.0 m²."
         )
         return 0.0
 
@@ -470,7 +469,8 @@ def xarray_zonal_cells(
     if extent is not None:
         in_extent = raster_extent_mask(geobox, extent)
         if in_extent is not None:
-            inside = inside & in_extent
+            # In place, so no third full-grid boolean array is allocated.
+            np.logical_and(inside, in_extent, out=inside)
 
     array = data.data
     lazy = dask.is_dask_collection(array)

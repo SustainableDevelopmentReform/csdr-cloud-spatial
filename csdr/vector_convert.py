@@ -492,6 +492,7 @@ def convert_vector(
     make_valid: bool = True,
     overwrite: bool = True,
     drop_empty: bool = True,
+    count_invalid: bool = True,
 ) -> ConversionResult:
     """Convert one vector source; see the module docstring for the outputs.
 
@@ -511,6 +512,9 @@ def convert_vector(
 
     ``drop_empty`` removes null or empty geometries (after repair and clip)
     before writing and counts them.
+
+    ``count_invalid=False`` with ``make_valid=False`` skips the per-feature
+    validity scan, for callers that neither repair nor record the count.
     """
     declared_sha256 = normalise_sha256(source_sha256)
     if append and layer_column_value is None:
@@ -587,7 +591,12 @@ def convert_vector(
             )
         gdf = gdf[[*wanted, "geometry"]]
 
-    gdf, invalid_count = repair_geometries(gdf, make_valid)
+    if make_valid or count_invalid:
+        gdf, invalid_count = repair_geometries(gdf, make_valid)
+    else:
+        # Nothing is repaired or recorded, so the per-feature is_valid scan (costly
+        # on large multipolygon layers) is skipped.
+        invalid_count = 0
     if invalid_count:
         action = "repaired with " + MAKE_VALID_METHOD if make_valid else "left as-is"
         logger.warning(f"{invalid_count} invalid geometries {action}.")
