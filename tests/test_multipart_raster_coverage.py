@@ -13,15 +13,20 @@ import pytest
 from odc.geo.geobox import GeoBox
 from odc.geo.geom import Geometry
 from odc.geo.xr import wrap_xr
-from shapely.geometry import MultiPolygon, box
+from shapely.geometry import MultiPolygon, Polygon, box
 
 from csdr.products import process_indicators_for_geometry
 from csdr.utils import xarray_calculate_area_m2
 
 
 def calculate(
-    values, *, reverse=False, indicators=None, all_touched=False, parts=None
-):
+    values: list[list[int]],
+    *,
+    reverse: bool = False,
+    indicators: dict | None = None,
+    all_touched: bool = False,
+    parts: list[Polygon] | None = None,
+) -> dict:
     grid = GeoBox.from_bbox((0, 0, 60, 20), crs="EPSG:6933", resolution=10)
     data = wrap_xr(np.array(values, dtype="uint8"), grid, nodata=255)
     parts = parts or [box(0, 0, 20, 20), box(40, 0, 60, 20)]
@@ -29,7 +34,9 @@ def calculate(
         MultiPolygon(list(reversed(parts)) if reverse else parts), crs=6933
     ).to_crs(4326)
 
-    def measure(sd, url, kind, part, **kwargs):
+    def measure(
+        sd: object, url: str, kind: str, part: Geometry, **kwargs: object
+    ) -> float:
         return xarray_calculate_area_m2(
             data,
             part,

@@ -26,6 +26,7 @@ from typer.testing import CliRunner
 from csdr.cli import app as csdr_app
 from csdr.cli_conversion import conversion_app
 from csdr.cli_products import products_app
+from csdr.products import parse_outputs
 from csdr.raster_stac import (
     classification_classes,
     plan_tiles,
@@ -892,3 +893,111 @@ def test_stac_index_and_process_geometry_measure_class_area_without_nodata(
     )
     assert output["indicators"]["sum-mapped-area"] == valid.sum() * cell
     assert valid.sum() < window.size  # nodata cells were inside and excluded
+
+
+def test_raster_to_stac_to_area_and_zonal_statistics_through_consolidate(
+    tmp_path: Path, categorical: Path, class_dbf: Path
+) -> None:
+    """raster-to-stac -> stac index -> process-geometry -> consolidate -> parse_outputs.
+
+    The area sum and the zonal statistics families run in one process-geometry
+    call over a boundary that crosses six tiles and part of the skipped
+    all-nodata tile (rows 0-19, columns 40-49), which no item covers.
+    """
+    out = tmp_path / "raster"
+    convert(
+        "--source", str(categorical), "--target-location", str(out),
+        "--asset-name", "landcover", "--datetime", "2023-01-01", "--tile-size", "20",
+        "--classification-table", str(class_dbf),
+    )  # fmt: skip
+    item_paths = sorted(str(p) for p in (out / "items").glob("*.json"))
+    index = runner.invoke(
+        csdr_app,
+        [
+            "stac", "index", "--source-stac-items", ",".join(item_paths),
+            "--target-location", str(tmp_path / "index"), "--target-filename", "classes",
+        ],
+    )  # fmt: skip
+    assert index.exit_code == 0, index.output
+    parquet = tmp_path / "index" / "classes.parquet"
+
+    # Pixel rows 15-34 and columns 5-44 under the cell-centre rule.
+    rows, cols = slice(15, 35), slice(5, 45)
+    x0, x1 = ORIGIN_X + (cols.start + 0.25) * RES, ORIGIN_X + (cols.stop + 0.25) * RES
+    y1, y0 = ORIGIN_Y - (rows.start + 0.25) * RES, ORIGIN_Y - (rows.stop + 0.25) * RES
+    gpd.GeoDataFrame(
+        {"csdr-id": ["zone"], "csdr-name": ["Zone"]},
+        geometry=[box(x0, y0, x1, y1)],
+        crs=CRS,
+    ).to_crs(4326).to_parquet(tmp_path / "boundaries.parquet")
+    geometry_provenance = write_provenance(
+        tmp_path / "boundaries.parquet.provenance.json",
+        dataUrl=str(tmp_path / "boundaries.parquet"),
+    )
+    dataset_provenance = write_provenance(
+        tmp_path / "index" / "classes.parquet.provenance.json",
+        dataUrl=str(parquet),
+        dataType="stac-geoparquet",
+    )
+    indicators = {
+        "sum-wet-area": {"indicator-name": "landcover", "indicator-value": 3},
+        "mean-landcover": {"indicator-name": "landcover"},
+        "p50-landcover": {"indicator-name": "landcover"},
+        "valid-fraction-landcover": {"indicator-name": "landcover"},
+        "distinct-landcover-count": {
+            "indicator-name": "landcover", "indicator-value": "1,2,3",
+        },
+    }  # fmt: skip
+    target = tmp_path / "product"
+    result = runner.invoke(
+        products_app,
+        [
+            "process-geometry", "--product-id", "p", "--run-id", "r",
+            "--geometry-provenance-url", geometry_provenance,
+            "--dataset-provenance-url", dataset_provenance,
+            "--indicators-to-extract", json.dumps(indicators),
+            "--datetime", "2023", "--target-location", str(target),
+            "--geometry-id", "zone", "--raster-cell-centre",
+        ],
+    )  # fmt: skip
+    assert result.exit_code == 0, result.output
+    consolidated = runner.invoke(
+        products_app,
+        [
+            "consolidate", "--product-id", "p", "--location", str(target),
+            "--geometry-provenance-url", geometry_provenance,
+            "--dataset-provenance-url", dataset_provenance,
+            "--indicator-name", "many-indicators",
+        ],
+    )  # fmt: skip
+    assert consolidated.exit_code == 0, consolidated.output
+    table = pd.read_parquet(target / "many-indicators" / "p.parquet")
+    outputs = parse_outputs(table)
+
+    # Expected values from the source array, independently of the implementation.
+    window = categorical_values()[rows, cols]
+    r, c = np.indices((50, 50))
+    in_extent = ~((r < 20) & (c >= 40))[rows, cols]  # the skipped tile is no source
+    valid = (window != NODATA) & in_extent
+    values = window[valid].astype("float64")
+    assert in_extent.sum() < window.size  # part of the boundary has no source
+
+    def value(indicator: str) -> object:
+        [row] = outputs[indicator]["2023-01-01T00:00:00Z"]
+        assert row["geometryOutputId"] == "zone"
+        return row["value"]
+
+    assert value("sum-wet-area") == (window[valid] == 3).sum() * RES * RES
+    assert value("mean-landcover") == pytest.approx(values.mean(), rel=1e-12)
+    assert value("p50-landcover") == np.quantile(values, 0.5)
+    assert value("valid-fraction-landcover") == valid.sum() / in_extent.sum()
+    assert value("distinct-landcover-count") == len(set(values) & {1.0, 2.0, 3.0})
+    [row] = outputs["mean-landcover"]["2023-01-01T00:00:00Z"]
+    metadata = row["metadata"]
+    assert metadata["rasterCellRule"] == "cell-centre"
+    assert metadata["percentileMethod"] == "linear"
+    assert metadata["zonalCellCounts"]["landcover"] == {
+        "boundaryCells": int(in_extent.sum()),
+        "validCells": int(valid.sum()),
+        "extentSource": "proj",
+    }
