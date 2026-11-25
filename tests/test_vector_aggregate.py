@@ -776,7 +776,11 @@ def test_parse_outputs_carries_the_counting_rule_metadata(
         row["geometryOutputId"]: row
         for row in outputs["sum-a-area"]["2024-06-30T00:00:00Z"]
     }
+    # Run-level keys (command and provenance URLs) are not posted per output; the
+    # counting rule and the per-measure record are.
+    assert set(by_geometry["main"]["metadata"]) == {"vectorAggregate"}
     meta = by_geometry["main"]["metadata"]["vectorAggregate"]
+    assert meta["countingRule"] == spec_for([])["countingRule"]
     assert meta["measures"]["count-r"]["relation"] == "within"
     assert meta["measures"]["sum-a-area"]["class"] == {
         "column": "kind",
