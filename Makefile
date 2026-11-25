@@ -440,6 +440,109 @@ geometry-pacific-eez-filter-s3:
 # These are from here https://github.com/digitalearthpacific/dep-tools/blob/main/dep_tools/grids.py
 # Only difference is I had to rename 'Pitcairn Islands' to 'Pitcairn'.
 
+### GENERIC VECTOR CONVERSION ###
+# csdr convert vector-to-geoparquet: see docs/vector-conversion.md.
+# The fixture targets run as-is from a checkout; the others expect the raw files under ./cache.
+VECTOR_FIXTURES := tests/data/vector
+SHA256 = $(shell python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" $(1))
+
+# A zipped shapefile to a partitioned geoparquet dataset (process-geometry reads partition/).
+convert-vector-fixture-local:
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/features_shp.zip \
+		--target-location=./cache/datasets/vector-fixture/0-0-1 \
+		--target-filename=features \
+		--partition
+
+convert-vector-fixture-provenance-local:
+	csdr provenance dataset \
+		--id=vector-fixture \
+		--dataset-url=./cache/datasets/vector-fixture/0-0-1/features.parquet \
+		--dataset-type=geoparquet \
+		--source-url=$(VECTOR_FIXTURES)/features_shp.zip \
+		--source-metadata-url=https://example.org/vector-fixture \
+		--source-sha256=$(call SHA256,$(VECTOR_FIXTURES)/features_shp.zip) \
+		--overwrite
+
+# One GeoPackage layer, attribute-filtered at read time.
+convert-vector-gpkg-layer-local:
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/layers.gpkg \
+		--layer=parks \
+		--where="state = 'A'" \
+		--target-location=./cache/datasets/vector-fixture-parks/0-0-1 \
+		--target-filename=parks \
+		--partition
+
+# Three sources into one dataset with a layer column (measure layers separately; do not sum
+# them where they overlap). Re-running replaces each layer's rows instead of duplicating them.
+convert-vector-layers-local:
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/layers.gpkg \
+		--layer=parks \
+		--layer-column-value=parks \
+		--target-location=./cache/datasets/vector-fixture-layers/0-0-1 \
+		--target-filename=layers \
+		--append \
+		--partition
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/layers.gpkg \
+		--layer=forests \
+		--layer-column-value=forests \
+		--target-location=./cache/datasets/vector-fixture-layers/0-0-1 \
+		--target-filename=layers \
+		--append \
+		--partition
+	csdr convert vector-to-geoparquet \
+		--source=$(VECTOR_FIXTURES)/features_shp.zip \
+		--where="name = 'east'" \
+		--layer-column-value=reserves \
+		--target-location=./cache/datasets/vector-fixture-layers/0-0-1 \
+		--target-filename=layers \
+		--append \
+		--partition
+
+# Rows of a large-area source filtered to one region's boundary (the source has no region
+# attribute). Whole features are kept; add --clip only when the inside part alone should be measured.
+convert-vector-region-filtered-local:
+	csdr convert vector-to-geoparquet \
+		--source=./cache/datasets/large-area-source/0-0-1/raw/features.parquet \
+		--filter-geometry=./cache/geometries/region-boundary/0-0-1/region.parquet \
+		--target-location=./cache/datasets/large-area-source-region/0-0-1 \
+		--target-filename=features \
+		--partition
+
+# A large source on a finer partition grid (4.5 degree cells).
+convert-vector-large-local:
+	csdr convert vector-to-geoparquet \
+		--source=./cache/datasets/large-source/0-0-1/raw/source.zip \
+		--target-location=./cache/datasets/large-source/0-0-1 \
+		--target-filename=source \
+		--partition \
+		--grid-chunks=40
+
+# A geometry set: filtered, named, tiled.
+convert-vector-geometry-local:
+	csdr convert vector-to-geoparquet \
+		--source=./cache/geometries/regions/0-0-1/raw/regions.zip \
+		--where="REGION_CODE = '1'" \
+		--name-field=REGION_NAME \
+		--target-location=./cache/geometries/regions/0-0-1/runs/test-run-id \
+		--create-pmtiles
+
+# Batched fan-out (docs/fan-out-batching.md): one item per 20 geometries per year.
+product-batched-list-geometries-years-local:
+	csdr products list-geometries-years \
+		--geometry-provenance-url=./cache/geometries/regions/0-0-1/runs/test-run-id/regions.parquet.provenance.json \
+		--years="2024" \
+		--batch-size=20 \
+		--out-file=./cache/tmp/geometry-batches.json
+
+# Indicator registry (docs/indicator-families.md).
+helpers-indicator-families:
+	csdr helpers indicator-families
+
+
 ### PRODUCTS ###
 
 # Product GMW EEZ V4.

@@ -144,6 +144,17 @@ python -m csdr.cli  eez cache \
   --overwrite
 ```
 
+### Generic processing commands
+
+| Command | What it does | Docs |
+|---|---|---|
+| `csdr convert vector-to-geoparquet` | Shapefile (bare or zipped), GeoPackage, GeoJSON or GeoParquet to `<slug>.parquet` (native CRS), optional `partition/` (EPSG:4326, the `geoparquet` dataset layout), PMTiles, read-time `--where`, `--filter-geometry`/`--clip`, `--layer-column-value`/`--append`, `csdr-id`/`csdr-name`, source SHA-256 | [vector-conversion](docs/vector-conversion.md) |
+| `csdr convert zip-to-parquet` | Unchanged interface; the zip member may also be a GeoPackage or GeoJSON | [vector-conversion](docs/vector-conversion.md#zip-to-parquet) |
+| `csdr products list-geometries-years --batch-size N` | Items `{"year", "ids": "a,b,c"}` for batched fan-out (per-id items without it) | [fan-out-batching](docs/fan-out-batching.md) |
+| `csdr products process-geometry --geometry-ids a,b,c` | Several geometries in one process and Dask client, one output file each; resumes with `--no-overwrite` | [fan-out-batching](docs/fan-out-batching.md) |
+| `csdr provenance dataset\|geometry ... --source-sha256 --source-version-id --provenance-extra '<json>'`; `csdr provenance product ... --provenance-extra '<json>'` | Source identity (dataset and geometry only) and declarations in the provenance file and `provenanceJson` | [provenance-passthrough](docs/provenance-passthrough.md) |
+| `csdr helpers indicator-families [--json]` | Prints the indicator registry: families, implemented or declared, exact ids | [indicator-families](docs/indicator-families.md) |
+
 ### Debugging
 
 Debug any command by adding this to a line in Python before running:
