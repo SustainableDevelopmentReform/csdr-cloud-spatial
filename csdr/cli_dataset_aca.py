@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import typer
 from obstore.store import ObjectStore
@@ -16,10 +15,9 @@ from csdr.io import (
     exists,
     find_matching_files,
     get_store_with_prefix_from_url,
-    write_gdf_to_parquet,
 )
 from csdr.provenance import write_step
-from csdr.utils import CSDRException
+from csdr.utils import CSDRException, partition_parquet
 
 aca_app = typer.Typer()
 logger = logging.getLogger(__name__)
@@ -137,67 +135,6 @@ def extract_aca(
     )
 
 
-# _partition_parquet partitions a large GeoParquet file into smaller Parquet files based on a global grid.
-# _partition_parquet could be moved to utils if needed for other datasets too.
-def _partition_parquet(
-    target_store: ObjectStore,
-    gdf: gpd.GeoDataFrame,
-    grid_chunks: int = 10,
-    overwrite: bool = True,
-) -> None:
-    # Default size is 20 x 10 grid cells of 18 x 18 degrees. Large countries will be spread over many partitions, medium and small countries hopefully fit into 1 or 2.
-    # Number of edges is one more than number of intervals
-    grid_size_lon = (
-        grid_chunks * 2 + 1
-    )  # Default is 20 longitude cells each 360 / 20 = 18 degrees wide
-    grid_size_lat = (
-        grid_chunks + 1
-    )  # Default is 10 latitude cells each 180 / 10 = 18 degrees high
-
-    # Define grid edges
-    lon_edges = np.linspace(-180, 180, grid_size_lon)
-    lat_edges = np.linspace(-90, 90, grid_size_lat)
-    # Get centroid coordinates
-    gdf["lon"] = gdf.geometry.centroid.x
-    gdf["lat"] = gdf.geometry.centroid.y
-
-    # Assign grid cell indices
-    gdf["lon_bin"] = pd.cut(gdf["lon"], lon_edges, labels=False, include_lowest=True)
-    gdf["lat_bin"] = pd.cut(gdf["lat"], lat_edges, labels=False, include_lowest=True)
-
-    # Create a partition label
-    gdf["partition"] = gdf["lon_bin"].astype(str) + "_" + gdf["lat_bin"].astype(str)
-
-    # Delete all files in partition/ folder first if overwrite is on. Otherwise if partition settings are changed, reading the data will be broken due to duplication in different partition structures.
-    if overwrite:
-        logger.info("Overwrite is on, deleting existing partition files ...")
-        partition_files = find_matching_files(
-            target_store, prefix="partition/", pattern=r"\.parquet$"
-        )
-        print(f"Deleting {len(partition_files)} partition files...")
-        for file in partition_files:
-            print(f"Deleting file {file}...")
-            target_store.delete(f"{file}")
-        logger.info("Deleted all partitioned Parquet files ...")
-    else:
-        logger.info("Overwrite is off, existing partition files will be preserved ...")
-
-    # Write each partition to a separate Parquet file
-    for partition, group in gdf.groupby("partition"):
-        file_name = f"partition/reefextent_{partition}.parquet"
-        file_exists = exists(target_store, file_name)
-        if (file_exists and overwrite) or not file_exists:
-            # Remove columns, then write partitioned file
-            gdf_partition = group.drop(
-                ["lon", "lat", "lon_bin", "lat_bin", "partition"], axis=1
-            )
-            write_gdf_to_parquet(gdf_partition, target_store, file_name)
-        else:
-            logger.info(
-                f"Skipping partition {partition}, already exists and overwrite is off."
-            )
-
-
 def _write_gdf_to_pmtiles(
     gdf: gpd.GeoDataFrame,
     target_store: ObjectStore,
@@ -285,7 +222,13 @@ async def _run_index_aca(
         )
 
     logger.info("Starting partitioning of the merged GeoParquet ...")
-    _partition_parquet(target_store, merged_gdf, grid_chunks=10, overwrite=overwrite)
+    partition_parquet(
+        target_store,
+        merged_gdf,
+        grid_chunks=10,
+        overwrite=overwrite,
+        file_prefix="reefextent",
+    )
     logger.info("Partitioning completed.")
 
 
