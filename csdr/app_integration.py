@@ -1,12 +1,13 @@
 import json
 import logging
 import os
+from collections.abc import Iterable
 from typing import Literal
 
 import requests
 from requests import Response
 
-from csdr.provenance import WORKFLOW_TEMPLATE_FIELDS
+from csdr.provenance import PROVENANCE_JSON_ONLY_KEYS, WORKFLOW_TEMPLATE_FIELDS
 from csdr.utils import CSDRException
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,9 @@ def _post(url: str, json: dict) -> Response:
 def post_provenance(
     provenance: dict[str, str | int | dict[str, str | int]],
     type: Literal["dataset", "geometry", "product"],
+    json_only_keys: Iterable[str] = (),
 ) -> Response:
+    """Post a run. ``json_only_keys`` stay in ``provenanceJson`` only."""
     # Check for API key
     _check_api_key()
 
@@ -195,8 +198,9 @@ def post_provenance(
     provenance_copy.pop("sourceUrl", None)
     provenance_copy.pop("sourceMetadataUrl", None)
     provenance_copy.pop("provenanceUpdated", None)
-    # Workflow template references are kept in provenanceJson only.
-    for key in WORKFLOW_TEMPLATE_FIELDS:
+    # Workflow template references, source identity and --provenance-extra
+    # declarations are kept in provenanceJson only.
+    for key in (*WORKFLOW_TEMPLATE_FIELDS, *PROVENANCE_JSON_ONLY_KEYS, *json_only_keys):
         provenance_copy.pop(key, None)
     provenance_copy["provenanceJson"] = provenance
 
