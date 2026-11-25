@@ -530,6 +530,50 @@ convert-vector-geometry-local:
 		--target-location=./cache/geometries/regions/0-0-1/runs/test-run-id \
 		--create-pmtiles
 
+### GENERIC RASTER CONVERSION ###
+# csdr convert raster-to-stac, then csdr stac index: see docs/raster-to-stac.md.
+# These expect the raw files under ./cache. Set GDAL_CACHEMAX (MB) on a large machine.
+# One tiling per target and slug: the index targets index every items/*.json, and a re-run
+# with another tiling removes the earlier tiling's items (use a fresh target to keep it).
+
+# A categorical raster (for example a fine-resolution class map in a projected CRS) in
+# 1 degree tiles, classes and a grouping field from its value attribute table, plus a
+# display copy for map display.
+convert-raster-categorical-local:
+	csdr convert raster-to-stac \
+		--source=./cache/datasets/raster-categorical/0-0-1/raw/classes.tif \
+		--target-location=./cache/datasets/raster-categorical/0-0-1 \
+		--target-filename=classes \
+		--asset-name=classes \
+		--datetime=2023-01-01 \
+		--tile-degrees=1 \
+		--classification-table=./cache/datasets/raster-categorical/0-0-1/raw/classes.tif.vat.dbf \
+		--class-extra-columns=group \
+		--display-copy=./cache/datasets/raster-categorical/0-0-1/display
+
+convert-raster-categorical-index-local:
+	csdr stac index \
+		--source-stac-items="$$(ls $(CURDIR)/cache/datasets/raster-categorical/0-0-1/items/*.json | paste -sd, -)" \
+		--target-location=./cache/datasets/raster-categorical/0-0-1 \
+		--target-filename=classes \
+		--dataset-name="Categorical raster"
+
+# A continuous raster (for example an index between 0 and 1) as one item.
+convert-raster-continuous-local:
+	csdr convert raster-to-stac \
+		--source=./cache/datasets/raster-continuous/0-0-1/raw/index.tif \
+		--target-location=./cache/datasets/raster-continuous/0-0-1 \
+		--target-filename=index \
+		--asset-name=index \
+		--datetime=2023-01-01
+
+convert-raster-continuous-index-local:
+	csdr stac index \
+		--source-stac-items="$$(ls $(CURDIR)/cache/datasets/raster-continuous/0-0-1/items/*.json | paste -sd, -)" \
+		--target-location=./cache/datasets/raster-continuous/0-0-1 \
+		--target-filename=index \
+		--dataset-name="Continuous raster"
+
 # Batched fan-out (docs/fan-out-batching.md): one item per 20 geometries per year.
 product-batched-list-geometries-years-local:
 	csdr products list-geometries-years \

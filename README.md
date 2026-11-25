@@ -149,6 +149,7 @@ python -m csdr.cli  eez cache \
 | Command | What it does | Docs |
 |---|---|---|
 | `csdr convert vector-to-geoparquet` | Shapefile (bare or zipped), GeoPackage, GeoJSON or GeoParquet to `<slug>.parquet` (native CRS), optional `partition/` (EPSG:4326, the `geoparquet` dataset layout), PMTiles, read-time `--where`, `--filter-geometry`/`--clip`, `--layer-column-value`/`--append`, `csdr-id`/`csdr-name`, source SHA-256 | [vector-conversion](docs/vector-conversion.md) |
+| `csdr convert raster-to-stac` | One GeoTIFF band to COGs (never warped: native CRS, grid, dtype, nodata) on pixel-aligned tiles (`--tile-size`/`--tile-degrees`, all-nodata tiles skipped), one STAC item each (`proj`, `raster:bands`, `classification:classes` from a `.dbf`/`.csv`/`.json`/`.aux.xml` table) and `collection.json`, optional display copy, source SHA-256; then `csdr stac index` for `stac-geoparquet` | [raster-to-stac](docs/raster-to-stac.md) |
 | `csdr convert zip-to-parquet` | Unchanged interface; the zip member may also be a GeoPackage or GeoJSON | [vector-conversion](docs/vector-conversion.md#zip-to-parquet) |
 | `csdr products list-geometries-years --batch-size N` | Items `{"year", "ids": "a,b,c"}` for batched fan-out (per-id items without it) | [fan-out-batching](docs/fan-out-batching.md) |
 | `csdr products process-geometry --geometry-ids a,b,c` | Several geometries in one process and Dask client, one output file each; resumes with `--no-overwrite` | [fan-out-batching](docs/fan-out-batching.md) |
