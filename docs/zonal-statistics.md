@@ -116,7 +116,10 @@ when the percentile is computed); prefer the histogram method for very large bou
 
 The per-geometry output `metadata` (carried through `consolidate`, and by `parse_outputs`
 into each output that `provenance product` posts) gains, when a statistic family is
-requested:
+requested, the keys below. `parse_outputs` leaves out the run-level keys every row carries
+(`command`, `geometryProvenanceUrl`, `datasetProvenanceUrl`), which are already in the
+product run's provenance, and posts no `metadata` when nothing else remains, so outputs of
+products without statistics keep their earlier shape.
 
 | Key | Value |
 |---|---|
