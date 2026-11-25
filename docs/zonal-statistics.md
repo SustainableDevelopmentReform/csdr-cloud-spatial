@@ -7,7 +7,7 @@
 |---|---|---|
 | `mean-<x>` | float64 sum of the valid cells divided by the number of valid cells | float |
 | `p10-<x>`, `p25-<x>`, `p50-<x>`, `p75-<x>`, `p90-<x>` | 10th, 25th, 50th, 75th, 90th percentile of the valid cells (`--percentile-method`) | float |
-| `valid-fraction-<x>` | valid cells divided by all cells inside the boundary | float, 0 to 1 |
+| `valid-fraction-<x>` | valid cells divided by all cells inside the boundary and the source extent (nodata cells included) | float, 0 to 1 |
 | `distinct-<x>-count` | number of distinct values among the valid cells, optionally restricted to `indicator-value` | integer |
 
 `indicator-name` is the band (STAC asset key). `indicator-value` is accepted only by
@@ -57,7 +57,7 @@ The validity rule is shared with `sum-<x>-area`: a declared nodata value is neve
 as area either, and the value selection (`indicator-value`) applies to valid cells only.
 Before this rule, `sum-<x>-area` without an `indicator-value` counted the cells of a
 non-NaN nodata value (for example 255 in a byte raster) as area; such products change
-when they are re-run.
+when they are re-run. Selecting the nodata value itself as `indicator-value` now gives 0.
 
 **Missing coverage: the statistics raise, the area sum does not.** Support is checked over
 the whole boundary first: no STAC item for any part, or no valid cell anywhere in the
