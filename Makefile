@@ -10,6 +10,13 @@ export
 ### DATASETS ###
 
 # Dataset GMW v4
+cache-gmw-v41-local:
+	uv run csdr gmw cache \
+		--source-locations=https://zenodo.org/records/21346457/files/gmw_mng_ext_v4112_stack.tar.gz \
+		--target-location=./cache/datasets/gmw-v41/0-0-1/raw \
+		--out-file=/tmp/cached_files.json \
+		--no-overwrite
+
 cache-gmw-v4-local:
 	uv run csdr gmw cache \
 		--source-locations=https://files.auspatious.com/gmw-v4/raw/gmw_mng_2020_v4019_gtiff.zip \
@@ -26,6 +33,13 @@ cache-gmw-v4-s3:
 
 # Extracting takes a few minutes
 # Extract target-location must be an absolute path (for local store)! Otherwise STAC items will be made with broken href attributes.
+extract-gmw-v41-local:
+	uv run csdr gmw extract \
+		--source-location=./cache/datasets/gmw-v41/0-0-1/raw \
+		--source-zip-name=gmw_mng_ext_v4112_stack.tar.gz \
+		--target-location=$(PWD)/cache/datasets/gmw-v41/0-0-1/data \
+		--no-overwrite
+
 extract-gmw-v4-local:
 	uv run csdr gmw extract \
 		--source-location=./cache/datasets/gmw-v4/0-0-1/raw \
@@ -41,6 +55,12 @@ extract-gmw-v4-s3:
 		--overwrite
 
 # TODO: Check whether index source and target locations must be absolute paths (for local store) too for STAC hrefs to be correct. Using absolute paths just in case.
+index-gmw-v41-local:
+	uv run csdr gmw index \
+		--source-location=$(PWD)/cache/datasets/gmw-v41/0-0-1/data/gmw_mng_ext_v4112_stack \
+		--target-location=$(PWD)/cache/datasets/gmw-v41/0-0-1 \
+		--no-overwrite
+
 index-gmw-v4-local:
 	uv run csdr gmw index \
 		--source-location=$(PWD)/cache/datasets/gmw-v4/0-0-1/data \
@@ -54,6 +74,17 @@ index-gmw-v4-s3:
 		--no-overwrite
 
 # Make a Dataset in the app and use the ID here
+provenance-gmw-v41-local-db:
+	uv run csdr provenance dataset \
+		--id=79438c84-608c-475d-957d-b7a5a3c05001 \
+		--dataset-url=./cache/datasets/gmw-v41/0-0-1/gmw.parquet \
+		--source-url="https://zenodo.org/records/21346457" \
+		--source-metadata-url="https://zenodo.org/records/21346457" \
+		--dataset-type=stac-geoparquet \
+		--post-to-database \
+		--overwrite \
+		--workflow-dag-simple='{"description": "Prepare the Global Mangrove Watch v4.1 (2026) 10 meter resolution dataset for presentation and analysis.", "inputs": ["Global Mangrove Watch v4.1 zipfile of COGs."], "methods": ["Cache (download 2026 zipfile), extract (unzip to COGs, write STAC metadata), and index to STAC-Geoparquet."], "outputs": ["COGs and STAC items indexed in STAC-Geoparquet on AWS S3."]}'
+
 provenance-gmw-v4-local-db:
 	uv run csdr provenance dataset \
 		--id=forest-cover \
@@ -453,6 +484,12 @@ geometry-pacific-eez-filter-s3:
 # 4. Provenance - generates provenance information for the product.
 
 # Product GMW EEZ V4 List Geometries
+product-gmw-v41-eez-list-geometries-years-local:
+	uv run csdr products list-geometries-years \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--out-file=./cache/tmp/geometries-years.json \
+		--years="2025"
+
 product-gmw-v4-eez-list-geometries-years-local:
 	uv run csdr products list-geometries-years \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
@@ -473,6 +510,19 @@ product-gmw-v4-eez-list-geometries-years-s3:
 # Create a Product in the app. Use the product ID below. Select your dataset and geometry, and time as yearly.
 # Jordan 1cd8d5a6-8ba2-537a-9706-a6413e025b03. No mangrove (but might intersect bbox?).
 # Australia b4c4c411-4daa-57d2-b3f7-fb14ec95d6f2. Has mangrove.
+product-gmw-v41-eez-process-geometry-local:
+	uv run csdr products process-geometry \
+		--product-id=b17b95e4-ff75-47a0-86a5-aa9c1e69371e \
+		--run-id=abaad8a9-c3b7-4dbb-96ef-4226cd1b0bc5 \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v41/0-0-1/gmw.parquet.provenance.json \
+		--target-location=./cache/products/gmw-v41-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
+		--indicators-to-extract='{"sum-mangrove-area": {"indicator-name": "mangrove.41", "indicator-value": 1.0}}' \
+		--datetime=2025 \
+		--load-kwargs='{"resolution": 500, "crs": "epsg:6933"}' \
+		--geometry-id=eb0ef273-4855-57ba-a037-d30d51b1da47 \
+		--overwrite
+
 product-gmw-v4-eez-process-geometry-local:
 	uv run csdr products process-geometry \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
@@ -505,6 +555,15 @@ product-gmw-v4-eez-process-geometry-s3:
 # Product GMW v4 EEZ Consolidate
 product-gmw-v4-eez-consolidate-local:
 	uv run csdr products consolidate \
+		--product-id=b17b95e4-ff75-47a0-86a5-aa9c1e69371e \
+		--location=./cache/products/gmw-v41-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
+		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/test-run-id/EEZ_land_union_v4_202410.parquet.provenance.json \
+		--dataset-provenance-url=./cache/datasets/gmw-v41/0-0-1/gmw.parquet.provenance.json \
+		--indicator-name=mangrove
+
+
+product-gmw-v4-eez-consolidate-local:
+	uv run csdr products consolidate \
 		--product-id=935e9c13-7e2e-40c5-a4f8-f5f62ea54381 \
 		--location=./cache/products/gmw-v4-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id \
 		--geometry-provenance-url=./cache/geometries/eez-v4/0-0-1/runs/755206f2-dc2f-5b11-8355-2a86b34f7984/EEZ_land_union_v4_202410.parquet.provenance.json \
@@ -523,6 +582,17 @@ product-gmw-v4-eez-consolidate-s3:
 
 # You need to make a Product in the app before running provenance. Use that product ID here.
 # You also need to make a indicator. It must have the ID 'sum-mangrove-area'.
+product-gmw-v41-eez-provenance-local-db:
+	uv run csdr provenance product \
+		--product-id=b17b95e4-ff75-47a0-86a5-aa9c1e69371e \
+		--product-url=./cache/products/gmw-v41-eez/0-0-1/runs/test-product-gmw-v4-eez-run-id/mangrove.1/b17b95e4-ff75-47a0-86a5-aa9c1e69371e.parquet \
+		--run-id=fd8d58a4-506c-447e-8431-87cd8d2c8e04 \
+		--dataset-run-id=09a418ba-5dae-4ec0-8c18-211dbe033cd8 \
+		--geometries-run-id=3ca80642-7dcd-4dfc-b12e-9c1eded3b54a \
+		--post-to-database \
+		--overwrite \
+		--workflow-dag-simple='{"description": "Intersect GMW v4.1 with EEZ boundaries to calculate mangrove area per EEZ.", "inputs": [{"description": "GMW v4.1 (2025) 10m raster dataset", "type": "dataset", "run_id": "cded8fbc-faf2-49fa-afef-145b7870231d"}, {"description": "Global EEZ boundaries", "type": "geometry", "run_id": "755206f2-dc2f-5b11-8355-2a86b34f7984"}], "methods": ["Intersect and calculate area (per EEZ, per year)"], "outputs": ["GMW v4.1 per EEZ Product 2020"], "indicators": [{"description": "Mangrove Area (m²)", "indicator_id": "sum-mangrove-area", "product_run_id": "test-product-gmw-v4-eez-run-id6"}]}'
+
 product-gmw-v4-eez-provenance-local-db:
 	uv run csdr provenance product \
 		--product-id=forest-cover-product \
