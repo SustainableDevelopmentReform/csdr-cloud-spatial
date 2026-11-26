@@ -348,7 +348,12 @@ async def run_extract_gmw(
         await asyncio.gather(
             *[
                 process_single_file(
-                    name, open_member, target_location, target_store, overwrite, semaphore
+                    name,
+                    open_member,
+                    target_location,
+                    target_store,
+                    overwrite,
+                    semaphore,
                 )
                 for name in output_names
             ]
