@@ -99,11 +99,6 @@ curl -Ls https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
-For development, install with this command:
-```bash
-uv pip install -e ".[dev]"
-```
-
 #### Run premade commands
 
 5. Run a basic geometry cache command (see [Makefile](Makefile) for more):
