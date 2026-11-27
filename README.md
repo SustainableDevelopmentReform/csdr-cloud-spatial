@@ -99,6 +99,13 @@ curl -Ls https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
+Enable the virtual env and load the environment variables:
+
+```bash
+source .venv/bin/activate
+set -a; source .env; set +a
+```
+
 #### Run premade commands
 
 5. Run a basic geometry cache command (see [Makefile](Makefile) for more):
@@ -108,8 +115,8 @@ make geometry-eez-cache-local
 ```
 or make your own command:
 ```bash
-uv run csdr <subcommand> ...
-uv run python -m csdr.cli  eez cache \
+csdr <subcommand> ...
+python -m csdr.cli  eez cache \
   --target-location ./cache/eez-v4/0-0-1/raw \
   --overwrite
 ```
